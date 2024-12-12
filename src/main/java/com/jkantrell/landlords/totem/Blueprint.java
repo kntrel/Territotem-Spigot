@@ -14,7 +14,6 @@ import org.bukkit.entity.EntityType;
 import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
 
-import java.lang.reflect.Array;
 import java.lang.reflect.Type;
 import java.util.*;
 

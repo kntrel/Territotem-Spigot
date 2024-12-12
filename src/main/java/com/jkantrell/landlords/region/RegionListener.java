@@ -2,7 +2,6 @@ package com.jkantrell.landlords.region;
 
 import com.jkantrell.landlords.Landlords;
 import com.jkantrell.landlords.io.Config;
-import com.jkantrell.regionslib.RegionsLib;
 import com.jkantrell.regionslib.events.AbilityTriggeredEvent;
 import com.jkantrell.regionslib.events.PlayerEnterRegionEvent;
 import com.jkantrell.regionslib.events.PlayerLeaveRegionEvent;

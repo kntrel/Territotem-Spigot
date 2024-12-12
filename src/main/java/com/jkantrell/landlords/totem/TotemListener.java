@@ -5,7 +5,6 @@ import com.jkantrell.landlords.event.DeedsCreateEvent;
 import com.jkantrell.landlords.event.PlayerInteractTotemEvent;
 import com.jkantrell.landlords.event.TotemDestroyedByPlayerEvent;
 import com.jkantrell.landlords.io.Config;
-import com.jkantrell.landlords.io.LangProvider;
 import com.jkantrell.landlords.totem.Exception.*;
 import com.jkantrell.regionslib.RegionsLib;
 import com.jkantrell.regionslib.events.RegionDestroyEvent;
@@ -36,20 +35,16 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.world.EntitiesLoadEvent;
 import org.bukkit.event.world.EntitiesUnloadEvent;
 import org.bukkit.inventory.EquipmentSlot;
-import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.BookMeta;
 import org.bukkit.potion.PotionType;
-import org.bukkit.util.BoundingBox;
-import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
 import java.text.DecimalFormat;
 import java.util.*;
 import java.util.function.Function;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public class TotemListener implements Listener {
 

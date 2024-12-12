@@ -1,6 +1,5 @@
 package com.jkantrell.landlords.totem;
 
-import com.jkantrell.landlords.io.LangProvider;
 import com.jkantrell.regionslib.regions.Permission;
 import com.jkantrell.regionslib.regions.Region;
 import com.jkantrell.landlords.Landlords;
