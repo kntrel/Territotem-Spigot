@@ -1,9 +1,9 @@
-package com.jkantrell.landlords.region;
+package com.kntrel.mc.territotem.region;
 
-import com.jkantrell.landlords.Landlords;
-import com.jkantrell.landlords.event.DeedsCreateEvent;
-import com.jkantrell.landlords.event.TotemDestroyedByPlayerEvent;
-import com.jkantrell.landlords.totem.TotemLectern;
+import com.kntrel.mc.territotem.Territotem;
+import com.kntrel.mc.territotem.event.DeedsCreateEvent;
+import com.kntrel.mc.territotem.event.TotemDestroyedByPlayerEvent;
+import com.kntrel.mc.territotem.totem.TotemLectern;
 import com.jkantrell.regionslib.events.BlockRightClickedEvent;
 import com.jkantrell.regionslib.regions.abilities.Ability;
 import com.jkantrell.regionslib.regions.abilities.AbilityRegistration;
@@ -13,13 +13,13 @@ import org.bukkit.block.data.Directional;
 import org.bukkit.block.data.FaceAttachable;
 import org.bukkit.event.player.PlayerTakeLecternBookEvent;
 
-public final class LandLordsAbilities {
+public final class TerritotemAbilities {
 
     @AbilityRegistration
     public static final Ability<BlockRightClickedEvent>
     PRESS_ENFORCED_BUTTONS = new Ability<>(
             com.jkantrell.regionslib.regions.abilities.Abilities.PRESS_BUTTONS,
-            (e) -> Landlords.CONFIG.regionsEnforcedButtons.contains(e.getBlock().getType())
+            (e) -> Territotem.CONFIG.regionsEnforcedButtons.contains(e.getBlock().getType())
     ).extend(com.jkantrell.regionslib.regions.abilities.Abilities.PRESS_BUTTONS),
 
     PULL_LOCKED_LEVERS = new Ability<>(
@@ -38,7 +38,7 @@ public final class LandLordsAbilities {
                         default ->  BlockFace.EAST;
                     };
                 };
-                return Landlords.CONFIG.regionsLeverLockerBlocks.contains(e.getBlock().getRelative(face).getType());
+                return Territotem.CONFIG.regionsLeverLockerBlocks.contains(e.getBlock().getRelative(face).getType());
             }
     ).extend(com.jkantrell.regionslib.regions.abilities.Abilities.PULL_LEVERS),
 

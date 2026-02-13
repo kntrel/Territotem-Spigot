@@ -4,18 +4,18 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.jkantrell</groupId>
-    <artifactId>LandLords-Spigot</artifactId>
+    <groupId>com.kntrel</groupId>
+    <artifactId>Territotem</artifactId>
     <version>main-SNAPSHOT</version>
     <packaging>jar</packaging>
 
-    <name>Landlords</name>
+    <name>Territotem</name>
 
     <description>Give your players the ability to claim regions of your word in an interactive and simple way that
         involves gameplay.
     </description>
     <properties>
-        <java.version>1.17</java.version>
+        <java.version>21</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
@@ -26,8 +26,8 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.8.1</version>
                 <configuration>
-                    <source>17</source>
-                    <target>17</target>
+                    <source>21</source>
+                    <target>21</target>
                 </configuration>
             </plugin>
             <plugin>
@@ -82,23 +82,18 @@
         <dependency>
             <groupId>org.spigotmc</groupId>
             <artifactId>spigot-api</artifactId>
-            <version>1.19-R0.1-SNAPSHOT</version>
+            <version>1.21.11-R0.1-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>com.google.code.gson</groupId>
-            <artifactId>gson</artifactId>
-            <version>2.9.0</version>
-        </dependency>
-        <dependency>
-            <groupId>com.jkantrell</groupId>
+            <groupId>com.kntrel</groupId>
             <artifactId>RegionsLib-Spigot</artifactId>
             <version>main-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-lang3</artifactId>
-            <version>3.12.0</version>
+            <version>3.18.0</version>
             <scope>compile</scope>
         </dependency>
     </dependencies>

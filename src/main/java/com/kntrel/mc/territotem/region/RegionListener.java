@@ -1,7 +1,7 @@
-package com.jkantrell.landlords.region;
+package com.kntrel.mc.territotem.region;
 
-import com.jkantrell.landlords.Landlords;
-import com.jkantrell.landlords.io.Config;
+import com.kntrel.mc.territotem.Territotem;
+import com.kntrel.mc.territotem.io.Config;
 import com.jkantrell.regionslib.events.AbilityTriggeredEvent;
 import com.jkantrell.regionslib.events.PlayerEnterRegionEvent;
 import com.jkantrell.regionslib.events.PlayerLeaveRegionEvent;
@@ -37,15 +37,15 @@ public class RegionListener implements Listener {
 
     @EventHandler
     public void onPlayerEnterRegion(PlayerEnterRegionEvent e) {
-        if (!Landlords.CONFIG.regionsNameTitleEnabled) { return; }
+        if (!Territotem.CONFIG.regionsNameTitleEnabled) { return; }
 
         Player player = e.getPlayer();
         Region region = e.getRegion();
         String mainOwner = (region.getPermissions().length < 1) ? "" : region.getPermissions()[0].getPlayerName();
-        Config.TitleData titleData = Landlords.CONFIG.regionsNameTitleData;
+        Config.TitleData titleData = Territotem.CONFIG.regionsNameTitleData;
         player.sendTitle(
-                Landlords.getLangProvider().getEntry(player,"regions.enter_title.title",region.getName(),mainOwner),
-                Landlords.getLangProvider().getEntry(player,"regions.enter_title.subtitle",region.getName(),mainOwner),
+                Territotem.getLangProvider().getEntry(player,"regions.enter_title.title",region.getName(),mainOwner),
+                Territotem.getLangProvider().getEntry(player,"regions.enter_title.subtitle",region.getName(),mainOwner),
                 titleData.fadeIn(),
                 titleData.stay(),
                 titleData.fadeOut()
@@ -69,15 +69,15 @@ public class RegionListener implements Listener {
             String  message,
                     path = "not_allowed." + abilityName.toLowerCase();
             try {
-                message = Landlords.getLangProvider().getEntry(player, path, regionName);
+                message = Territotem.getLangProvider().getEntry(player, path, regionName);
             } catch (NullPointerException ex) {
-                message = Landlords.getLangProvider().getEntry(player, "not_allowed.default", regionName);
+                message = Territotem.getLangProvider().getEntry(player, "not_allowed.default", regionName);
                 Bukkit.getLogger().warning(String.format(
                         """
                             %1$s doesn't have the ability "%2$s" in the region "%3$s", but a specific denial message wasn't found in the "%4$s" lang file.
                             Displaying the default denied action message.
                             Include the "not_allowed.%2$s" entry in the lang file to provide an specific message.""",
-                        player.getName(), abilityName, regionName, Landlords.getLangProvider().getLangFileName(player)
+                        player.getName(), abilityName, regionName, Territotem.getLangProvider().getLangFileName(player)
                 ));
             }
             if (message.equals("")) { return; }
@@ -87,7 +87,7 @@ public class RegionListener implements Listener {
                     """
                             %1$s doesn't have the ability "%2$s" in the region "%3$s", but neither a specific nor default denial message was found in the "%4$s" lang file.
                             Make sure to include the "not_allowed.%2$s" or "not_allowed.default" entry in the lang file.""",
-                    player.getName(), abilityName, regionName, Landlords.getLangProvider().getLangFileName(player)
+                    player.getName(), abilityName, regionName, Territotem.getLangProvider().getLangFileName(player)
             ));
         }
     }
@@ -150,7 +150,7 @@ public class RegionListener implements Listener {
                     item.remove();
                 }
             }
-        }.runTaskLater(Landlords.getMainInstance(),1);
+        }.runTaskLater(Territotem.getMainInstance(),1);
 
     }
 
@@ -197,7 +197,7 @@ public class RegionListener implements Listener {
         for (Region r :  Regions.getRuleContainersAt("fireProtected",RuleDataType.BOOL,e.getBlock().getLocation().add(.5,.5,.5))) {
             if (r.getRuleValue("fireProtected",RuleDataType.BOOL)) {
                 e.setCancelled(true);
-                double extinguishChance = Landlords.CONFIG.regionFireExtinguishChance;
+                double extinguishChance = Territotem.CONFIG.regionFireExtinguishChance;
                 if (extinguishChance <= 0) { return; }
                 if (Math.random() <= extinguishChance) {
                     Optional.ofNullable(e.getIgnitingBlock()).ifPresent(b -> b.setType(Material.AIR));
@@ -212,7 +212,7 @@ public class RegionListener implements Listener {
         for (Region r :  Regions.getRuleContainersAt("raidProtected",RuleDataType.BOOL,e.getRaid().getLocation())) {
             if (r.getRuleValue("raidProtected",RuleDataType.BOOL)) {
                 e.setCancelled(true);
-                Landlords.getMainInstance().getLogger().fine(
+                Territotem.getMainInstance().getLogger().fine(
                  "A raid was prevented from triggering in " + r.getName() + " as 'raidProtected' rule is enabled in the region."
                 );
                 return;
@@ -234,9 +234,9 @@ public class RegionListener implements Listener {
             intercept = true;
         } else if (e.getEntity() instanceof TNTPrimed tnt) {
             ruleLabel = "tntProtected";
-            dataType = Landlords.getMainInstance().getRuleKeys().TNT_PROTECTED.getDataType();
+            dataType = Territotem.getMainInstance().getRuleKeys().TNT_PROTECTED.getDataType();
             predicate = (ru,re) -> {
-                switch ((LandLordsRuleKeys.TntProtection) ru.getValue()) {
+                switch ((TerritotemRuleKeys.TntProtection) ru.getValue()) {
                     case ignitor -> {
                         Entity source = tnt.getSource();
                         if (source == null ) { return true; }

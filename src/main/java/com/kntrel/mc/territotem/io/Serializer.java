@@ -1,8 +1,8 @@
-package com.jkantrell.landlords.io;
+package com.kntrel.mc.territotem.io;
 
 import com.google.gson.*;
-import com.jkantrell.landlords.Landlords;
-import com.jkantrell.landlords.totem.Blueprint;
+import com.kntrel.mc.territotem.Territotem;
+import com.kntrel.mc.territotem.totem.Blueprint;
 import com.jkantrell.regionslib.regions.rules.Rule;
 import org.bukkit.Bukkit;
 
@@ -26,7 +26,7 @@ public abstract class Serializer {
     }
 
     public static class FILES {
-        public static final File BLUEPRINTS = new File(Landlords.CONFIG.configPath, "blueprints.json");
+        public static final File BLUEPRINTS = new File(Territotem.CONFIG.configPath, "blueprints.json");
     }
 
     public static <T> T deserializeFile (File file, Class<T> typeOf) {

@@ -1,11 +1,11 @@
-package com.jkantrell.landlords.region;
+package com.kntrel.mc.territotem.region;
 
-import com.jkantrell.landlords.Landlords;
+import com.kntrel.mc.territotem.Territotem;
 import com.jkantrell.regionslib.regions.rules.RuleDataType;
 import com.jkantrell.regionslib.regions.rules.RuleEnumDataType;
 import com.jkantrell.regionslib.regions.rules.RuleKey;
 
-public class LandLordsRuleKeys {
+public class TerritotemRuleKeys {
 
     //DATATYPES
     public enum TntProtection { none, all, ignitor }
@@ -20,10 +20,10 @@ public class LandLordsRuleKeys {
     public final RuleKey FARMLAND_PROTECTED;
 
     //FIELDS
-    private static Landlords mainInstance_ = null;
+    private static Territotem mainInstance_ = null;
 
-    public LandLordsRuleKeys(Landlords landlordsInstance) {
-        mainInstance_ = landlordsInstance;
+    public TerritotemRuleKeys(Territotem territotemInstance) {
+        mainInstance_ = territotemInstance;
         this.CREEPER_PROTECTED = RuleKey.registerNew(mainInstance_,"creeperProtected", RuleDataType.BOOL);
         this.TNT_PROTECTED = RuleKey.registerNew(mainInstance_,"tntProtected", new RuleEnumDataType<>(TntProtection.class));
         this.FIRE_PROTECTED = RuleKey.registerNew(mainInstance_,"fireProtected",RuleDataType.BOOL);

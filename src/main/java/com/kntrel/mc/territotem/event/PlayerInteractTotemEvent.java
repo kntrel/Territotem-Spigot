@@ -1,6 +1,6 @@
-package com.jkantrell.landlords.event;
+package com.kntrel.mc.territotem.event;
 
-import com.jkantrell.landlords.totem.Totem;
+import com.kntrel.mc.territotem.totem.Totem;
 import org.bukkit.Location;
 import org.bukkit.block.BlockFace;
 import org.bukkit.entity.Player;

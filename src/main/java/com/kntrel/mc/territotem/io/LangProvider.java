@@ -1,4 +1,4 @@
-package com.jkantrell.landlords.io;
+package com.kntrel.mc.territotem.io;
 
 import com.jkantrell.yamlizer.yaml.YamlElement;
 import com.jkantrell.yamlizer.yaml.YamlElementType;
