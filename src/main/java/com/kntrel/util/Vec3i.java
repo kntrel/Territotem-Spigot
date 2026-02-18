@@ -1,6 +1,8 @@
 package com.kntrel.util;
 
 import com.kntrel.mc.territotem.blueprint.BlueprintElement;
+import org.bukkit.block.Block;
+import org.bukkit.block.BlockState;
 import org.bukkit.util.Vector;
 
 public record Vec3i(int x, int y, int z) implements Comparable<Vec3i> {
@@ -18,6 +20,12 @@ public record Vec3i(int x, int y, int z) implements Comparable<Vec3i> {
     }
     public static Vec3i max(Vec3i a, Vec3i b) {
         return new Vec3i(Math.max(a.x(), b.x()), Math.max(a.y(), b.y()), Math.max(a.z(), b.z()));
+    }
+    public static Vec3i ofBlock(Block block) {
+        return new Vec3i(block.getX(), block.getY(), block.getZ());
+    }
+    public static Vec3i ofBlock(BlockState blockState) {
+        return new Vec3i(blockState.getX(), blockState.getY(), blockState.getZ());
     }
 
 
@@ -51,10 +59,19 @@ public record Vec3i(int x, int y, int z) implements Comparable<Vec3i> {
     public Vec3i invert() {
         return this.multiply(-1);
     }
+    public Vec3i shiftLeft(int shift) {
+        return new Vec3i(this.x << shift, this.y << shift, this.z << shift);
+    }
+    public Vec3i shiftRight(int shift) {
+        return new Vec3i(this.x >> shift, this.y >> shift, this.z >> shift);
+    }
     public Vector toDouble() {
         return new Vector(this.x, this.y, this.z);
     }
 
+    @Override public String toString() {
+        return String.format("Vec3i(%d, %d, %d)", this.x, this.y, this.z);
+    }
     @Override public int compareTo(Vec3i o) {
         int cmp = Integer.compare(this.y(), o.y());
         if (cmp != 0) return cmp;

@@ -3,49 +3,58 @@ package com.kntrel.mc.territotem.blueprint;
 import com.kntrel.mc.regionLib.region.hierarchy.Hierarchy;
 import com.kntrel.mc.regionLib.region.rule.RuleValue;
 import com.kntrel.util.Vec3i;
+import com.kntrel.util.tuple.Pair;
 import org.bukkit.Material;
+import org.bukkit.entity.EntityType;
 import org.bukkit.util.BoundingBox;
-import org.bukkit.util.Vector;
 import org.jspecify.annotations.Nullable;
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 public class Blueprint {
 
     //FIELDS
     private final long id_;
+    private final String name_;
     private final Map<Vec3i, BlueprintElement> elementMap_;
+    private final BlueprintCoreTile core_;
     private final Material keyMaterial_;
-    private final Set<BlueprintElement> keyElements_;
-    private final Vector regionOrigin_;
     private final Vec3i dimensions_;
     private final Hierarchy hierarchy_;
     private final Set<RuleValue<?>> ruleValues_;
     private final BoundingBox initialRegionBounds_;
+    private final Set<Material> materials_;
+    private final Set<EntityType> entityTypes_;
 
 
     //CONSTRUCTORS
     public Blueprint(
             long id,
-            Iterable<BlueprintElement> elements,
+            String name,
+            Iterable<BlueprintTile> elements,
             @Nullable Material keyMaterial,
-            @Nullable Vector regionOrigin,
             BoundingBox initialRegionBounds,
             Hierarchy hierarchy,
             Iterable<RuleValue<?>> ruleValues
     ) {
         this.id_ = id;
+        this.name_ = name;
         this.keyMaterial_ = keyMaterial;
-        this.initialRegionBounds_ = initialRegionBounds;
         this.hierarchy_ = hierarchy;
         this.ruleValues_ = StreamSupport.stream(ruleValues.spliterator(), false).collect(Collectors.toSet());
 
-        Processed processed = process(elements, regionOrigin, keyMaterial);
+        Processed processed = process(elements, initialRegionBounds);
         this.dimensions_ = processed.dimensions();
-        this.keyElements_ = processed.keyElements();
+        this.core_ = processed.core();
         this.elementMap_ = processed.elementMap();
-        this.regionOrigin_ = processed.regionOrigin();
+        this.initialRegionBounds_ = processed.initialBounds();
+
+        Pair<Stream<Material>, Stream<EntityType>> distinct = distinctTypes(this.elementMap_.values());
+        this.materials_ = distinct.first().collect(Collectors.toSet());
+        this.entityTypes_ = distinct.second().collect(Collectors.toSet());
     }
 
 
@@ -53,14 +62,19 @@ public class Blueprint {
     public long id() {
         return this.id_;
     }
-    public List<BlueprintElement> elements() {
-        return this.elementMap_.values().stream().toList();
+    public String name() {
+        return this.name_;
+    }
+    public List<BlueprintTile> elements() {
+        return this.elementMap_.entrySet().stream()
+                .map(e -> new BlueprintTile(e.getKey(), e.getValue()))
+                .toList();
+    }
+    public BlueprintCoreTile core() {
+        return this.core_;
     }
     public Vec3i dimensions() {
         return this.dimensions_;
-    }
-    public Vector regionOrigin() {
-        return this.regionOrigin_;
     }
     public Hierarchy hierarchy() {
         return this.hierarchy_;
@@ -69,19 +83,20 @@ public class Blueprint {
         return this.ruleValues_;
     }
     public BoundingBox initialRegionBounds() {
-        return this.initialRegionBounds_;
+        return this.initialRegionBounds_.clone();
     }
     public int elementCount() {
         return this.elementMap_.size();
     }
-    public @Nullable BlueprintElement getByOffset(Vec3i offset) {
-        return this.elementMap_.get(offset);
+    public BlueprintElement getByOffset(Vec3i offset) {
+        this.checkBounds(offset);
+        return this.elementMap_.getOrDefault(offset, new BlueprintElement.Any());
     }
-    public @Nullable BlueprintElement getByOffset(int x, int y, int z) {
+    public BlueprintElement getByOffset(int x, int y, int z) {
         return this.getByOffset(new Vec3i(x, y, z));
     }
     public Map<Vec3i, BlueprintElement> elementsByOffset() {
-        return Collections.unmodifiableMap(this.elementMap_);
+        return this.elementMap_;
     }
     public @Nullable Material keyMaterial() {
         return this.keyMaterial_;
@@ -89,17 +104,11 @@ public class Blueprint {
     public boolean hasKeyElements() {
         return this.keyMaterial_ != null;
     }
-    public Set<BlueprintElement> keyElements() {
-        return this.keyElements_;
-    }
-    public Set<Vec3i> keyElementOffsets() {
-        return this.keyElements_.stream().map(BlueprintElement::offset).collect(Collectors.toSet());
-    }
     public Set<Material> containedMaterials() {
-        return this.elementMap_.values().stream()
-                .filter(e -> e instanceof BlueprintElement.Block)
-                .map(e -> ((BlueprintElement.Block) e).type())
-                .collect(Collectors.toSet());
+        return this.materials_;
+    }
+    public Set<EntityType> containedEntityTypes() {
+        return this.entityTypes_;
     }
     public boolean isEmptyAt(Vec3i offset) {
         return !this.elementMap_.containsKey(offset);
@@ -107,32 +116,41 @@ public class Blueprint {
     public boolean isEmptyAt(int x, int y, int z) {
         return this.isEmptyAt(new Vec3i(x, y, z));
     }
-    public boolean isKeyElementAt(Vec3i offset) {
-        return this.keyElementOffsets().contains(offset);
+    public boolean matchesAt(Vec3i offset, BlueprintElement element) {
+        BlueprintElement other = this.getByOffset(offset);
+        return other != null && other.matches(element);
     }
-    public boolean isKeyElement(BlueprintElement element) {
-        return     this.hasKeyElements()
-                && this.isKeyElementAt(element.offset())
-                && element instanceof BlueprintElement.Block b
-                && b.type() == this.keyMaterial_;
+    public boolean matchesAt(int x, int y, int z, BlueprintElement element) {
+        return this.matchesAt(new Vec3i(x, y, z), element);
     }
 
 
     //HELPERS
-    private static Processed process(Iterable<BlueprintElement> elements, @Nullable Vector regionOrigin, @Nullable Material keyMaterial) {
-        Iterator<BlueprintElement> i = elements.iterator();
-        if (!i.hasNext()) { return new Processed(Vec3i.zeroes(), Set.of(), Map.of(), regionOrigin); }
+    private void checkBounds(Vec3i offset) {
+        if (     offset.x() >= 0 && offset.x() < this.dimensions_.x()
+              && offset.y() >= 0 && offset.y() < this.dimensions_.y()
+              && offset.z() >= 0 && offset.z() < this.dimensions_.z()
+        ) {
+            throw new IndexOutOfBoundsException("Offset " + offset + " is out of bounds for blueprint dimensions " + this.dimensions_);
+        }
+    }
+    private static Processed process(Iterable<BlueprintTile> elements, BoundingBox regionBounds) {
+        Iterator<BlueprintTile> i = elements.iterator();
+        if (!i.hasNext()) {
+            throw new InvalidBlueprintException("Blueprint must contain at least one element");
+        }
 
-        List<BlueprintElement> trimmed = new ArrayList<>();
-        Set<BlueprintElement> keyElements = new HashSet<>();
-        BlueprintElement elm = i.next();
-        trimmed.add(elm);
-        int minX = elm.x(), minY = elm.y(), minZ = elm.z(),
-            maxX = elm.x(), maxY = elm.y(), maxZ = elm.z();
+        List<BlueprintTile> trimmed = new ArrayList<>();
+        BlueprintCoreTile core = null;
+        BlueprintTile tile = i.next();
+        trimmed.add(tile);
+        int minX = tile.x(), minY = tile.y(), minZ = tile.z(),
+            maxX = tile.x(), maxY = tile.y(), maxZ = tile.z();
+        boolean containsBlocks = tile.element() instanceof BlueprintElement.Block;
 
         while (i.hasNext()) {
-            elm = i.next();
-            int x = elm.x(), y = elm.y(), z = elm.z();
+            tile = i.next();
+            int x = tile.x(), y = tile.y(), z = tile.z();
 
             if (x < minX) { minX = x; }
             if (x > maxX) { maxX = x; }
@@ -141,18 +159,28 @@ public class Blueprint {
             if (z < minZ) { minZ = z; }
             if (z > maxZ) { maxZ = z; }
 
-            if (keyMaterial != null && elm instanceof BlueprintElement.Block b && b.type() == keyMaterial) {
-                keyElements.add(elm);
+            BlueprintElement elm = tile.element();
+            if (elm instanceof BlueprintElement.Block) { containsBlocks = true; }
+
+            if (elm instanceof BlueprintElement.Core c) {
+                if (core != null) {
+                    throw new InvalidBlueprintException("Blueprint cannot contain more than one core element");
+                }
+                core = new BlueprintCoreTile(tile.offset(), c);
             }
-            trimmed.add(elm);
+
+            if (!(elm instanceof BlueprintElement.Any)) { trimmed.add(tile); }
         }
 
-        if (keyMaterial != null && keyElements.isEmpty()) {
-            throw new IllegalArgumentException("Blueprint must contain at least one element with the key material " + keyMaterial);
+        if (!containsBlocks) {
+            throw new InvalidBlueprintException("Blueprint must contain at least one block negated");
+        }
+        if (core == null) {
+            throw new InvalidBlueprintException("Blueprint must contain one core element");
         }
 
         Vec3i correction = new Vec3i(minX, minY, minZ);
-        Vector correctedOrigin = (regionOrigin != null) ? regionOrigin : correction.toDouble();
+        BoundingBox correctedBox = regionBounds;
         if (!correction.equals(Vec3i.zeroes())) {
             trimmed = trimmed.stream()
                     .map(e ->
@@ -160,20 +188,42 @@ public class Blueprint {
                     )
                     .toList();
             maxX -= correction.x(); maxY -= correction.y(); maxZ -= correction.z();
-            correctedOrigin = correctedOrigin.subtract(correction.toDouble());
+            correctedBox = correctedBox.shift(-correction.x(), -correction.y(), -correction.z());
         }
 
         Map<Vec3i, BlueprintElement> elementMap = trimmed.stream().collect(Collectors.toMap(
-                BlueprintElement::offset,
-                e -> e)
-        );
+                BlueprintTile::offset,
+                BlueprintTile::element
+        ));
 
         Vec3i dimensions = new Vec3i(maxX + 1, maxY + 1, maxZ + 1);
 
-        return new Processed(dimensions, Collections.unmodifiableSet(keyElements), elementMap, correctedOrigin);
+        return new Processed(dimensions, core, elementMap, correctedBox);
+    }
+    private static Pair<Stream<Material>, Stream<EntityType>> distinctTypes(BlueprintElement element) {
+        return switch (element) {
+            case BlueprintElement.Block block -> Pair.of(Stream.of(block.type()), Stream.empty());
+            //case BlueprintElement.Entity entity -> Pair.of(Stream.empty(), Stream.of(entity.type()));
+            case BlueprintElement.Either either -> distinctTypes(Arrays.asList(either.options()));
+            default -> Pair.of(Stream.empty(), Stream.empty());
+        };
+    }
+    private static Pair<Stream<Material>, Stream<EntityType>> distinctTypes(Iterable<? extends BlueprintElement> elements) {
+        List<Stream<Material>> materials = new ArrayList<>();
+        List<Stream<EntityType>> entities = new ArrayList<>();
+        for (BlueprintElement elm : elements) {
+            Pair<Stream<Material>, Stream<EntityType>> pair = distinctTypes(elm);
+            materials.add(pair.first());
+            entities.add(pair.second());
+        }
+
+        return Pair.of(
+            materials.stream().flatMap(Function.identity()),
+            entities.stream().flatMap(Function.identity())
+        );
     }
 
 
     //SUBTYPES
-    private record Processed(Vec3i dimensions, Set<BlueprintElement> keyElements, Map<Vec3i, BlueprintElement> elementMap, Vector regionOrigin) {}
+    private record Processed(Vec3i dimensions, BlueprintCoreTile core, Map<Vec3i, BlueprintElement> elementMap, BoundingBox initialBounds) {}
 }

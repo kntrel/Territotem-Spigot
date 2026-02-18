@@ -1,23 +1,23 @@
 package com.kntrel.mc.territotem.totem;
 
+import com.kntrel.mc.regionLib.region.Region;
 import com.kntrel.mc.territotem.blueprint.Blueprint;
 import com.kntrel.util.Vec3i;
 import org.bukkit.World;
-import org.bukkit.util.Vector;
 
 public class Totem {
 
     //FIELDS
     private final Blueprint blueprint_;
     private final Vec3i origin_;
-    private final World world_;
+    private final Region region_;
 
 
     //CONSTRUCTORS
-    public Totem(Blueprint blueprint, Vec3i origin, World world) {
+    Totem(Blueprint blueprint, Vec3i origin, Region region) {
         this.blueprint_ = blueprint;
         this.origin_ = origin;
-        this.world_ = world;
+        this.region_ = region;
     }
 
 
@@ -28,11 +28,18 @@ public class Totem {
     public Vec3i origin() {
         return this.origin_;
     }
+    public Region region() {
+        return this.region_;
+    }
     public World world() {
-        return this.world_;
+        return this.region_.getWorld();
     }
-    public Vector regionOrigin() {
-        return this.blueprint_.regionOrigin().add(this.origin_.toDouble());
+    public boolean isEnabled() {
+        return this.region_.isEnabled();
     }
-
+    public void setEnabled(boolean enabled) {
+        if (enabled == this.isEnabled()) { return; }
+        this.region_.enabled(enabled);
+        this.region_.save();
+    }
 }
