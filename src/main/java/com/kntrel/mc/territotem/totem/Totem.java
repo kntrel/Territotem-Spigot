@@ -42,4 +42,11 @@ public class Totem {
         this.region_.enabled(enabled);
         this.region_.save();
     }
+    public boolean isDestroyed() {
+        return this.region_.isDestroyed();
+    }
+    public void destroy() {
+        this.region_.destroy();
+        this.region_.save();
+    }
 }

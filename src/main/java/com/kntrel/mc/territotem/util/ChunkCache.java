@@ -9,7 +9,7 @@ public class ChunkCache<T> {
     private final Map<ChunkKey, Set<T>> cache_;
     private final Map<ChunkKey, Set<T>> individualCache_;
     private final Function<T, ChunkKey> chunkMapper_;
-    private final int proximity;
+    private final int proximity_;
 
 
     //CONSTRUCTOR
@@ -18,7 +18,7 @@ public class ChunkCache<T> {
             throw new IllegalArgumentException("Proximity must be at least 1");
         }
         this.chunkMapper_ = mapper;
-        this.proximity = proximity;
+        this.proximity_ = proximity;
         this.cache_ = new HashMap<>();
         this.individualCache_ = new HashMap<>();
     }
@@ -32,7 +32,7 @@ public class ChunkCache<T> {
         Set<T> set = this.individualCache_.computeIfAbsent(chunk, k -> new HashSet<>());
         if (!set.add(element)) { return; }
 
-        getAdjacent(chunk, this.proximity).forEach(c ->
+        getAdjacent(chunk, this.proximity_).forEach(c ->
             this.cache_.computeIfAbsent(c, k -> new HashSet<>()).add(element)
         );
     }
@@ -48,7 +48,7 @@ public class ChunkCache<T> {
         Set<T> evicted = this.individualCache_.get(chunk);
         if (evicted == null) { return Collections.emptyList(); }
         for (T element : evicted) {
-            getAdjacent(chunk, this.proximity).forEach(c -> {
+            getAdjacent(chunk, this.proximity_).forEach(c -> {
                 Set<T> set = this.cache_.get(c);
                 if (set == null) { return; }
                 set.remove(element);
@@ -59,6 +59,19 @@ public class ChunkCache<T> {
         }
         Set<T> set = this.individualCache_.remove(chunk);
         return List.copyOf(set);
+    }
+    public void evict(T element) {
+        ChunkKey chunk = this.chunkMapper_.apply(element);
+        Set<T> set = this.individualCache_.get(chunk);
+        if (set == null || !set.remove(element)) { return; }
+        if (set.isEmpty()) { this.individualCache_.remove(chunk); }
+
+        getAdjacent(chunk, this.proximity_).forEach(c -> {
+            Set<T> adjacent = this.cache_.get(c);
+            if (adjacent == null) { return; }
+            adjacent.remove(element);
+            if (adjacent.isEmpty()) { this.cache_.remove(c); }
+        });
     }
 
 

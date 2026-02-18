@@ -85,21 +85,31 @@ public class TotemService {
         ChunkKey chunk = ChunkKey.ofBlock(where, worldUUID);
 
         Collection<BlueprintTracker> candidates;
+        Collection<TotemTracker> totems;
         synchronized (this.candidatesByChunk_) {
             candidates = List.copyOf(this.candidatesByChunk_.get(chunk));
+        }
+        synchronized (this.totemsByChunk_) {
+            totems = List.copyOf(this.totemsByChunk_.get(chunk));
         }
 
         for (BlueprintTracker candidate : candidates) {
             this.executor_.execute(() -> handleCandidateTask(candidate, who, where, material, block));
         }
+        for (TotemTracker totem : totems) {
+            this.executor_.execute(() -> handleTotemTask(totem, who, where, material, block));
+        }
     }
     private void handleCandidateTask(BlueprintTracker candidate, Entity who, Vec3i where, Material material, BlockState block) {
         if (!candidate.contains(where)) { return; }
 
+        ReentrantLock lock = this.candidateLocks_.get(candidate);
+        if (lock == null) { return; }
+
         BlueprintElement element = new BlueprintElement.Block(material);
         Vec3i offset = where.subtract(candidate.origin());
-        ReentrantLock lock = this.candidateLocks_.computeIfAbsent(candidate, c -> new ReentrantLock());
         boolean completed = false;
+
         lock.lock();
         try {
             if (candidate.isLocked()) { return; }
@@ -116,6 +126,34 @@ public class TotemService {
         if (completed) {
             this.promoteCandidate(who, candidate);
             this.dropCandidate(candidate);
+        }
+    }
+    private void handleTotemTask(TotemTracker totem, Entity who, Vec3i where, Material material, BlockState block) {
+        BlueprintTracker tracker = totem.tracker();
+        if (!tracker.contains(where)) { return; }
+
+        ReentrantLock lock = this.totemLocks_.get(totem.totem());
+        if (lock == null) { return; }
+
+        BlueprintElement element = new BlueprintElement.Block(material);
+        Vec3i offset = where.subtract(tracker.origin());
+        BlueprintCoreTile core = totem.totem().blueprint().core();
+
+        lock.lock();
+        try {
+            if (tracker.isLocked()) { return; }
+
+            if (core.offset().equals(offset) && !core.element().matches(element)) {
+                tracker.lock();
+                totem.totem().destroy();
+                this.dropTotem(totem);
+                return;
+            }
+
+            tracker.update(offset, element);
+            totem.totem().setEnabled(tracker.isComplete());
+        } finally {
+            lock.unlock();
         }
     }
 
@@ -174,6 +212,9 @@ public class TotemService {
         } finally {
             lock.unlock();
         }
+    }
+    private void dropTotem(TotemTracker totem) {
+        this.totemLocks_.remove(totem.totem());
     }
     private void register(Blueprint blueprint) {
         this.blueprintsByCore_.putInto(blueprint.core().element().type(), blueprint);

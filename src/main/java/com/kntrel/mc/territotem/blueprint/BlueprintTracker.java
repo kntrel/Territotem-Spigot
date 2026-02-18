@@ -1,6 +1,5 @@
 package com.kntrel.mc.territotem.blueprint;
 
-import com.kntrel.mc.territotem.util.ChunkKey;
 import com.kntrel.util.BitSet3D;
 import com.kntrel.util.IntBoundingBox;
 import com.kntrel.util.Vec3i;
