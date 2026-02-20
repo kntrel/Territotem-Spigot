@@ -94,10 +94,11 @@ class TotemCandidateTracker {
             Vec3i coreLoc = origin.add(blueprint.core().offset());
             if (!blueprint.core().element().matchesAt(coreLoc, chunk.getWorld())) {
                 LOGGER.warn("Expected a blueprint core at {} but now found.", coreLoc);
+                continue;
             }
 
             LOGGER.debug("Restoring totem candidate for blueprint {} at origin {}", blueprint.id(), origin);
-            this.trackCandidate(blueprint, chunk.getWorld(), origin);
+            this.executor_.execute(() -> this.trackCandidate(null, blueprint, chunk.getWorld(), origin));
         }
     }
     public void handleChunkUnload(Chunk chunk) {
@@ -124,7 +125,6 @@ class TotemCandidateTracker {
         }
 
         pdc.set(this.candidatesNSK_, TotemCandidatePersistentDataType.instance(), toSerialize);
-        LOGGER.debug("Successfully persisted {} candidates for chunk [{}, {}]", toSerialize.size(), chunk.getX(), chunk.getZ());
     }
     public void handleBlockUpdate(Entity who, Vec3i where, World world, Material material, BlockState block, Consumer<UpdateContext> totemUpdateHandler) {
         // Execute candidate update task asynchronously
@@ -141,7 +141,7 @@ class TotemCandidateTracker {
         for (Blueprint b : candidateBlueprints) {
             LOGGER.debug("Tracking new candidate for blueprint {} at origin {}", b.id(), where);
             Vec3i origin = where.subtract(b.core().offset());
-            this.trackCandidate(b, world, origin);
+            this.executor_.execute(() -> this.trackCandidate(who, b, world, origin));
         }
     }
 
@@ -158,24 +158,34 @@ class TotemCandidateTracker {
     private void updateCandidateTask(Entity who, BlueprintTracker candidate, Vec3i where, Material material, BlockState block, Consumer<UpdateContext> totemUpdateHandler) {
         LOGGER.trace("Updating candidate {} at position {}", candidate.blueprint().id(), where);
         BlueprintElement element = new BlueprintElement.Block(material);
-        CandidateUpdateContext context = new CandidateUpdateContext(candidate, who, where, element);
         boolean completed = this.updateCandidate(candidate, where, element);
 
         if (completed) {
-            LOGGER.info("Totem candidate COMPLETED for blueprint {} by player {}", candidate.blueprint().id(), who.getName());
-            this.onCandidateCompleted_.accept(context);
-            this.dropCandidate(candidate);
+            CandidateUpdateContext context = new CandidateUpdateContext(candidate, who, where, element);
+            handleCompleteCandidate(context);
         }
     }
-    public void trackCandidate(Blueprint blueprint, World world, Vec3i origin) {
+    private void handleCompleteCandidate(CandidateUpdateContext context) {
+        LOGGER.info("Totem candidate completed for blueprint {} by player {}", context.candidate.blueprint().id(), context.who.getName());
+        this.onCandidateCompleted_.accept(context);
+        this.dropCandidate(context.candidate());
+    }
+    public void trackCandidate(Entity who, Blueprint blueprint, World world, Vec3i origin) {
         Triplet<Vec3i, UUID, Long> trackKey = Triplet.of(origin, world.getUID(), blueprint.id());
         if (this.tracked_.contains(trackKey)) {
             LOGGER.debug("Already tracking a potential totem of blueprint {} at {}", blueprint.id(), origin);
             return;
         }
-        this.tracked_.add(trackKey);
 
         BlueprintTracker candidate = this.registry_.trackerAt(blueprint, world, origin);
+        if (candidate.isComplete()) {
+            CandidateUpdateContext context = new CandidateUpdateContext(candidate, who, origin, null);
+            this.handleCompleteCandidate(context);
+            LOGGER.debug("Candidate at {} was complete right away. No tracking needed", origin);
+            return;
+        }
+
+        this.tracked_.add(trackKey);
         this.candidatesByChunk_.put(candidate);
         this.candidateLocks_.put(candidate, new ReentrantLock());
     }
