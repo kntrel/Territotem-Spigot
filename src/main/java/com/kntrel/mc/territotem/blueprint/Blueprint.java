@@ -21,7 +21,6 @@ public class Blueprint {
     private final String name_;
     private final Map<Vec3i, BlueprintElement> elementMap_;
     private final BlueprintCoreTile core_;
-    private final Material keyMaterial_;
     private final Vec3i dimensions_;
     private final Hierarchy hierarchy_;
     private final Set<RuleValue<?>> ruleValues_;
@@ -35,14 +34,12 @@ public class Blueprint {
             long id,
             String name,
             Iterable<BlueprintTile> elements,
-            @Nullable Material keyMaterial,
             BoundingBox initialRegionBounds,
             Hierarchy hierarchy,
             Iterable<RuleValue<?>> ruleValues
     ) {
         this.id_ = id;
         this.name_ = name;
-        this.keyMaterial_ = keyMaterial;
         this.hierarchy_ = hierarchy;
         this.ruleValues_ = StreamSupport.stream(ruleValues.spliterator(), false).collect(Collectors.toSet());
 
@@ -98,12 +95,6 @@ public class Blueprint {
     public Map<Vec3i, BlueprintElement> elementsByOffset() {
         return this.elementMap_;
     }
-    public @Nullable Material keyMaterial() {
-        return this.keyMaterial_;
-    }
-    public boolean hasKeyElements() {
-        return this.keyMaterial_ != null;
-    }
     public Set<Material> containedMaterials() {
         return this.materials_;
     }
@@ -127,10 +118,10 @@ public class Blueprint {
 
     //HELPERS
     private void checkBounds(Vec3i offset) {
-        if (     offset.x() >= 0 && offset.x() < this.dimensions_.x()
+        if (!(   offset.x() >= 0 && offset.x() < this.dimensions_.x()
               && offset.y() >= 0 && offset.y() < this.dimensions_.y()
               && offset.z() >= 0 && offset.z() < this.dimensions_.z()
-        ) {
+        )) {
             throw new IndexOutOfBoundsException("Offset " + offset + " is out of bounds for blueprint dimensions " + this.dimensions_);
         }
     }
@@ -141,11 +132,11 @@ public class Blueprint {
         }
 
         List<BlueprintTile> trimmed = new ArrayList<>();
-        BlueprintCoreTile core = null;
         BlueprintTile tile = i.next();
         trimmed.add(tile);
         int minX = tile.x(), minY = tile.y(), minZ = tile.z(),
             maxX = tile.x(), maxY = tile.y(), maxZ = tile.z();
+        BlueprintCoreTile core = (tile.element() instanceof BlueprintElement.Core c) ? new BlueprintCoreTile(tile.offset(), c) : null;
         boolean containsBlocks = tile.element() instanceof BlueprintElement.Block;
 
         while (i.hasNext()) {
@@ -188,6 +179,7 @@ public class Blueprint {
                     )
                     .toList();
             maxX -= correction.x(); maxY -= correction.y(); maxZ -= correction.z();
+            core = core.withOffset(core.offset().subtract(correction));
             correctedBox = correctedBox.shift(-correction.x(), -correction.y(), -correction.z());
         }
 

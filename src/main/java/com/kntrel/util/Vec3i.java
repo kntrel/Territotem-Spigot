@@ -70,7 +70,7 @@ public record Vec3i(int x, int y, int z) implements Comparable<Vec3i> {
     }
 
     @Override public String toString() {
-        return String.format("Vec3i(%d, %d, %d)", this.x, this.y, this.z);
+        return "(" + this.x() + ", " + this.y() + ", " + this.z() + ")";
     }
     @Override public int compareTo(Vec3i o) {
         int cmp = Integer.compare(this.y(), o.y());

@@ -9,6 +9,7 @@ import com.kntrel.mc.territotem.util.ChunkCache;
 import com.kntrel.mc.territotem.util.ChunkKey;
 import com.kntrel.util.SetMap;
 import com.kntrel.util.Vec3i;
+import com.kntrel.util.tuple.Triplet;
 import org.bukkit.Chunk;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -37,6 +38,7 @@ class TotemCandidateTracker {
     private final ChunkCache<BlueprintTracker> candidatesByChunk_;
     private final Map<BlueprintTracker, ReentrantLock> candidateLocks_;
     private final SetMap<Material, Blueprint> blueprintsByCore_;
+    private final Set<Triplet<Vec3i, UUID, Long>> tracked_;
     private final Executor executor_;
     private final NamespacedKey candidatesNSK_;
     private final Consumer<CandidateUpdateContext> onCandidateCompleted_;
@@ -49,6 +51,7 @@ class TotemCandidateTracker {
         this.candidatesByChunk_ = new ChunkCache<>(c -> ChunkKey.ofBlock(c.origin(), c.world().getUID()));
         this.candidateLocks_ = new ConcurrentHashMap<>();
         this.blueprintsByCore_ = new SetMap<>();
+        this.tracked_ = new HashSet<>();
         this.executor_ = Executors.newVirtualThreadPerTaskExecutor();
         this.candidatesNSK_ = candidatesNSK;
         this.onCandidateCompleted_ = onCandidateCompleted;
@@ -60,39 +63,68 @@ class TotemCandidateTracker {
     //SERVICES
     public void registerBlueprint(Blueprint blueprint) {
         this.blueprintsByCore_.putInto(blueprint.core().element().type(), blueprint);
+        LOGGER.trace("Blueprint {} registered successfully", blueprint.id());
     }
     public void handleChunkLoad(Chunk chunk) {
         PersistentDataContainer pdc = chunk.getPersistentDataContainer();
-        if (!pdc.has(this.candidatesNSK_)) { return; }
+        if (!pdc.has(this.candidatesNSK_)) { 
+            LOGGER.trace("No totem candidates found in chunk [{}, {}]", chunk.getX(), chunk.getZ());
+            return; 
+        }
 
         List<ChunkTotemCandidate> candidates = pdc.get(this.candidatesNSK_, TotemCandidatePersistentDataType.instance());
-        if (candidates == null || candidates.isEmpty()) { return; }
+        if (candidates == null || candidates.isEmpty()) { 
+            LOGGER.warn("Totem candidates list is null or empty for chunk [{}, {}]", chunk.getX(), chunk.getZ());
+            pdc.remove(this.candidatesNSK_);
+            return; 
+        }
 
+        LOGGER.info("Found {} totem candidates in chunk [{}, {}]", candidates.size(), chunk.getX(), chunk.getZ());
         for (ChunkTotemCandidate candidate : candidates) {
             Blueprint blueprint = this.registry_.get(candidate.blueprintId()).orElse(null);
-            if (blueprint == null) { continue; }
+            if (blueprint == null) { 
+                LOGGER.warn("Blueprint with ID {} not found in registry", candidate.blueprintId());
+                continue; 
+            }
 
             Vec3i origin = new Vec3i(chunk.getX(), 0, chunk.getZ())
                     .shiftLeft(Constants.CHUNK_SHIFT)
                     .add(candidate.offset());
 
+            Vec3i coreLoc = origin.add(blueprint.core().offset());
+            if (!blueprint.core().element().matchesAt(coreLoc, chunk.getWorld())) {
+                LOGGER.warn("Expected a blueprint core at {} but now found.", coreLoc);
+            }
+
+            LOGGER.debug("Restoring totem candidate for blueprint {} at origin {}", blueprint.id(), origin);
             this.trackCandidate(blueprint, chunk.getWorld(), origin);
         }
     }
     public void handleChunkUnload(Chunk chunk) {
+        LOGGER.trace("Chunk unloading at [{}, {}] in world {}. Checking for totem candidates to serialize", chunk.getX(), chunk.getZ(), chunk.getWorld().getName());
         ChunkKey chunkKey = ChunkKey.ofBlock(new Vec3i(chunk.getX() * 16, 0, chunk.getZ() * 16), chunk.getWorld().getUID());
         Collection<BlueprintTracker> candidatesInChunk = this.candidatesByChunk_.evict(chunkKey);
 
-        if (candidatesInChunk.isEmpty()) { return; }
-
-        List<ChunkTotemCandidate> toSerialize = new ArrayList<>();
-        for (BlueprintTracker tracker : candidatesInChunk) {
-            toSerialize.add(new ChunkTotemCandidate(offsetInChunk(tracker.origin()), tracker.blueprint().id()));
-            this.candidateLocks_.remove(tracker);
+        PersistentDataContainer pdc = chunk.getPersistentDataContainer();
+        if (candidatesInChunk.isEmpty()) {
+            LOGGER.trace("No candidates to persist in chunk [{}, {}]", chunk.getX(), chunk.getZ());
+            pdc.remove(this.candidatesNSK_);
+            return;
         }
 
-        PersistentDataContainer pdc = chunk.getPersistentDataContainer();
+        LOGGER.debug("Persisting {} totem candidates in chunk [{}, {}]", candidatesInChunk.size(), chunk.getX(), chunk.getZ());
+        List<ChunkTotemCandidate> toSerialize = new ArrayList<>();
+        for (BlueprintTracker candidate : candidatesInChunk) {
+            LOGGER.debug("Persisting candidate for blueprint {} at origin {}", candidate.blueprint().id(), candidate.origin());
+            toSerialize.add(new ChunkTotemCandidate(offsetInChunk(candidate.origin()), candidate.blueprint().id()));
+
+            Triplet<Vec3i, UUID, Long> trackKey = Triplet.of(candidate.origin(), candidate.world().getUID(), candidate.blueprint().id());
+            this.tracked_.remove(trackKey);
+            this.candidateLocks_.remove(candidate);
+        }
+
         pdc.set(this.candidatesNSK_, TotemCandidatePersistentDataType.instance(), toSerialize);
+        LOGGER.debug("Successfully persisted {} candidates for chunk [{}, {}]", toSerialize.size(), chunk.getX(), chunk.getZ());
     }
     public void handleBlockUpdate(Entity who, Vec3i where, World world, Material material, BlockState block, Consumer<UpdateContext> totemUpdateHandler) {
         // Execute candidate update task asynchronously
@@ -100,12 +132,16 @@ class TotemCandidateTracker {
 
         // Track new candidates if block matches a blueprint core
         Set<Blueprint> candidateBlueprints = this.blueprintsByCore_.get(material);
-        if (candidateBlueprints.isEmpty()) {
+        if (candidateBlueprints == null || candidateBlueprints.isEmpty()) {
+            LOGGER.trace("No blueprints found with core material: {}", material);
             return;
         }
 
+        LOGGER.debug("Block matches core material - tracking {} candidate totem(s) at {}", candidateBlueprints.size(), where);
         for (Blueprint b : candidateBlueprints) {
-            this.trackCandidate(b, world, where);
+            LOGGER.debug("Tracking new candidate for blueprint {} at origin {}", b.id(), where);
+            Vec3i origin = where.subtract(b.core().offset());
+            this.trackCandidate(b, world, origin);
         }
     }
 
@@ -120,42 +156,68 @@ class TotemCandidateTracker {
         }
     }
     private void updateCandidateTask(Entity who, BlueprintTracker candidate, Vec3i where, Material material, BlockState block, Consumer<UpdateContext> totemUpdateHandler) {
+        LOGGER.trace("Updating candidate {} at position {}", candidate.blueprint().id(), where);
         BlueprintElement element = new BlueprintElement.Block(material);
         CandidateUpdateContext context = new CandidateUpdateContext(candidate, who, where, element);
         boolean completed = this.updateCandidate(candidate, where, element);
 
         if (completed) {
+            LOGGER.info("Totem candidate COMPLETED for blueprint {} by player {}", candidate.blueprint().id(), who.getName());
             this.onCandidateCompleted_.accept(context);
             this.dropCandidate(candidate);
         }
     }
     public void trackCandidate(Blueprint blueprint, World world, Vec3i origin) {
+        Triplet<Vec3i, UUID, Long> trackKey = Triplet.of(origin, world.getUID(), blueprint.id());
+        if (this.tracked_.contains(trackKey)) {
+            LOGGER.debug("Already tracking a potential totem of blueprint {} at {}", blueprint.id(), origin);
+            return;
+        }
+        this.tracked_.add(trackKey);
+
         BlueprintTracker candidate = this.registry_.trackerAt(blueprint, world, origin);
         this.candidatesByChunk_.put(candidate);
         this.candidateLocks_.put(candidate, new ReentrantLock());
     }
     public void dropCandidate(BlueprintTracker candidate) {
+        LOGGER.debug("Dropping candidate for blueprint {} at origin {}", candidate.blueprint().id(), candidate.origin());
         this.candidatesByChunk_.evict(candidate);
         this.candidateLocks_.remove(candidate);
+
+        Triplet<Vec3i, UUID, Long> trackKey = Triplet.of(candidate.origin(), candidate.world().getUID(), candidate.blueprint().id());
+        this.tracked_.remove(trackKey);
     }
     public Collection<BlueprintTracker> getCandidatesInChunk(ChunkKey chunk) {
-        return List.copyOf(this.candidatesByChunk_.get(chunk));
+        Collection<BlueprintTracker> candidates = List.copyOf(this.candidatesByChunk_.get(chunk));
+        LOGGER.trace("Retrieved {} candidates from chunk {}", candidates.size(), chunk);
+        return candidates;
     }
     public boolean updateCandidate(BlueprintTracker candidate, Vec3i where, BlueprintElement element) {
-        if (!candidate.contains(where)) { return false; }
+        if (!candidate.contains(where)) { 
+            LOGGER.trace("Position {} is not within candidate bounds", where);
+            return false; 
+        }
 
         ReentrantLock lock = this.candidateLocks_.get(candidate);
-        if (lock == null) { return false; }
+        if (lock == null) { 
+            LOGGER.warn("No lock found for candidate at {}", candidate.origin());
+            return false; 
+        }
 
         Vec3i offset = where.subtract(candidate.origin());
         boolean completed = false;
 
         lock.lock();
         try {
-            if (candidate.isLocked()) { return false; }
+            if (candidate.isLocked()) { 
+                LOGGER.trace("Candidate is already locked");
+                return false; 
+            }
 
+            LOGGER.debug("Updating candidate with element {} at offset {}", element, offset);
             candidate.update(offset, element);
             if (candidate.isComplete()) {
+                LOGGER.debug("Candidate is now complete - locking");
                 candidate.lock();
                 completed = true;
             }
