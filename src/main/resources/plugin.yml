@@ -1,7 +1,7 @@
-name: Landlords
+name: Territotem
 version: ${project.version}
-main: com.jkantrell.landlords.Landlords
-api-version: 1.17
-prefix: Landlords
-authors: [ TheJsUser ]
-description: Guive your players the ability to claim regions of your word in an interactive and simple may that involves gameplay.
+main: com.kntrel.mc.territotem.Territotem
+api-version: 1.21.11
+prefix: Territotem
+authors: [ Kntrel ]
+description: Give your players the ability to claim regions of your word in an interactive and simple may that involves gameplay.

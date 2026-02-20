@@ -43,20 +43,12 @@
                         <configuration>
                             <artifactSet>
                                 <includes>
-                                    <include>com.jkantrell:RegionsLib-Spigot</include>
+                                    <include>com.kntrel:RegionsLib-Spigot</include>
                                 </includes>
                             </artifactSet>
                         </configuration>
                     </execution>
                 </executions>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-jar-plugin</artifactId>
-                <version>2.3.1</version>
-                <configuration>
-                    <outputDirectory>F:\Minecrat\TestServer\plugins</outputDirectory>
-                </configuration>
             </plugin>
         </plugins>
         <resources>

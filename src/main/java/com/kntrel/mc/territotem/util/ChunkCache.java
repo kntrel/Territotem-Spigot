@@ -1,6 +1,7 @@
 package com.kntrel.mc.territotem.util;
 
 import java.util.*;
+import java.util.concurrent.*;
 import java.util.function.Function;
 
 public class ChunkCache<T> {
@@ -19,8 +20,8 @@ public class ChunkCache<T> {
         }
         this.chunkMapper_ = mapper;
         this.proximity_ = proximity;
-        this.cache_ = new HashMap<>();
-        this.individualCache_ = new HashMap<>();
+        this.cache_ = new ConcurrentHashMap<>();
+        this.individualCache_ = new ConcurrentHashMap<>();
     }
     public ChunkCache(Function<T, ChunkKey> mapper) {
         this(mapper,1);
@@ -28,12 +29,14 @@ public class ChunkCache<T> {
 
 
     //API
-    public void put(ChunkKey chunk, T element) {
-        Set<T> set = this.individualCache_.computeIfAbsent(chunk, k -> new HashSet<>());
+    private void put(ChunkKey chunk, T element) {
+        Set<T> set = this.individualCache_.computeIfAbsent(chunk, 
+            k -> Collections.newSetFromMap(new ConcurrentHashMap<>()));
         if (!set.add(element)) { return; }
 
         getAdjacent(chunk, this.proximity_).forEach(c ->
-            this.cache_.computeIfAbsent(c, k -> new HashSet<>()).add(element)
+            this.cache_.computeIfAbsent(c, 
+                k -> Collections.newSetFromMap(new ConcurrentHashMap<>())).add(element)
         );
     }
     public void put(T element) {
