@@ -16,6 +16,8 @@ import org.bukkit.World;
 import org.bukkit.block.BlockState;
 import org.bukkit.entity.Entity;
 import org.bukkit.persistence.PersistentDataContainer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
@@ -25,6 +27,9 @@ import java.util.function.Consumer;
 
 
 class TotemCandidateTracker {
+
+    //CONSTANTS
+    private static final Logger LOGGER = LoggerFactory.getLogger(TotemCandidateTracker.class);
 
 
     //FIELDS
@@ -47,6 +52,8 @@ class TotemCandidateTracker {
         this.executor_ = Executors.newVirtualThreadPerTaskExecutor();
         this.candidatesNSK_ = candidatesNSK;
         this.onCandidateCompleted_ = onCandidateCompleted;
+
+        LOGGER.info("Tracking totem candidates");
     }
 
 
