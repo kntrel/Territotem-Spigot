@@ -247,9 +247,9 @@ class TotemCandidateTracker {
     //HELPERS
     private static Vec3i offsetInChunk(Vec3i src) {
         return new Vec3i(
-                src.x() % Constants.CHUNK_SIZE,
+                Math.floorMod(src.x(), Constants.CHUNK_SIZE),
                 src.y(),
-                src.z() % Constants.CHUNK_SIZE
+                Math.floorMod(src.z(), Constants.CHUNK_SIZE)
         );
     }
 }
