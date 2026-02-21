@@ -66,7 +66,7 @@ public class BlueprintRegistry implements Listener {
             throw new RuntimeException(e);
         }
     }
-    <T> CompletableFuture<T> runInMainThreadAsync(Callable<T> task) {
+    protected <T> CompletableFuture<T> runInMainThreadAsync(Callable<T> task) {
         CompletableFuture<T> future = new CompletableFuture<>();
         this.plugin_.getServer().getScheduler().runTask(this.plugin_, () -> {
             try {
