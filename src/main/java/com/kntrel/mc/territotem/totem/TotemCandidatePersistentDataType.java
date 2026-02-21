@@ -1,5 +1,6 @@
 package com.kntrel.mc.territotem.totem;
 
+import com.kntrel.util.Bytes;
 import com.kntrel.util.Vec3i;
 import org.bukkit.persistence.PersistentDataAdapterContext;
 import org.bukkit.persistence.PersistentDataType;
@@ -63,8 +64,8 @@ class TotemCandidatePersistentDataType implements PersistentDataType<byte[], Lis
         }
 
         byte x = raw[offset], z = raw[offset + 1];
-        short y = toShort(raw,  offset + 2);
-        long blueprintId = toLong(raw,  offset + 4);
+        short y = Bytes.toShort(raw,  offset + 2);
+        long blueprintId = Bytes.toLong(raw,  offset + 4);
 
         return new ChunkTotemCandidate(new Vec3i(x, y, z), blueprintId);
     }
@@ -82,43 +83,7 @@ class TotemCandidatePersistentDataType implements PersistentDataType<byte[], Lis
 
         target[offset] = x;
         target[offset + 1] = z;
-        fromShort(y, target, offset + 2);
-        fromLong(blueprintId, target, offset + 4);
+        Bytes.fromShort(y, target, offset + 2);
+        Bytes.fromLong(blueprintId, target, offset + 4);
     }
-
-    private static long toNumber(byte[] raw, int offset, int bytes) {
-        int len = raw.length;
-        if (offset > len) {
-            throw new IndexOutOfBoundsException("offset " + offset + " is out of bounds of array of length " + len);
-        }
-        if (offset < 0) {
-            throw new IndexOutOfBoundsException("offset of " + offset + " is invalid. Must be a positive integer");
-        }
-        if (offset == len) { return 0; }
-
-        int pos = offset + bytes;
-        if (pos > len) { pos = len; }
-
-        long out = 0;
-        int shift = (offset + bytes - pos) * 8;
-        while (--pos >= offset) {
-            out |= (long)(raw[pos] & 0xFF) << shift;
-            shift += 8;
-        }
-        return out;
-    }
-
-    private static short toShort(byte[] raw, int offset) { return (short) toNumber(raw, offset, 2); }
-    private static int   toInt  (byte[] raw, int offset) { return (int) toNumber(raw, offset, 4); }
-    private static long  toLong (byte[] raw, int offset) { return toNumber(raw, offset, 8); }
-    private static void fromNumber(long val, byte[] target, int offset, int bytes) {
-        for (int i = bytes - 1; i >= 0; i--) {
-            target[offset + i] = (byte) val;
-            val >>= 8;
-        }
-    }
-
-    private static void fromShort(short val, byte[] target, int offset) { fromNumber(val, target, offset, 2); }
-    private static void fromInt (int val, byte[] target, int offset) { fromNumber(val, target, offset, 4); }
-    private static void fromLong (long val, byte[] target, int offset) { fromNumber(val, target, offset, 8); }
 }
