@@ -1,6 +1,6 @@
 package com.kntrel.mc.territotem.blueprint;
 
-import com.kntrel.mc.territotem.mock.MockBlueprints;
+import com.kntrel.mc.territotem.test.mock.MockBlueprints;
 import com.kntrel.mc.territotem.test.mock.MockBlockWorld;
 import com.kntrel.mc.territotem.test.mock.TestBlueprintRegistry;
 import com.kntrel.util.Vec3i;
@@ -14,10 +14,13 @@ import static org.junit.jupiter.api.Assertions.*;
 @DisplayName("BlueprintTracker Tests")
 class BlueprintTrackerTest {
 
+    //FIELDS
     private Blueprint blueprint;
     private TestBlueprintRegistry registry;
     private MockBlockWorld worldData;
 
+
+    //SETUP
     @BeforeEach
     void setUp() {
         this.blueprint = MockBlueprints.square4();
@@ -25,13 +28,15 @@ class BlueprintTrackerTest {
         this.worldData = new MockBlockWorld();
     }
 
+
+    //TESTS
     @Test
     @DisplayName("Full scan marks tracker complete when all blocks match")
     void fullScanCompletesWhenAllBlocksMatch() {
         Vec3i origin = new Vec3i(10, 64, 20);
         setWorldFromBlueprint(this.worldData, this.blueprint, origin);
 
-        BlueprintTracker tracker = new BlueprintTracker(this.registry, this.blueprint, this.worldData.asWorld(), origin);
+        BlueprintTracker tracker = this.newTracker(origin);
 
         assertFalse(tracker.isParked());
         assertTrue(tracker.isComplete());
@@ -43,7 +48,7 @@ class BlueprintTrackerTest {
         Vec3i origin = Vec3i.zeroes();
         setPartiallyBrokenWorld(origin);
 
-        BlueprintTracker tracker = new BlueprintTracker(this.registry, this.blueprint, this.worldData.asWorld(), origin);
+        BlueprintTracker tracker = this.newTracker(origin);
 
         assertTrue(tracker.isParked());
         assertFalse(tracker.isComplete());
@@ -55,7 +60,7 @@ class BlueprintTrackerTest {
         Vec3i origin = Vec3i.zeroes();
         setPartiallyBrokenWorld(origin);
 
-        BlueprintTracker tracker = new BlueprintTracker(this.registry, this.blueprint, this.worldData.asWorld(), origin);
+        BlueprintTracker tracker = this.newTracker(origin);
         assertTrue(tracker.isParked());
 
         tracker.update(new Vec3i(1, 0, 1), new BlueprintElement.Block(Material.GOLD_BLOCK));
@@ -70,13 +75,21 @@ class BlueprintTrackerTest {
         Vec3i origin = Vec3i.zeroes();
         setPartiallyBrokenWorld(origin);
 
-        BlueprintTracker tracker = new BlueprintTracker(this.registry, this.blueprint, this.worldData.asWorld(), origin);
+        BlueprintTracker tracker = this.newTracker(origin);
         assertTrue(tracker.isParked());
 
         this.worldData.set(origin, Material.LIGHTNING_ROD);
         this.worldData.set(origin.add(new Vec3i(1, 0, 0)), Material.OBSIDIAN);
 
-        tracker.update(new Vec3i(0, 0, 0), new BlueprintElement.Core(Material.LIGHTNING_ROD));
+        Vec3i parkedAt = tracker.parkedAt().orElse(null);
+        assertNotNull(parkedAt);
+
+        Material parkedMaterial = null;
+        if (parkedAt.equals(Vec3i.zeroes())) { parkedMaterial = Material.LIGHTNING_ROD; }
+        else if (parkedAt.equals(new Vec3i(1, 0, 0))) {parkedMaterial = Material.OBSIDIAN; }
+        assertNotNull(parkedMaterial);
+
+        tracker.update(parkedAt, new BlueprintElement.Block(parkedMaterial));
 
         assertFalse(tracker.isParked());
         assertTrue(tracker.isComplete());
@@ -88,7 +101,7 @@ class BlueprintTrackerTest {
         Vec3i origin = Vec3i.zeroes();
         setWorldFromBlueprint(this.worldData, this.blueprint, origin);
 
-        BlueprintTracker tracker = new BlueprintTracker(this.registry, this.blueprint, this.worldData.asWorld(), origin);
+        BlueprintTracker tracker = this.newTracker(origin);
         assertTrue(tracker.isComplete());
 
         tracker.update(new Vec3i(1, 0, 1), new BlueprintElement.Block(Material.DIRT));
@@ -105,7 +118,7 @@ class BlueprintTrackerTest {
         Vec3i origin = Vec3i.zeroes();
         setWorldFromBlueprint(this.worldData, this.blueprint, origin);
 
-        BlueprintTracker tracker = new BlueprintTracker(this.registry, this.blueprint, this.worldData.asWorld(), origin);
+        BlueprintTracker tracker = this.newTracker(origin);
         tracker.lock();
 
         tracker.update(new Vec3i(1, 0, 1), new BlueprintElement.Block(Material.DIRT));
@@ -114,13 +127,11 @@ class BlueprintTrackerTest {
         assertTrue(tracker.isComplete());
     }
 
-    private void setPartiallyBrokenWorld(Vec3i origin) {
-        this.worldData.set(origin, Material.DIRT);
-        this.worldData.set(origin.add(new Vec3i(1, 0, 0)), Material.DIRT);
-        this.worldData.set(origin.add(new Vec3i(0, 0, 1)), Material.CRYING_OBSIDIAN);
-        this.worldData.set(origin.add(new Vec3i(1, 0, 1)), Material.GOLD_BLOCK);
-    }
 
+    //HELPERS
+    private BlueprintTracker newTracker(Vec3i origin) {
+        return new BlueprintTracker(this.registry, this.blueprint, this.worldData.asWorld(), origin);
+    }
     private static void setWorldFromBlueprint(MockBlockWorld worldData, Blueprint blueprint, Vec3i origin) {
         blueprint.elementsByOffset().forEach((offset, element) -> {
             Material material = Material.AIR;
@@ -131,5 +142,11 @@ class BlueprintTrackerTest {
             }
             worldData.set(origin.add(offset), material);
         });
+    }
+    private void setPartiallyBrokenWorld(Vec3i origin) {
+        this.worldData.set(origin, Material.DIRT);
+        this.worldData.set(origin.add(new Vec3i(1, 0, 0)), Material.DIRT);
+        this.worldData.set(origin.add(new Vec3i(0, 0, 1)), Material.CRYING_OBSIDIAN);
+        this.worldData.set(origin.add(new Vec3i(1, 0, 1)), Material.GOLD_BLOCK);
     }
 }

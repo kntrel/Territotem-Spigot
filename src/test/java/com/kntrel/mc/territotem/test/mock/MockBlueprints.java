@@ -1,4 +1,4 @@
-package com.kntrel.mc.territotem.mock;
+package com.kntrel.mc.territotem.test.mock;
 
 import com.kntrel.mc.regionLib.region.hierarchy.Hierarchy;
 import com.kntrel.mc.territotem.blueprint.Blueprint;

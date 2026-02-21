@@ -51,7 +51,7 @@ class TotemCandidateTracker {
         this.candidatesByChunk_ = new ChunkCache<>(c -> ChunkKey.ofBlock(c.origin(), c.world().getUID()));
         this.candidateLocks_ = new ConcurrentHashMap<>();
         this.blueprintsByCore_ = new SetMap<>();
-        this.tracked_ = new HashSet<>();
+        this.tracked_ = ConcurrentHashMap.newKeySet();
         this.executor_ = Executors.newVirtualThreadPerTaskExecutor();
         this.candidatesNSK_ = candidatesNSK;
         this.onCandidateCompleted_ = onCandidateCompleted;
@@ -84,7 +84,7 @@ class TotemCandidateTracker {
             Blueprint blueprint = this.registry_.get(candidate.blueprintId()).orElse(null);
             if (blueprint == null) { 
                 LOGGER.warn("Blueprint with ID {} not found in registry", candidate.blueprintId());
-                continue; 
+                continue;
             }
 
             Vec3i origin = new Vec3i(chunk.getX(), 0, chunk.getZ())
@@ -93,7 +93,7 @@ class TotemCandidateTracker {
 
             Vec3i coreLoc = origin.add(blueprint.core().offset());
             if (!blueprint.core().element().matchesAt(coreLoc, chunk.getWorld())) {
-                LOGGER.warn("Expected a blueprint core at {} but now found.", coreLoc);
+                LOGGER.warn("Expected a blueprint core at {} but bot found.", coreLoc);
                 continue;
             }
 
