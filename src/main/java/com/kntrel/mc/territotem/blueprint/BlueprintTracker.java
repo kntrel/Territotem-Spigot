@@ -6,6 +6,7 @@ import com.kntrel.util.Vec3i;
 import org.bukkit.World;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 
@@ -86,6 +87,9 @@ public class BlueprintTracker {
     public boolean isParked() { synchronized (this.mutex_) {
         return this.parkedUnlockOffset_ != null;
     }}
+    public Optional<Vec3i> parkedAt() { synchronized (this.mutex_) {
+        return Optional.ofNullable(this.parkedUnlockOffset_);
+    }}
     public void update(Vec3i offset, BlueprintElement element) {
         LOGGER.trace("Block update at offset {}", offset);
         CompletableFuture<Void> pendingScan;
@@ -139,9 +143,12 @@ public class BlueprintTracker {
                 LOGGER.trace("Full scan already in progress");
                 return this.scanTask_; 
             }
-            this.scanTask_ = this.service_.runInMainThreadAsync(() -> { this.fullScanTask(); return null; })
+            CompletableFuture<Void> scanTask = this.service_.runInMainThreadAsync(() -> { this.fullScanTask(); return null; })
                     .thenAccept(v -> { synchronized (this.mutex_) { this.scanTask_ = null; } });
-            return this.scanTask_;
+            synchronized (this.mutex_) {
+                this.scanTask_ = (scanTask.isDone()) ? null : scanTask;
+            }
+            return scanTask;
         }
     }
 
