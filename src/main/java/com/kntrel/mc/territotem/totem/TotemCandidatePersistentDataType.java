@@ -41,7 +41,7 @@ class TotemCandidatePersistentDataType implements PersistentDataType<byte[], Lis
     @Override
     public @NonNull List<ChunkTotemCandidate> fromPrimitive(byte[] primitive, @NonNull PersistentDataAdapterContext context) {
         List<ChunkTotemCandidate> out = new ArrayList<>(primitive.length / 12);
-        for (int i = 0; i < primitive.length; i += 12) {
+        for (int i = 0; (i + 12) <= primitive.length; i += 12) {
             ChunkTotemCandidate candidate = toCandidate(primitive, i);
             out.add(candidate);
         }
