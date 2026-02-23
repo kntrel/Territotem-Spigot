@@ -21,6 +21,9 @@ public class NBTList extends NBTTag implements Collection<NBTTag> {
         }
         this.compute();
     }
+    public NBTList() {
+        this(TagList.newTag());
+    }
 
 
     //IMPLEMENTATION

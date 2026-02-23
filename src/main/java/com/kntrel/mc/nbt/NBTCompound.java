@@ -18,6 +18,9 @@ public class NBTCompound extends NBTTag implements Map<String, NBTTag> {
         }
         this.compute();
     }
+    public NBTCompound() {
+        this(TagCompound.newTag());
+    }
 
 
     //IMPLEMENTATION

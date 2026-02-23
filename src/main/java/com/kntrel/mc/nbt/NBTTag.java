@@ -47,7 +47,7 @@ public abstract class NBTTag {
 
 
     //CONSTRUCTOR
-    public NBTTag(Object tag) {
+    protected NBTTag(Object tag) {
         this.handle_ = tag;
     }
 
