@@ -1,8 +1,12 @@
 package com.kntrel.mc.nbt;
 
+import com.kntrel.util.Numbers;
 import com.saicone.rtag.tag.TagBase;
 import com.saicone.rtag.tag.TagCompound;
 import com.saicone.rtag.tag.TagList;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 
 public abstract class NBTTag {
 
@@ -52,8 +56,64 @@ public abstract class NBTTag {
     }
 
 
-    protected Object handle() { return this.handle_; }
+    //API
+    public Object handle() { return this.handle_; }
     public Object get() {
         return TagBase.getValue(this.handle_);
+    }
+    @Override public String toString() {
+        return this.handle_.toString();
+    }
+    @Override public boolean equals(Object o) {
+        if (o == null) { return false; }
+        if (o == this) { return true; }
+        if (!this.getClass().isInstance(o)) { return false; }
+        return ((NBTTag) o).handle_.equals(this.handle_);
+    }
+    @Override public int hashCode() {
+        return this.handle_.hashCode();
+    }
+
+
+    //HELPERS
+    static Optional<NBTTag> getAt(NBTTag tag, Object... path) {
+        NBTTag next = tag;
+        for (Object token : path) {
+            if (next instanceof NBTList list) {
+                if (!(token instanceof Number num)) { return Optional.empty(); }
+                if (Numbers.hasDecimals(num)) { return Optional.empty(); }
+                next = list.get().get(num.intValue());
+                continue;
+            }
+
+            if (next instanceof NBTCompound compound) {
+                next = compound.get(token.toString());
+                continue;
+            }
+
+            return Optional.empty();
+        }
+
+        return Optional.of(next);
+    }
+    static Optional<NBTTag> getAt(NBTTag tag, String path) {
+        String[] parts = path.split("\\.");
+        List<Object> list = new ArrayList<>(parts.length);
+
+        for (String p : parts) {
+            p = p.trim();
+            if (p.isEmpty()) { continue; }
+
+            Integer index = null;
+            try { index = Integer.parseInt(p); } catch (NumberFormatException ignored) {}
+
+            if (index != null) {
+                list.add(index);
+            } else {
+                list.add(p);
+            }
+        }
+
+        return getAt(tag, list.toArray());
     }
 }

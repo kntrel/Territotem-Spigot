@@ -2,10 +2,7 @@ package com.kntrel.mc.nbt;
 
 import com.saicone.rtag.tag.TagList;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
 
 public class NBTList extends NBTTag implements Collection<NBTTag> {
 
@@ -105,6 +102,16 @@ public class NBTList extends NBTTag implements Collection<NBTTag> {
         TagList.clear(this.handle());
         this.cache_.clear();
     }
+
+
+    //SPECIALIZATION
+    public Optional<NBTTag> getAt(Object... path) {
+        return NBTTag.getAt(this, path);
+    }
+    public Optional<NBTTag> getAt(String path) {
+        return NBTTag.getAt(this, path);
+    }
+
 
     //HELPERS
     private void compute() {

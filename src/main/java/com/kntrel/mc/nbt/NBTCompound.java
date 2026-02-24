@@ -74,44 +74,10 @@ public class NBTCompound extends NBTTag implements Map<String, NBTTag> {
 
     //SPECIALIZATION
     public Optional<NBTTag> getAt(Object... path) {
-        NBTTag next = this;
-        for (Object token : path) {
-            if (next instanceof NBTList list) {
-                if (!(token instanceof Number num)) { return Optional.empty(); }
-                if (hasDecimals(num)) { return Optional.empty(); }
-                next = list.get().get(num.intValue());
-                continue;
-            }
-
-            if (next instanceof NBTCompound compound) {
-                next = compound.get(token.toString());
-                continue;
-            }
-
-            return Optional.empty();
-        }
-
-        return Optional.of(next);
+        return NBTTag.getAt(this, path);
     }
     public Optional<NBTTag> getAt(String path) {
-        String[] parts = path.split("\\.");
-        List<Object> list = new ArrayList<>(parts.length);
-
-        for (String p : parts) {
-            p = p.trim();
-            if (p.isEmpty()) { continue; }
-
-            Integer index = null;
-            try { index = Integer.parseInt(p); } catch (NumberFormatException ignored) {}
-
-            if (index != null) {
-                list.add(index);
-            } else {
-                list.add(p);
-            }
-        }
-
-        return this.getAt(list.toArray());
+        return NBTTag.getAt(this, path);
     }
 
 
@@ -121,14 +87,6 @@ public class NBTCompound extends NBTTag implements Map<String, NBTTag> {
         for (var entry : TagCompound.getValue(this.handle()).entrySet()) {
             this.cache_.put(entry.getKey(), NBTTag.asTag(entry.getValue()));
         }
-    }
-    public static boolean hasDecimals(Number n) {
-        if (n == null) return false;
-
-        double d = n.doubleValue();
-        return !Double.isNaN(d)
-                && !Double.isInfinite(d)
-                && d != Math.floor(d);
     }
 }
 
