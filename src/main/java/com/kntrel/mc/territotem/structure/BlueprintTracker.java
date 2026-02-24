@@ -1,4 +1,4 @@
-package com.kntrel.mc.territotem.blueprint;
+package com.kntrel.mc.territotem.structure;
 
 import com.kntrel.util.BitSet3D;
 import com.kntrel.util.IntBoundingBox;
@@ -17,7 +17,7 @@ public class BlueprintTracker {
 
 
     //FIELDS
-    private final BlueprintRegistry service_;
+    private final StructureService service_;
     private final Blueprint blueprint_;
     private final World world_;
     private final Vec3i origin_;
@@ -31,7 +31,7 @@ public class BlueprintTracker {
 
 
     //CONSTRUCTOR
-    public BlueprintTracker(BlueprintRegistry service, Blueprint blueprint, World world, Vec3i origin) {
+    public BlueprintTracker(StructureService service, Blueprint blueprint, World world, Vec3i origin) {
         LOGGER.trace("Creating BlueprintTracker for blueprint {} at origin {}", blueprint, origin);
         this.service_ = service;
         this.blueprint_ = blueprint;
@@ -90,7 +90,7 @@ public class BlueprintTracker {
     public Optional<Vec3i> parkedAt() { synchronized (this.mutex_) {
         return Optional.ofNullable(this.parkedUnlockOffset_);
     }}
-    public void update(Vec3i offset, BlueprintElement element) {
+    public void update(Vec3i offset, Piece element) {
         LOGGER.trace("Block update at offset {}", offset);
         CompletableFuture<Void> pendingScan;
         synchronized (this.mutex_) {
@@ -204,7 +204,7 @@ public class BlueprintTracker {
         for (var entry : this.blueprint_.elementsByOffset().entrySet()) {
             Vec3i offset = entry.getKey();
             Vec3i worldOffset = offset.add(this.origin_);
-            BlueprintElement element = entry.getValue();
+            Piece element = entry.getValue();
             boolean match = element.matchesAt(worldOffset, this.world_);
 
             synchronized (this.mutex_) {

@@ -1,4 +1,4 @@
-package com.kntrel.mc.territotem.blueprint;
+package com.kntrel.mc.territotem.structure;
 
 import com.kntrel.mc.territotem.test.mock.MockBlueprints;
 import com.kntrel.mc.territotem.test.mock.MockBlockWorld;
@@ -63,7 +63,7 @@ class BlueprintTrackerTest {
         BlueprintTracker tracker = this.newTracker(origin);
         assertTrue(tracker.isParked());
 
-        tracker.update(new Vec3i(1, 0, 1), new BlueprintElement.Block(Material.GOLD_BLOCK));
+        tracker.update(new Vec3i(1, 0, 1), new Piece.Block(Material.GOLD_BLOCK));
 
         assertTrue(tracker.isParked());
         assertFalse(tracker.isComplete());
@@ -89,7 +89,7 @@ class BlueprintTrackerTest {
         else if (parkedAt.equals(new Vec3i(1, 0, 0))) {parkedMaterial = Material.OBSIDIAN; }
         assertNotNull(parkedMaterial);
 
-        tracker.update(parkedAt, new BlueprintElement.Block(parkedMaterial));
+        tracker.update(parkedAt, new Piece.Block(parkedMaterial));
 
         assertFalse(tracker.isParked());
         assertTrue(tracker.isComplete());
@@ -104,11 +104,11 @@ class BlueprintTrackerTest {
         BlueprintTracker tracker = this.newTracker(origin);
         assertTrue(tracker.isComplete());
 
-        tracker.update(new Vec3i(1, 0, 1), new BlueprintElement.Block(Material.DIRT));
+        tracker.update(new Vec3i(1, 0, 1), new Piece.Block(Material.DIRT));
         assertFalse(tracker.isComplete());
         assertFalse(tracker.isParked());
 
-        tracker.update(new Vec3i(1, 0, 1), new BlueprintElement.Block(Material.GOLD_BLOCK));
+        tracker.update(new Vec3i(1, 0, 1), new Piece.Block(Material.GOLD_BLOCK));
         assertTrue(tracker.isComplete());
     }
 
@@ -121,7 +121,7 @@ class BlueprintTrackerTest {
         BlueprintTracker tracker = this.newTracker(origin);
         tracker.lock();
 
-        tracker.update(new Vec3i(1, 0, 1), new BlueprintElement.Block(Material.DIRT));
+        tracker.update(new Vec3i(1, 0, 1), new Piece.Block(Material.DIRT));
 
         assertTrue(tracker.isLocked());
         assertTrue(tracker.isComplete());
@@ -135,9 +135,9 @@ class BlueprintTrackerTest {
     private static void setWorldFromBlueprint(MockBlockWorld worldData, Blueprint blueprint, Vec3i origin) {
         blueprint.elementsByOffset().forEach((offset, element) -> {
             Material material = Material.AIR;
-            if (element instanceof BlueprintElement.Core core) {
+            if (element instanceof Piece.Core core) {
                 material = core.type();
-            } else if (element instanceof BlueprintElement.Block block) {
+            } else if (element instanceof Piece.Block block) {
                 material = block.type();
             }
             worldData.set(origin.add(offset), material);

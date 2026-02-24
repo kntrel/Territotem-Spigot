@@ -1,6 +1,5 @@
 package com.kntrel.util;
 
-import com.kntrel.mc.territotem.blueprint.BlueprintElement;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockState;
 import org.bukkit.util.Vector;

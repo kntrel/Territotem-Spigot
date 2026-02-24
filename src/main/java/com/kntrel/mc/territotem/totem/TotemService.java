@@ -4,23 +4,14 @@ import com.kntrel.mc.regionLib.region.Region;
 import com.kntrel.mc.regionLib.region.context.RegionContext;
 import com.kntrel.mc.regionLib.region.dataContainer.RegionData;
 import com.kntrel.mc.regionLib.region.dataContainer.RegionDataContainer;
-import com.kntrel.mc.regionLib.util.Area;
-import com.kntrel.mc.territotem.blueprint.*;
-import com.kntrel.mc.territotem.util.ChunkCache;
-import com.kntrel.mc.territotem.util.ChunkKey;
+import com.kntrel.mc.territotem.structure.*;
 import com.kntrel.util.Vec3i;
-import org.bukkit.Chunk;
-import org.bukkit.Material;
-import org.bukkit.NamespacedKey;
 import org.bukkit.World;
-import org.bukkit.block.BlockState;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.util.BoundingBox;
-import java.util.*;
 import java.util.concurrent.*;
-import java.util.concurrent.locks.ReentrantLock;
 
 public class TotemService {
 
@@ -38,38 +29,21 @@ public class TotemService {
 
     //FIELDS
     private final Plugin plugin_;
-    private final BlueprintRegistry registry_;
+    private final StructureService structureService_;
     private final RegionContext regionContext_;
     private final Executor executor_;
     private final TotemServiceListener listener_;
 
 
-    //SUPPORT DATA STRUCTURES
-    private final TotemCandidateTracker candidateTracker_;
-    private final ChunkCache<TotemTracker> totemsByChunk_;
-    private final Map<Totem, ReentrantLock> totemLocks_;
-
 
     //CONSTRUCTORS
-    public TotemService(RegionContext regionContext, BlueprintRegistry blueprintRegistry) {
+    public TotemService(RegionContext regionContext, StructureService blueprintRegistry) {
         this.regionContext_ = regionContext;
         this.plugin_ = this.regionContext_.getPlugin();
-        this.registry_ = blueprintRegistry;
+        this.structureService_ = blueprintRegistry;
         this.executor_ = Executors.newVirtualThreadPerTaskExecutor();
         this.listener_ = new TotemServiceListener(this);
-
-        NamespacedKey candidatesNSK = new NamespacedKey(this.plugin_, "totem_candidates");
-        this.candidateTracker_ = new TotemCandidateTracker(
-            blueprintRegistry,
-            candidatesNSK,
-            this::onCandidateCompleted
-        );
-        this.totemsByChunk_ = new ChunkCache<>(t -> ChunkKey.ofBlock(t.totem().origin(), t.totem().world().getUID()));
-        this.totemLocks_ = new ConcurrentHashMap<>();
-
         this.plugin_.getServer().getPluginManager().registerEvents(this.listener_, this.plugin_);
-        this.registry_.all().forEach(this::register);
-        this.registry_.onNewRegistration(this::register);
     }
 
 
@@ -96,66 +70,9 @@ public class TotemService {
 
 
     //IGNITERS
-    void handleBlockUpdate(Entity who, Vec3i where, World world, Material material, BlockState block) {
-        Area area = new Area(
-                where.x(), where.y(), where.z(),
-                where.x() + 1, where.y() + 1, where.z() + 1,
-                world
-        );
-        List<Region> presentRegions = this.regionContext_.getHotRegionRepository().where()
-                .in(area)
-                .hasDataKey(TOTEM_LOCATION_KEY)
-                .hasDataKey(TOTEM_BLUEPRINT_KEY)
-                .get();
-        if (!presentRegions.isEmpty()) { return; }
-
-        this.candidateTracker_.handleBlockUpdate(who, where, world, material, block, ctx -> handleTotemUpdate(who, ctx));
-    }
-    void handleChunkLoad(Chunk chunk) {
-        this.candidateTracker_.handleChunkLoad(chunk);
-    }
-    void handleChunkUnload(Chunk chunk) {
-        this.candidateTracker_.handleChunkUnload(chunk);
-    }
 
 
     //TASKS
-    private void handleTotemUpdate(Entity who, TotemCandidateTracker.UpdateContext context) {
-        ChunkKey chunk = ChunkKey.ofBlock(context.where(), who.getWorld().getUID());
-        Collection<TotemTracker> totems = List.copyOf(this.totemsByChunk_.get(chunk));
-
-        for (TotemTracker totem : totems) {
-            this.executor_.execute(() -> updateTotemTask(totem, who, context.where(), context.material(), context.block()));
-        }
-    }
-    private void updateTotemTask(TotemTracker totem, Entity who, Vec3i where, Material material, BlockState block) {
-        BlueprintTracker tracker = totem.tracker();
-        if (!tracker.contains(where)) { return; }
-
-        ReentrantLock lock = this.totemLocks_.get(totem.totem());
-        if (lock == null) { return; }
-
-        BlueprintElement element = new BlueprintElement.Block(material);
-        Vec3i offset = where.subtract(tracker.origin());
-        BlueprintCoreTile core = totem.totem().blueprint().core();
-
-        lock.lock();
-        try {
-            if (tracker.isLocked()) { return; }
-
-            if (core.offset().equals(offset) && !core.element().matches(element)) {
-                tracker.lock();
-                totem.totem().destroy();
-                this.dropTotem(totem);
-                return;
-            }
-
-            tracker.update(offset, element);
-            totem.totem().setEnabled(tracker.isComplete());
-        } finally {
-            lock.unlock();
-        }
-    }
 
 
     //PACKAGE PRIVATE SERVICES
@@ -187,31 +104,7 @@ public class TotemService {
 
 
     //HELPERS
-    private void onCandidateCompleted(TotemCandidateTracker.CandidateUpdateContext context) {
-        if (context.who() instanceof Player player) {
-            player.sendMessage("Completed blueprint " + context.candidate().blueprint().name());
-        }
-    }
-    private void trackTotem(Totem totem) {
-        BlueprintTracker blueprintTracker = this.registry_.trackerAt(totem.blueprint(), totem.world(), totem.origin());
-        TotemTracker totemTracker = new TotemTracker(totem, blueprintTracker);
-        ReentrantLock lock = new ReentrantLock();
 
-        lock.lock();
-        try {
-            this.totemsByChunk_.put(totemTracker);
-            this.totemLocks_.put(totem, lock);
-            totem.setEnabled(blueprintTracker.isComplete());
-        } finally {
-            lock.unlock();
-        }
-    }
-    private void dropTotem(TotemTracker totem) {
-        this.totemLocks_.remove(totem.totem());
-    }
-    private void register(Blueprint blueprint) {
-        this.candidateTracker_.registerBlueprint(blueprint);
-    }
 
 
     //SUBTYPES

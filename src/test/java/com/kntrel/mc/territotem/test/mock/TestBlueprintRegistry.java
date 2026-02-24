@@ -1,6 +1,6 @@
 package com.kntrel.mc.territotem.test.mock;
 
-import com.kntrel.mc.territotem.blueprint.BlueprintRegistry;
+import com.kntrel.mc.territotem.structure.BlueprintRegistry;
 
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;

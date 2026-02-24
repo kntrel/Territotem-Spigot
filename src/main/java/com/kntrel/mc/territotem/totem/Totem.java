@@ -1,7 +1,7 @@
 package com.kntrel.mc.territotem.totem;
 
 import com.kntrel.mc.regionLib.region.Region;
-import com.kntrel.mc.territotem.blueprint.Blueprint;
+import com.kntrel.mc.territotem.structure.Blueprint;
 import com.kntrel.util.Vec3i;
 import org.bukkit.World;
 

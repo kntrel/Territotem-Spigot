@@ -1,5 +1,7 @@
 package com.kntrel.mc.territotem.totem;
 
+import com.kntrel.mc.territotem.structure.ChunkTotemCandidate;
+import com.kntrel.mc.territotem.structure.TotemCandidatePersistentDataType;
 import com.kntrel.util.Vec3i;
 import org.bukkit.persistence.PersistentDataAdapterContext;
 import org.junit.jupiter.api.DisplayName;

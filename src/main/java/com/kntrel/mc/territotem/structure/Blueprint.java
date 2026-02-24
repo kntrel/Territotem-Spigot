@@ -1,13 +1,14 @@
-package com.kntrel.mc.territotem.blueprint;
+package com.kntrel.mc.territotem.structure;
 
 import com.kntrel.mc.regionLib.region.hierarchy.Hierarchy;
 import com.kntrel.mc.regionLib.region.rule.RuleValue;
+import com.kntrel.mc.territotem.structure.piece.Tile;
 import com.kntrel.util.Vec3i;
 import com.kntrel.util.tuple.Pair;
 import org.bukkit.Material;
 import org.bukkit.entity.EntityType;
 import org.bukkit.util.BoundingBox;
-import org.jspecify.annotations.Nullable;
+
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -19,7 +20,7 @@ public class Blueprint {
     //FIELDS
     private final long id_;
     private final String name_;
-    private final Map<Vec3i, BlueprintElement> elementMap_;
+    private final Map<Vec3i, Piece> elementMap_;
     private final BlueprintCoreTile core_;
     private final Vec3i dimensions_;
     private final Hierarchy hierarchy_;
@@ -33,7 +34,7 @@ public class Blueprint {
     public Blueprint(
             long id,
             String name,
-            Iterable<BlueprintTile> elements,
+            Iterable<Tile> elements,
             BoundingBox initialRegionBounds,
             Hierarchy hierarchy,
             Iterable<RuleValue<?>> ruleValues
@@ -62,9 +63,9 @@ public class Blueprint {
     public String name() {
         return this.name_;
     }
-    public List<BlueprintTile> elements() {
+    public List<Tile> elements() {
         return this.elementMap_.entrySet().stream()
-                .map(e -> new BlueprintTile(e.getKey(), e.getValue()))
+                .map(e -> new Tile(e.getKey(), e.getValue()))
                 .toList();
     }
     public BlueprintCoreTile core() {
@@ -85,14 +86,14 @@ public class Blueprint {
     public int elementCount() {
         return this.elementMap_.size();
     }
-    public BlueprintElement getByOffset(Vec3i offset) {
+    public Piece getByOffset(Vec3i offset) {
         this.checkBounds(offset);
-        return this.elementMap_.getOrDefault(offset, new BlueprintElement.Any());
+        return this.elementMap_.getOrDefault(offset, new Piece.Any());
     }
-    public BlueprintElement getByOffset(int x, int y, int z) {
+    public Piece getByOffset(int x, int y, int z) {
         return this.getByOffset(new Vec3i(x, y, z));
     }
-    public Map<Vec3i, BlueprintElement> elementsByOffset() {
+    public Map<Vec3i, Piece> elementsByOffset() {
         return this.elementMap_;
     }
     public Set<Material> containedMaterials() {
@@ -107,11 +108,11 @@ public class Blueprint {
     public boolean isEmptyAt(int x, int y, int z) {
         return this.isEmptyAt(new Vec3i(x, y, z));
     }
-    public boolean matchesAt(Vec3i offset, BlueprintElement element) {
-        BlueprintElement other = this.getByOffset(offset);
+    public boolean matchesAt(Vec3i offset, Piece element) {
+        Piece other = this.getByOffset(offset);
         return other != null && other.matches(element);
     }
-    public boolean matchesAt(int x, int y, int z, BlueprintElement element) {
+    public boolean matchesAt(int x, int y, int z, Piece element) {
         return this.matchesAt(new Vec3i(x, y, z), element);
     }
 
@@ -125,19 +126,19 @@ public class Blueprint {
             throw new IndexOutOfBoundsException("Offset " + offset + " is out of bounds for blueprint dimensions " + this.dimensions_);
         }
     }
-    private static Processed process(Iterable<BlueprintTile> elements, BoundingBox regionBounds) {
-        Iterator<BlueprintTile> i = elements.iterator();
+    private static Processed process(Iterable<Tile> elements, BoundingBox regionBounds) {
+        Iterator<Tile> i = elements.iterator();
         if (!i.hasNext()) {
             throw new InvalidBlueprintException("Blueprint must contain at least one element");
         }
 
-        List<BlueprintTile> trimmed = new ArrayList<>();
-        BlueprintTile tile = i.next();
+        List<Tile> trimmed = new ArrayList<>();
+        Tile tile = i.next();
         trimmed.add(tile);
         int minX = tile.x(), minY = tile.y(), minZ = tile.z(),
             maxX = tile.x(), maxY = tile.y(), maxZ = tile.z();
-        BlueprintCoreTile core = (tile.element() instanceof BlueprintElement.Core c) ? new BlueprintCoreTile(tile.offset(), c) : null;
-        boolean containsBlocks = tile.element() instanceof BlueprintElement.Block;
+        BlueprintCoreTile core = (tile.element() instanceof Piece.Core c) ? new BlueprintCoreTile(tile.offset(), c) : null;
+        boolean containsBlocks = tile.element() instanceof Piece.Block;
 
         while (i.hasNext()) {
             tile = i.next();
@@ -150,17 +151,17 @@ public class Blueprint {
             if (z < minZ) { minZ = z; }
             if (z > maxZ) { maxZ = z; }
 
-            BlueprintElement elm = tile.element();
-            if (elm instanceof BlueprintElement.Block) { containsBlocks = true; }
+            Piece elm = tile.element();
+            if (elm instanceof Piece.Block) { containsBlocks = true; }
 
-            if (elm instanceof BlueprintElement.Core c) {
+            if (elm instanceof Piece.Core c) {
                 if (core != null) {
                     throw new InvalidBlueprintException("Blueprint cannot contain more than one core element");
                 }
                 core = new BlueprintCoreTile(tile.offset(), c);
             }
 
-            if (!(elm instanceof BlueprintElement.Any)) { trimmed.add(tile); }
+            if (!(elm instanceof Piece.Any)) { trimmed.add(tile); }
         }
 
         if (!containsBlocks) {
@@ -183,27 +184,27 @@ public class Blueprint {
             correctedBox = correctedBox.shift(-correction.x(), -correction.y(), -correction.z());
         }
 
-        Map<Vec3i, BlueprintElement> elementMap = trimmed.stream().collect(Collectors.toMap(
-                BlueprintTile::offset,
-                BlueprintTile::element
+        Map<Vec3i, Piece> elementMap = trimmed.stream().collect(Collectors.toMap(
+                Tile::offset,
+                Tile::element
         ));
 
         Vec3i dimensions = new Vec3i(maxX + 1, maxY + 1, maxZ + 1);
 
         return new Processed(dimensions, core, elementMap, correctedBox);
     }
-    private static Pair<Stream<Material>, Stream<EntityType>> distinctTypes(BlueprintElement element) {
+    private static Pair<Stream<Material>, Stream<EntityType>> distinctTypes(Piece element) {
         return switch (element) {
-            case BlueprintElement.Block block -> Pair.of(Stream.of(block.type()), Stream.empty());
+            case Piece.Block block -> Pair.of(Stream.of(block.type()), Stream.empty());
             //case BlueprintElement.Entity entity -> Pair.of(Stream.empty(), Stream.of(entity.type()));
-            case BlueprintElement.Either either -> distinctTypes(Arrays.asList(either.options()));
+            case Piece.Either either -> distinctTypes(Arrays.asList(either.options()));
             default -> Pair.of(Stream.empty(), Stream.empty());
         };
     }
-    private static Pair<Stream<Material>, Stream<EntityType>> distinctTypes(Iterable<? extends BlueprintElement> elements) {
+    private static Pair<Stream<Material>, Stream<EntityType>> distinctTypes(Iterable<? extends Piece> elements) {
         List<Stream<Material>> materials = new ArrayList<>();
         List<Stream<EntityType>> entities = new ArrayList<>();
-        for (BlueprintElement elm : elements) {
+        for (Piece elm : elements) {
             Pair<Stream<Material>, Stream<EntityType>> pair = distinctTypes(elm);
             materials.add(pair.first());
             entities.add(pair.second());
@@ -217,5 +218,5 @@ public class Blueprint {
 
 
     //SUBTYPES
-    private record Processed(Vec3i dimensions, BlueprintCoreTile core, Map<Vec3i, BlueprintElement> elementMap, BoundingBox initialBounds) {}
+    private record Processed(Vec3i dimensions, BlueprintCoreTile core, Map<Vec3i, Piece> elementMap, BoundingBox initialBounds) {}
 }

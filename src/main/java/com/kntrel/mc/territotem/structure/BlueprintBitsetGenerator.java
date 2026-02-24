@@ -1,4 +1,4 @@
-package com.kntrel.mc.territotem.blueprint;
+package com.kntrel.mc.territotem.structure;
 
 import com.kntrel.util.BitSet3D;
 import java.util.HashMap;
@@ -32,7 +32,7 @@ class BlueprintBitsetGenerator {
     private static BitSet3D generateInner(Blueprint blueprint) {
         BitSet3D out = new BitSet3D(blueprint.dimensions());
         blueprint.elementsByOffset().forEach((v, e) -> {
-            if (!(e instanceof BlueprintElement.Any)) { out.set(v); }
+            if (!(e instanceof Piece.Any)) { out.set(v); }
         });
         return out;
     }
