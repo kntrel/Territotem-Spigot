@@ -1,7 +1,8 @@
 package com.kntrel.mc.territotem.structure.piece;
 
+import com.kntrel.mc.territotem.structure.worldTile.WorldTile;
+import com.kntrel.mc.territotem.structure.worldTile.WorldTileWriter;
 import com.kntrel.util.Vec3i;
-import org.bukkit.World;
 
 public class Tile implements Piece, Comparable<Tile> {
 

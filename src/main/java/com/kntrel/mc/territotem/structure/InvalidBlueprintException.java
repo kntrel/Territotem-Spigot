@@ -1,4 +1,4 @@
-package com.kntrel.mc.territotem.blueprint;
+package com.kntrel.mc.territotem.structure;
 
 public class InvalidBlueprintException extends RuntimeException {
 

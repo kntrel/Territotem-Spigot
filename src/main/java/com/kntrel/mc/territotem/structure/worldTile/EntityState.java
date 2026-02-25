@@ -1,4 +1,4 @@
-package com.kntrel.mc.territotem.structure.piece;
+package com.kntrel.mc.territotem.structure.worldTile;
 
 import com.kntrel.mc.nbt.NBTCompound;
 import org.bukkit.Location;

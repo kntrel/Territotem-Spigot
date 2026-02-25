@@ -201,7 +201,7 @@ public class BlueprintTracker {
             this.parkedUnlockOffset_ = null;
         }
 
-        for (var entry : this.blueprint_.elementsByOffset().entrySet()) {
+        for (var entry : this.blueprint_.piecesByOffset().entrySet()) {
             Vec3i offset = entry.getKey();
             Vec3i worldOffset = offset.add(this.origin_);
             Piece element = entry.getValue();

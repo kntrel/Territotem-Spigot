@@ -1,9 +1,9 @@
 package com.kntrel.mc.territotem;
 
-import com.kntrel.mc.territotem.blueprint.BlueprintRegistry;
 import com.kntrel.mc.regionLib.RegionLib;
 import com.kntrel.mc.regionLib.region.context.RegionContext;
 import com.kntrel.mc.territotem.mock.MockBlueprint;
+import com.kntrel.mc.territotem.structure.StructureService;
 import com.kntrel.mc.territotem.totem.TotemService;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -25,9 +25,9 @@ public final class Territotem extends JavaPlugin {
         RegionLib.enable(this);
         RegionContext ctx = RegionLib.createDefaultContext(this);
 
-        BlueprintRegistry blueprintRegistry = new BlueprintRegistry(this);
-        blueprintRegistry.register(MockBlueprint.get());
-        new TotemService(ctx, blueprintRegistry);
+        StructureService structureService = new StructureService(this);
+        structureService.registerBlueprint(MockBlueprint.get());
+        new TotemService(ctx, structureService);
 
         LOGGER.info("Territotem is up and running");
     }

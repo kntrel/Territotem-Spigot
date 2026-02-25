@@ -31,9 +31,7 @@ class BlueprintBitsetGenerator {
     //HELPERS
     private static BitSet3D generateInner(Blueprint blueprint) {
         BitSet3D out = new BitSet3D(blueprint.dimensions());
-        blueprint.elementsByOffset().forEach((v, e) -> {
-            if (!(e instanceof Piece.Any)) { out.set(v); }
-        });
+        blueprint.piecesByOffset().forEach((v, e) -> out.set(v));
         return out;
     }
 }
