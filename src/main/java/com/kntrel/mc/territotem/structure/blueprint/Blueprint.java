@@ -1,7 +1,8 @@
-package com.kntrel.mc.territotem.structure;
+package com.kntrel.mc.territotem.structure.blueprint;
 
 import com.kntrel.mc.regionLib.region.hierarchy.Hierarchy;
 import com.kntrel.mc.regionLib.region.rule.RuleValue;
+import com.kntrel.mc.territotem.structure.InvalidBlueprintException;
 import com.kntrel.mc.territotem.structure.piece.Tile;
 import com.kntrel.mc.territotem.structure.piece.Piece;
 import com.kntrel.mc.territotem.structure.worldTile.WorldTile;

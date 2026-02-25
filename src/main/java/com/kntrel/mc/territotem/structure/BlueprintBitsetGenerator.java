@@ -1,5 +1,6 @@
 package com.kntrel.mc.territotem.structure;
 
+import com.kntrel.mc.territotem.structure.blueprint.Blueprint;
 import com.kntrel.util.BitSet3D;
 import java.util.HashMap;
 import java.util.Map;

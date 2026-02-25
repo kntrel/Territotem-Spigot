@@ -1,5 +1,6 @@
 package com.kntrel.mc.territotem.structure;
 
+import com.kntrel.mc.territotem.structure.blueprint.Blueprint;
 import com.kntrel.util.Vec3i;
 
 public class Structure {

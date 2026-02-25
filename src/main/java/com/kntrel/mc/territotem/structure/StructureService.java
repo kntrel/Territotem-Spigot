@@ -1,15 +1,15 @@
 package com.kntrel.mc.territotem.structure;
 
 import com.kntrel.mc.regionLib.Constants;
+import com.kntrel.mc.territotem.structure.blueprint.Blueprint;
+import com.kntrel.mc.territotem.structure.blueprint.BlueprintRegistration;
+import com.kntrel.mc.territotem.structure.blueprint.BlueprintRegistrationBuilder;
+import com.kntrel.mc.territotem.structure.piece.Piece;
 import com.kntrel.mc.territotem.util.ChunkCache;
 import com.kntrel.mc.territotem.util.ChunkKey;
-import com.kntrel.util.SetMap;
 import com.kntrel.util.Vec3i;
 import com.kntrel.util.tuple.Triplet;
-import org.bukkit.Chunk;
-import org.bukkit.Material;
-import org.bukkit.NamespacedKey;
-import org.bukkit.World;
+import org.bukkit.*;
 import org.bukkit.block.BlockState;
 import org.bukkit.entity.Entity;
 import org.bukkit.persistence.PersistentDataContainer;
@@ -33,11 +33,11 @@ public class StructureService {
     private final Map<Long, Blueprint> blueprints_;
     private final ChunkCache<BlueprintTracker> candidatesByChunk_;
     private final Map<BlueprintTracker, ReentrantLock> candidateLocks_;
-    private final SetMap<Material, Blueprint> blueprintsByCore_;
-    private final Set<Triplet<Vec3i, UUID, Long>> tracked_;
+    private final Map<Triplet<Vec3i, UUID, Long>, BlueprintTracker> trackersMap_;
     private final Executor executor_;
     private final NamespacedKey candidatesNSK_;
     private final BlueprintBitsetGenerator bitsetGenerator_;
+    private final StructureServiceListener listener_;
 
 
 
@@ -47,30 +47,64 @@ public class StructureService {
         this.blueprints_ = new ConcurrentHashMap<>();
         this.candidatesByChunk_ = new ChunkCache<>(c -> ChunkKey.ofBlock(c.origin(), c.world().getUID()));
         this.candidateLocks_ = new ConcurrentHashMap<>();
-        this.blueprintsByCore_ = new SetMap<>();
-        this.tracked_ = ConcurrentHashMap.newKeySet();
+        this.trackersMap_ = new  ConcurrentHashMap<>();
         this.executor_ = Executors.newVirtualThreadPerTaskExecutor();
         this.candidatesNSK_ = new NamespacedKey(this.plugin_, CANDIDATES_KEY);
         this.bitsetGenerator_ = new BlueprintBitsetGenerator();
+        this.listener_ = new StructureServiceListener(this);
 
         LOGGER.info("Tracking totem candidates");
     }
 
 
     //SERVICES
-    public void registerBlueprint(Blueprint blueprint) {
-        long id = blueprint.id();
-        if (blueprints_.containsKey(id)) {
-            LOGGER.error("Tried to register a blueprint with ID " + id + " one with the same ID was already registered");
-            throw new IllegalArgumentException("A blueprint with ID " + id + " is already registered");
+    public Plugin getPlugin() {
+        return this.plugin_;
+    }
+    public Server getServer() {
+        return this.plugin_.getServer();
+    }
+    public BlueprintTracker track(Blueprint blueprint, Vec3i origin, World world, Entity causer) {
+
+        Triplet<Vec3i, UUID, Long> trackKey = Triplet.of(origin, world.getUID(), blueprint.id());
+        BlueprintTracker candidate = this.trackersMap_.get(trackKey);
+        if (candidate != null) {
+            LOGGER.debug("Already tracking a potential totem of blueprint {} at {}", blueprint.id(), origin);
+            return candidate;
         }
 
-        this.blueprints_.put(id, blueprint);
-        this.blueprintsByCore_.putInto(blueprint.core().element().type(), blueprint);
+        candidate = new BlueprintTracker(this, blueprint, world, origin);
+        if (candidate.isEmpty()) {
+            LOGGER.debug("Candidate at {} had not a single match. Dropped", origin);
+            return candidate;
+        }
+        if (candidate.isComplete()) {
+            this.handleCompleteCandidate(candidate);
+            LOGGER.debug("Candidate at {} was complete right away. No tracking needed", origin);
+            return candidate;
+        }
+
+        this.trackersMap_.put(trackKey, candidate);
+        this.candidatesByChunk_.put(candidate);
+        this.candidateLocks_.put(candidate, new ReentrantLock());
+
+        return candidate;
     }
-    public BlueprintTracker trackerAt(Blueprint blueprint, World world, Vec3i origin) {
-        return new BlueprintTracker(this, blueprint, world, origin);
+    public void registerBlueprint(BlueprintRegistration registration) {
+        this.registerBlueprintInner(registration.blueprint());
+        this.listener_.listen(registration);
     }
+    public BlueprintRegistrationBuilder.EventSelector registerBlueprint(Blueprint blueprint) {
+        this.registerBlueprintInner(blueprint);
+        return BlueprintRegistrationBuilder.forBlueprint(blueprint, r -> {
+            if (r.eventClass() == null) { return; }
+            this.listener_.listen(r);
+        });
+    }
+    public void registerUntrackedBlueprint(Blueprint blueprint) {
+        this.registerBlueprintInner(blueprint);
+    }
+
 
 
     //PACKAGE-PRIVATE SERVICES
@@ -117,14 +151,8 @@ public class StructureService {
                     .shiftLeft(Constants.CHUNK_SHIFT)
                     .add(candidate.offset());
 
-            Vec3i coreLoc = origin.add(blueprint.core().offset());
-            if (!blueprint.core().element().matchesAt(coreLoc, chunk.getWorld())) {
-                LOGGER.warn("Expected a blueprint core at {} but bot found.", coreLoc);
-                continue;
-            }
-
             LOGGER.debug("Restoring totem candidate for blueprint {} at origin {}", blueprint.id(), origin);
-            this.executor_.execute(() -> this.trackCandidate(null, blueprint, chunk.getWorld(), origin));
+            this.executor_.execute(() -> this.track(blueprint, origin, chunk.getWorld(), null));
         }
     }
     void handleChunkUnload(Chunk chunk) {
@@ -146,7 +174,7 @@ public class StructureService {
             toSerialize.add(new ChunkTotemCandidate(offsetInChunk(candidate.origin()), candidate.blueprint().id()));
 
             Triplet<Vec3i, UUID, Long> trackKey = Triplet.of(candidate.origin(), candidate.world().getUID(), candidate.blueprint().id());
-            this.tracked_.remove(trackKey);
+            this.trackersMap_.remove(trackKey);
             this.candidateLocks_.remove(candidate);
         }
 
@@ -155,20 +183,6 @@ public class StructureService {
     void handleBlockUpdate(Entity who, Vec3i where, World world, Material material, BlockState block) {
         // Execute candidate update task asynchronously
         this.executor_.execute(() -> handleCandidatesUpdateTask(who, where, world, material, block));
-
-        // Track new candidates if block matches a blueprint core
-        Set<Blueprint> candidateBlueprints = this.blueprintsByCore_.get(material);
-        if (candidateBlueprints == null || candidateBlueprints.isEmpty()) {
-            LOGGER.trace("No blueprints found with core material: {}", material);
-            return;
-        }
-
-        LOGGER.debug("Block matches core material - tracking {} candidate totem(s) at {}", candidateBlueprints.size(), where);
-        for (Blueprint b : candidateBlueprints) {
-            LOGGER.debug("Tracking new candidate for blueprint {} at origin {}", b.id(), where);
-            Vec3i origin = where.subtract(b.core().offset());
-            this.executor_.execute(() -> this.trackCandidate(who, b, world, origin));
-        }
     }
 
 
@@ -183,49 +197,31 @@ public class StructureService {
     }
     private void updateCandidateTask(Entity who, BlueprintTracker candidate, Vec3i where, Material material, BlockState block) {
         LOGGER.trace("Updating candidate {} at position {}", candidate.blueprint().id(), where);
-        Piece element = new Piece.Block(material);
-        boolean completed = this.updateCandidate(candidate, where, element);
+        Piece piece = Piece.block(material);
+        boolean completed = this.updateCandidate(candidate, where);
 
         if (completed) {
             handleCompleteCandidate(candidate);
         }
     }
     private void handleCompleteCandidate(BlueprintTracker candidate) {
-        LOGGER.info("Totem candidate completed for blueprint {} by player {}", context.candidate.blueprint().id(), context.who.getName());
+        LOGGER.info("Totem candidate completed for blueprint {}", candidate.blueprint().id());
         this.dropCandidate(candidate);
     }
-    public void trackCandidate(Entity who, Blueprint blueprint, World world, Vec3i origin) {
-        Triplet<Vec3i, UUID, Long> trackKey = Triplet.of(origin, world.getUID(), blueprint.id());
-        if (this.tracked_.contains(trackKey)) {
-            LOGGER.debug("Already tracking a potential totem of blueprint {} at {}", blueprint.id(), origin);
-            return;
-        }
-
-        BlueprintTracker candidate = this.trackerAt(blueprint, world, origin);
-        if (candidate.isComplete()) {
-            this.handleCompleteCandidate(candidate);
-            LOGGER.debug("Candidate at {} was complete right away. No tracking needed", origin);
-            return;
-        }
-
-        this.tracked_.add(trackKey);
-        this.candidatesByChunk_.put(candidate);
-        this.candidateLocks_.put(candidate, new ReentrantLock());
-    }
-    public void dropCandidate(BlueprintTracker candidate) {
+    private void dropCandidate(BlueprintTracker candidate) {
         LOGGER.debug("Dropping candidate for blueprint {} at origin {}", candidate.blueprint().id(), candidate.origin());
         this.candidatesByChunk_.evict(candidate);
         this.candidateLocks_.remove(candidate);
 
         Triplet<Vec3i, UUID, Long> trackKey = Triplet.of(candidate.origin(), candidate.world().getUID(), candidate.blueprint().id());
-        this.tracked_.remove(trackKey);
+        this.trackersMap_.remove(trackKey);
     }
     public Collection<BlueprintTracker> getCandidatesInChunk(ChunkKey chunk) {
         Collection<BlueprintTracker> candidates = List.copyOf(this.candidatesByChunk_.get(chunk));
         LOGGER.trace("Retrieved {} candidates from chunk {}", candidates.size(), chunk);
         return candidates;
     }
-    public boolean updateCandidate(BlueprintTracker candidate, Vec3i where, Piece element) {
+    private boolean updateCandidate(BlueprintTracker candidate, Vec3i where) {
         if (!candidate.contains(where)) { 
             LOGGER.trace("Position {} is not within candidate bounds", where);
             return false; 
@@ -247,8 +243,8 @@ public class StructureService {
                 return false; 
             }
 
-            LOGGER.debug("Updating candidate with element {} at offset {}", element, offset);
-            candidate.update(offset, element);
+            LOGGER.debug("Updating candidate of {} at offset {}", candidate.blueprint().name(), offset);
+            candidate.update(offset);
             if (candidate.isComplete()) {
                 LOGGER.debug("Candidate is now complete - locking");
                 candidate.lock();
@@ -269,5 +265,14 @@ public class StructureService {
                 src.y(),
                 Math.floorMod(src.z(), Constants.CHUNK_SIZE)
         );
+    }
+    public void registerBlueprintInner(Blueprint blueprint) {
+        long id = blueprint.id();
+        if (blueprints_.containsKey(id)) {
+            LOGGER.error("Tried to register a blueprint with ID " + id + " one with the same ID was already registered");
+            throw new IllegalArgumentException("A blueprint with ID " + id + " is already registered");
+        }
+
+        this.blueprints_.put(id, blueprint);
     }
 }

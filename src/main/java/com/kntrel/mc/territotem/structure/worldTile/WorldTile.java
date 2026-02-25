@@ -3,10 +3,15 @@ package com.kntrel.mc.territotem.structure.worldTile;
 
 import com.kntrel.mc.nbt.NBTCompound;
 import com.kntrel.util.Vec3i;
+import org.bukkit.World;
 import org.bukkit.block.BlockState;
 import java.util.List;
 
 public interface WorldTile {
+
+    //FACTORY
+    static WorldTile of(Vec3i coordinates, World world) { return new WorldTileImpl(coordinates, world); }
+
 
     //CONTRACT
     Vec3i coordinates();

@@ -1,5 +1,8 @@
 package com.kntrel.mc.territotem.structure;
 
+import com.kntrel.mc.territotem.structure.blueprint.Blueprint;
+import com.kntrel.mc.territotem.structure.piece.Piece;
+import com.kntrel.mc.territotem.structure.worldTile.WorldTile;
 import com.kntrel.util.BitSet3D;
 import com.kntrel.util.IntBoundingBox;
 import com.kntrel.util.Vec3i;
@@ -84,13 +87,23 @@ public class BlueprintTracker {
             return this.matchCount_ == this.elementCount_;
         }
     }
+    public boolean isEmpty() {
+        CompletableFuture<Void> scanTask;
+        synchronized (this.mutex_) { scanTask = this.scanTask_; }
+        if (scanTask != null) { wait(scanTask); }
+
+        synchronized (this.mutex_) {
+            return this.matchCount_ == 0 && this.knownCount_ == this.elementCount_;
+        }
+    }
     public boolean isParked() { synchronized (this.mutex_) {
         return this.parkedUnlockOffset_ != null;
     }}
     public Optional<Vec3i> parkedAt() { synchronized (this.mutex_) {
         return Optional.ofNullable(this.parkedUnlockOffset_);
     }}
-    public void update(Vec3i offset, Piece element) {
+    public void update(Vec3i offset) {
+
         LOGGER.trace("Block update at offset {}", offset);
         CompletableFuture<Void> pendingScan;
         synchronized (this.mutex_) {
@@ -102,6 +115,8 @@ public class BlueprintTracker {
         }
         if (pendingScan != null) { wait(pendingScan); }
 
+        Vec3i coordinates = this.origin_.add(offset);
+        WorldTile worldTile = WorldTile.of(coordinates, this.world_);
         pendingScan = null;
         synchronized (this.mutex_) {
             if (this.parkedUnlockOffset_ != null) {
@@ -109,7 +124,7 @@ public class BlueprintTracker {
                     LOGGER.trace("Parked offset {} does not match update offset {}", this.parkedUnlockOffset_, offset);
                     return; 
                 }
-                if (!this.presenceMap_.get(offset) || this.blueprint_.matchesAt(offset, element)) {
+                if (!this.presenceMap_.get(offset) || this.blueprint_.matchesAt(offset, worldTile)) {
                     this.unPark();
                     pendingScan = this.scanTask_;
                 } else { return; }
@@ -126,7 +141,7 @@ public class BlueprintTracker {
             synchronized (this.mutex_) { scan = this.scanTask_; }
             if (scan != null) { wait(scan); continue; }
 
-            boolean match = blueprint_.matchesAt(offset, element);
+            boolean match = blueprint_.matchesAt(offset, worldTile);
             LOGGER.debug("Block at offset {} {}", offset, match ? "matches" : "does not match");
             synchronized (this.mutex_) {
                 if (this.scanTask_ != null) { continue; }
@@ -203,9 +218,9 @@ public class BlueprintTracker {
 
         for (var entry : this.blueprint_.piecesByOffset().entrySet()) {
             Vec3i offset = entry.getKey();
-            Vec3i worldOffset = offset.add(this.origin_);
-            Piece element = entry.getValue();
-            boolean match = element.matchesAt(worldOffset, this.world_);
+            Vec3i coordinates = offset.add(this.origin_);
+            Piece piece = entry.getValue();
+            boolean match = piece.matches(WorldTile.of(coordinates, this.world_));
 
             synchronized (this.mutex_) {
                 this.markMatched(offset, match);
