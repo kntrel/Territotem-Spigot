@@ -2,8 +2,6 @@ package com.kntrel.mc.territotem.mock;
 
 import com.kntrel.mc.regionLib.region.hierarchy.Hierarchy;
 import com.kntrel.mc.territotem.structure.blueprint.Blueprint;
-import com.kntrel.mc.territotem.structure.BlueprintCoreTile;
-import com.kntrel.mc.territotem.structure.Piece;
 import com.kntrel.mc.territotem.structure.piece.Piece;
 import com.kntrel.mc.territotem.structure.piece.Tile;
 import com.kntrel.util.Vec3i;
