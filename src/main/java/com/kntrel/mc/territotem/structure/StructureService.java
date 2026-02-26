@@ -5,6 +5,8 @@ import com.kntrel.mc.territotem.structure.blueprint.Blueprint;
 import com.kntrel.mc.territotem.structure.blueprint.BlueprintRegistration;
 import com.kntrel.mc.territotem.structure.blueprint.BlueprintRegistrationBuilder;
 import com.kntrel.mc.territotem.structure.piece.Piece;
+import com.kntrel.mc.territotem.structure.piece.Tile;
+import com.kntrel.mc.territotem.structure.worldTile.WorldTileWriter;
 import com.kntrel.mc.territotem.util.ChunkCache;
 import com.kntrel.mc.territotem.util.ChunkKey;
 import com.kntrel.util.Vec3i;
@@ -103,6 +105,13 @@ public class StructureService {
     }
     public void registerUntrackedBlueprint(Blueprint blueprint) {
         this.registerBlueprintInner(blueprint);
+    }
+    public Structure placeAt(Blueprint blueprint, Vec3i location, World world) {
+        for (Tile piece : blueprint.pieces()) {
+            Vec3i loc = location.add(piece.offset());
+            piece.place(WorldTileWriter.of(loc, world));
+        }
+        return new Structure(this, blueprint, location);
     }
 
 
