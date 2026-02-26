@@ -1,14 +1,11 @@
 package com.kntrel.mc.territotem.structure.blueprint;
 
 import com.kntrel.mc.regionLib.region.hierarchy.Hierarchy;
-import com.kntrel.mc.regionLib.region.rule.RuleValue;
 import com.kntrel.mc.territotem.structure.InvalidBlueprintException;
 import com.kntrel.mc.territotem.structure.piece.Tile;
 import com.kntrel.mc.territotem.structure.piece.Piece;
 import com.kntrel.mc.territotem.structure.worldTile.WorldTile;
 import com.kntrel.util.Vec3i;
-import org.bukkit.Material;
-import org.bukkit.entity.EntityType;
 import org.bukkit.util.BoundingBox;
 import java.util.*;
 import java.util.function.Function;
@@ -31,8 +28,7 @@ public class Blueprint {
             String name,
             Iterable<Tile> elements,
             BoundingBox initialRegionBounds,
-            Hierarchy hierarchy,
-            Iterable<RuleValue<?>> ruleValues
+            Hierarchy hierarchy
     ) {
         this.id_ = id;
         this.name_ = name;

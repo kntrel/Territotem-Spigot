@@ -5,6 +5,7 @@ import com.kntrel.mc.regionLib.region.context.RegionContext;
 import com.kntrel.mc.regionLib.region.dataContainer.RegionData;
 import com.kntrel.mc.regionLib.region.dataContainer.RegionDataContainer;
 import com.kntrel.mc.territotem.structure.*;
+import com.kntrel.mc.territotem.structure.blueprint.Blueprint;
 import com.kntrel.util.Vec3i;
 import org.bukkit.World;
 import org.bukkit.entity.Entity;
@@ -62,10 +63,7 @@ public class TotemService {
         }
         region.save();
 
-        Totem totem = new Totem(blueprint, origin, region);
-        this.trackTotem(totem);
-
-        return totem;
+        return new Totem(blueprint, origin, region);
     }
 
 

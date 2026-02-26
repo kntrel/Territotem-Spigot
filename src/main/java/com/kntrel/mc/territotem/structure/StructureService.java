@@ -141,7 +141,7 @@ public class StructureService {
             return; 
         }
 
-        List<ChunkTotemCandidate> candidates = pdc.get(this.candidatesNSK_, TotemCandidatePersistentDataType.instance());
+        List<ChunkTotemCandidate> candidates = pdc.get(this.candidatesNSK_, StructureCandidatePersistentDataType.instance());
         if (candidates == null || candidates.isEmpty()) { 
             LOGGER.warn("Totem candidates list is null or empty for chunk [{}, {}]", chunk.getX(), chunk.getZ());
             pdc.remove(this.candidatesNSK_);
@@ -187,7 +187,7 @@ public class StructureService {
             this.candidateLocks_.remove(candidate);
         }
 
-        pdc.set(this.candidatesNSK_, TotemCandidatePersistentDataType.instance(), toSerialize);
+        pdc.set(this.candidatesNSK_, StructureCandidatePersistentDataType.instance(), toSerialize);
     }
     void handleBlockUpdate(Entity who, Vec3i where, World world, Material material, BlockState block) {
         // Execute candidate update task asynchronously

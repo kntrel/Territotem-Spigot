@@ -8,15 +8,15 @@ import org.jspecify.annotations.NonNull;
 import java.util.ArrayList;
 import java.util.List;
 
-class TotemCandidatePersistentDataType implements PersistentDataType<byte[], List<ChunkTotemCandidate>> {
+class StructureCandidatePersistentDataType implements PersistentDataType<byte[], List<ChunkTotemCandidate>> {
 
     //FACTORY
-    private static final TotemCandidatePersistentDataType INSTANCE = new TotemCandidatePersistentDataType();
-    public static TotemCandidatePersistentDataType instance() { return INSTANCE; }
+    private static final StructureCandidatePersistentDataType INSTANCE = new StructureCandidatePersistentDataType();
+    public static StructureCandidatePersistentDataType instance() { return INSTANCE; }
 
 
     //CONSTRUCTOR
-    private TotemCandidatePersistentDataType() {}
+    private StructureCandidatePersistentDataType() {}
 
 
     //IMPLEMENTATION
