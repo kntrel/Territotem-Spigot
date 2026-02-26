@@ -1,7 +1,9 @@
 package com.kntrel.mc.territotem.structure.worldTile;
 
 import com.kntrel.mc.nbt.NBTCompound;
+import com.kntrel.util.Vec3i;
 import org.bukkit.Material;
+import org.bukkit.World;
 import org.bukkit.entity.EntityType;
 import org.bukkit.util.Vector;
 import org.jspecify.annotations.Nullable;
@@ -9,8 +11,12 @@ import java.util.UUID;
 
 public interface WorldTileWriter extends WorldTile {
 
+    //FACTORY
+    static WorldTileWriter of(Vec3i coordinates, World world) { return new WorldTileWriterImpl(coordinates, world); }
+
+
     //CONTRACT
-    void setBlock(Material material, @Nullable NBTCompound ntb);
+    void setBlock(Material material, @Nullable NBTCompound nbt);
     void killEntity(UUID id);
     void killEntities();
     void spawnEntity(EntityType type, Vector offset, @Nullable NBTCompound nbt);

@@ -8,15 +8,17 @@ import org.bukkit.block.Block;
 import org.bukkit.block.BlockState;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.EnderCrystal;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.Hanging;
 import org.bukkit.util.BoundingBox;
 import java.util.List;
+import java.util.stream.Stream;
 
 class WorldTileImpl implements WorldTile {
 
     //FIELDS
-    private final Vec3i coordinates_;
-    private final World world_;
+    protected final Vec3i coordinates_;
+    protected final World world_;
 
 
     //CONSTRUCTOR
@@ -39,22 +41,17 @@ class WorldTileImpl implements WorldTile {
         return new NBTCompound(rawTag);
     }
     @Override public List<EntityState> entities() {
-        return this.world_.getNearbyEntities(this.boundingBox()).stream()
-                .filter(e ->
-                           e instanceof Hanging
-                        || e instanceof ArmorStand
-                        || e instanceof EnderCrystal
-                )
+        return this.actualEntities()
                 .map(EntityStateImpl::fromLive)
                 .toList();
     }
 
 
     //HELPERS
-    private Block actualBlock() {
+    protected Block actualBlock() {
          return this.world_.getBlockAt(this.coordinates_.x(), this.coordinates_.y(), this.coordinates_.z());
     }
-    public BoundingBox boundingBox() {
+    protected BoundingBox boundingBox() {
         return new BoundingBox(
                 this.coordinates_.x(),
                 this.coordinates_.y(),
@@ -63,5 +60,13 @@ class WorldTileImpl implements WorldTile {
                 this.coordinates_.y() + 1,
                 this.coordinates_.z() + 1
         );
+    }
+    protected Stream<Entity> actualEntities() {
+        return this.world_.getNearbyEntities(this.boundingBox()).stream()
+                .filter(e ->
+                        e instanceof Hanging
+                                || e instanceof ArmorStand
+                                || e instanceof EnderCrystal
+                );
     }
 }
