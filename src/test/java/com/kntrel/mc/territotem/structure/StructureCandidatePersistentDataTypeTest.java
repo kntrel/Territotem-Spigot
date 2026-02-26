@@ -1,7 +1,5 @@
-package com.kntrel.mc.territotem.totem;
+package com.kntrel.mc.territotem.structure;
 
-import com.kntrel.mc.territotem.structure.ChunkTotemCandidate;
-import com.kntrel.mc.territotem.structure.TotemCandidatePersistentDataType;
 import com.kntrel.util.Vec3i;
 import org.bukkit.persistence.PersistentDataAdapterContext;
 import org.junit.jupiter.api.DisplayName;
@@ -16,14 +14,14 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
 @DisplayName("TotemCandidatePersistentDataType Tests")
-public class TotemCandidatePersistentDataTypeTest {
+public class StructureCandidatePersistentDataTypeTest {
 
-    private TotemCandidatePersistentDataType persistentDataType;
+    private StructureCandidatePersistentDataType persistentDataType;
     private PersistentDataAdapterContext mockContext;
 
     @BeforeEach
     void setUp() {
-        persistentDataType = TotemCandidatePersistentDataType.instance();
+        persistentDataType = StructureCandidatePersistentDataType.instance();
         mockContext = () -> null;
     }
 
@@ -34,15 +32,15 @@ public class TotemCandidatePersistentDataTypeTest {
         @Test
         @DisplayName("Should return same instance on multiple calls")
         void testSingletonInstance() {
-            TotemCandidatePersistentDataType instance1 = TotemCandidatePersistentDataType.instance();
-            TotemCandidatePersistentDataType instance2 = TotemCandidatePersistentDataType.instance();
+            StructureCandidatePersistentDataType instance1 = StructureCandidatePersistentDataType.instance();
+            StructureCandidatePersistentDataType instance2 = StructureCandidatePersistentDataType.instance();
             assertSame(instance1, instance2);
         }
 
         @Test
         @DisplayName("Should return non-null instance")
         void testInstanceNotNull() {
-            assertNotNull(TotemCandidatePersistentDataType.instance());
+            assertNotNull(StructureCandidatePersistentDataType.instance());
         }
     }
 

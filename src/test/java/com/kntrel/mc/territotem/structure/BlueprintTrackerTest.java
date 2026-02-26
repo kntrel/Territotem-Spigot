@@ -1,8 +1,9 @@
 package com.kntrel.mc.territotem.structure;
 
+import com.kntrel.mc.territotem.structure.blueprint.Blueprint;
 import com.kntrel.mc.territotem.test.mock.MockBlueprints;
 import com.kntrel.mc.territotem.test.mock.MockBlockWorld;
-import com.kntrel.mc.territotem.test.mock.TestBlueprintRegistry;
+import com.kntrel.mc.territotem.test.mock.TestStructureService;
 import com.kntrel.util.Vec3i;
 import org.bukkit.Material;
 import org.junit.jupiter.api.BeforeEach;
@@ -16,7 +17,7 @@ class BlueprintTrackerTest {
 
     //FIELDS
     private Blueprint blueprint;
-    private TestBlueprintRegistry registry;
+    private TestStructureService service;
     private MockBlockWorld worldData;
 
 
@@ -24,7 +25,7 @@ class BlueprintTrackerTest {
     @BeforeEach
     void setUp() {
         this.blueprint = MockBlueprints.square4();
-        this.registry = new TestBlueprintRegistry();
+        this.service = new TestStructureService();
         this.worldData = new MockBlockWorld();
     }
 
@@ -63,7 +64,7 @@ class BlueprintTrackerTest {
         BlueprintTracker tracker = this.newTracker(origin);
         assertTrue(tracker.isParked());
 
-        tracker.update(new Vec3i(1, 0, 1), new Piece.Block(Material.GOLD_BLOCK));
+        tracker.update(new Vec3i(1, 0, 1));
 
         assertTrue(tracker.isParked());
         assertFalse(tracker.isComplete());
@@ -89,7 +90,7 @@ class BlueprintTrackerTest {
         else if (parkedAt.equals(new Vec3i(1, 0, 0))) {parkedMaterial = Material.OBSIDIAN; }
         assertNotNull(parkedMaterial);
 
-        tracker.update(parkedAt, new Piece.Block(parkedMaterial));
+        tracker.update(parkedAt);
 
         assertFalse(tracker.isParked());
         assertTrue(tracker.isComplete());
@@ -104,11 +105,11 @@ class BlueprintTrackerTest {
         BlueprintTracker tracker = this.newTracker(origin);
         assertTrue(tracker.isComplete());
 
-        tracker.update(new Vec3i(1, 0, 1), new Piece.Block(Material.DIRT));
+        tracker.update(new Vec3i(1, 0, 1));;
         assertFalse(tracker.isComplete());
         assertFalse(tracker.isParked());
 
-        tracker.update(new Vec3i(1, 0, 1), new Piece.Block(Material.GOLD_BLOCK));
+        tracker.update(new Vec3i(1, 0, 1));;
         assertTrue(tracker.isComplete());
     }
 
@@ -121,7 +122,7 @@ class BlueprintTrackerTest {
         BlueprintTracker tracker = this.newTracker(origin);
         tracker.lock();
 
-        tracker.update(new Vec3i(1, 0, 1), new Piece.Block(Material.DIRT));
+        tracker.update(new Vec3i(1, 0, 1));;
 
         assertTrue(tracker.isLocked());
         assertTrue(tracker.isComplete());
@@ -130,18 +131,10 @@ class BlueprintTrackerTest {
 
     //HELPERS
     private BlueprintTracker newTracker(Vec3i origin) {
-        return new BlueprintTracker(this.registry, this.blueprint, this.worldData.asWorld(), origin);
+        return new BlueprintTracker(this.service, this.blueprint, this.worldData.asWorld(), origin);
     }
-    private static void setWorldFromBlueprint(MockBlockWorld worldData, Blueprint blueprint, Vec3i origin) {
-        blueprint.elementsByOffset().forEach((offset, element) -> {
-            Material material = Material.AIR;
-            if (element instanceof Piece.Core core) {
-                material = core.type();
-            } else if (element instanceof Piece.Block block) {
-                material = block.type();
-            }
-            worldData.set(origin.add(offset), material);
-        });
+    private void setWorldFromBlueprint(MockBlockWorld worldData, Blueprint blueprint, Vec3i origin) {
+        this.service.placeAt(blueprint, origin, worldData.asWorld());
     }
     private void setPartiallyBrokenWorld(Vec3i origin) {
         this.worldData.set(origin, Material.DIRT);

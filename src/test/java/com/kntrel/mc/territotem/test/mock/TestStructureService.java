@@ -1,13 +1,12 @@
 package com.kntrel.mc.territotem.test.mock;
 
-import com.kntrel.mc.territotem.structure.BlueprintRegistry;
-
+import com.kntrel.mc.territotem.structure.StructureService;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 
-public class TestBlueprintRegistry extends BlueprintRegistry {
+public class TestStructureService extends StructureService {
 
-    public TestBlueprintRegistry() {
+    public TestStructureService() {
         super(null);
     }
 
