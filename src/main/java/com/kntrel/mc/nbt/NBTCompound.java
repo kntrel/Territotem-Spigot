@@ -8,10 +8,6 @@ import java.util.Optional;
 public interface NBTCompound extends NBTTag, Map<String, NBTTag> {
 
     //FACTORY
-    static NBTCompound ofHandle(Object tag) {
-        return new RTagNBTCompound(tag);
-    }
-
     static NBTCompound create() {
         return new RTagNBTCompound();
     }

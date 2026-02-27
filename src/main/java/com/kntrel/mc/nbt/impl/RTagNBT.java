@@ -1,23 +1,19 @@
 package com.kntrel.mc.nbt.impl;
 
-import com.kntrel.mc.nbt.NBTCompound;
-import com.kntrel.mc.nbt.NBTList;
-import com.kntrel.mc.nbt.NBTPrimitive;
 import com.kntrel.mc.nbt.NBTTag;
 import com.saicone.rtag.tag.TagBase;
 import com.saicone.rtag.tag.TagCompound;
 import com.saicone.rtag.tag.TagList;
 
-public final class RTagNBT {
+public abstract class RTagNBT implements NBTTag {
 
-    private RTagNBT() {}
-
+    //FACTORY
     public static NBTTag asTag(Object object) {
         if (object == null) { return null; }
 
-        if (TagCompound.isTagCompound(object)) { return NBTCompound.ofHandle(object); }
-        if (TagList.isTagList(object)) { return NBTList.ofHandle(object); }
-        if (TagBase.isTag(object)) { return NBTPrimitive.ofHandle(object); }
+        if (TagCompound.isTagCompound(object)) { return new RTagNBTCompound(object); }
+        if (TagList.isTagList(object)) { return new RTagNBTList(object); }
+        if (TagBase.isTag(object)) { return new RTagNBTPrimitive(object); }
 
         Object tag;
         try {
@@ -34,12 +30,43 @@ public final class RTagNBT {
             );
         }
 
-        if (TagCompound.isTagCompound(tag)) { return NBTCompound.ofHandle(tag); }
-        if (TagList.isTagList(tag)) { return NBTList.ofHandle(tag); }
-        if (TagBase.isTag(tag)) { return NBTPrimitive.ofHandle(tag); }
+        if (TagCompound.isTagCompound(tag)) { return new RTagNBTCompound(tag); }
+        if (TagList.isTagList(tag)) { return new RTagNBTList(tag); }
+        if (TagBase.isTag(tag)) { return new RTagNBTPrimitive(tag); }
 
         throw new IllegalStateException(
                 "TagBase.newTag produced a non-tag: " + tag.getClass().getName()
         );
+    }
+
+
+    //FIELDS
+    private final Object handle_;
+
+
+    //CONSTRUCTOR
+    protected RTagNBT(Object tag) {
+        this.handle_ = tag;
+    }
+
+
+    //IMPLEMENTATION
+    public Object handle() {
+        return this.handle_;
+    }
+    @Override public Object get() {
+        return TagBase.getValue(this.handle_);
+    }
+    @Override public String toString() {
+        return this.handle_.toString();
+    }
+    @Override public boolean equals(Object o) {
+        if (o == null) { return false; }
+        if (o == this) { return true; }
+        if (!(o instanceof RTagNBT other)) { return false; }
+        return other.handle().equals(this.handle_);
+    }
+    @Override public int hashCode() {
+        return this.handle_.hashCode();
     }
 }

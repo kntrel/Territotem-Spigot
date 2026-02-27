@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
+import java.util.function.BiFunction;
 
 public class BlueprintTracker {
 
@@ -27,6 +28,7 @@ public class BlueprintTracker {
     private final IntBoundingBox boundingBox_;
     private final BitSet3D presenceMap_, knownMap_, matchMap_;
     private final Object mutex_;
+    private final BiFunction<Vec3i, World, WorldTile> worldTileGetter_;
     private int elementCount_, knownCount_, matchCount_;
     private CompletableFuture<Void> scanTask_;
     private Vec3i parkedUnlockOffset_;
@@ -34,7 +36,7 @@ public class BlueprintTracker {
 
 
     //CONSTRUCTOR
-    public BlueprintTracker(StructureService service, Blueprint blueprint, World world, Vec3i origin) {
+    public BlueprintTracker(StructureService service, Blueprint blueprint, World world, Vec3i origin, BiFunction<Vec3i, World, WorldTile> worldTileGetter) {
         LOGGER.trace("Creating BlueprintTracker for blueprint {} at origin {}", blueprint, origin);
         this.service_ = service;
         this.blueprint_ = blueprint;
@@ -42,6 +44,7 @@ public class BlueprintTracker {
         this.origin_ = origin;
         this.mutex_ = new Object();
         this.parkedUnlockOffset_ = null;
+        this.worldTileGetter_ = worldTileGetter;
 
         Vec3i dimensions = blueprint.dimensions();
         Vec3i end = new Vec3i(
@@ -59,6 +62,9 @@ public class BlueprintTracker {
 
         LOGGER.trace("BlueprintTracker initialized with {} elements", this.elementCount_);
         this.fullScan();
+    }
+    public BlueprintTracker(StructureService service, Blueprint blueprint, World world, Vec3i origin) {
+        this(service, blueprint, world, origin, WorldTile::of);
     }
 
 
@@ -116,7 +122,7 @@ public class BlueprintTracker {
         if (pendingScan != null) { wait(pendingScan); }
 
         Vec3i coordinates = this.origin_.add(offset);
-        WorldTile worldTile = WorldTile.of(coordinates, this.world_);
+        WorldTile worldTile = this.worldTileGetter_.apply(coordinates, this.world_);
         pendingScan = null;
         synchronized (this.mutex_) {
             if (this.parkedUnlockOffset_ != null) {
@@ -220,7 +226,8 @@ public class BlueprintTracker {
             Vec3i offset = entry.getKey();
             Vec3i coordinates = offset.add(this.origin_);
             Piece piece = entry.getValue();
-            boolean match = piece.matches(WorldTile.of(coordinates, this.world_));
+            WorldTile wTile = this.worldTileGetter_.apply(coordinates, this.world_);
+            boolean match = piece.matches(wTile);
 
             synchronized (this.mutex_) {
                 this.markMatched(offset, match);

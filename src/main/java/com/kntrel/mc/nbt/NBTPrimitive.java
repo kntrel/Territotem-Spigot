@@ -4,12 +4,6 @@ import com.kntrel.mc.nbt.impl.RTagNBTPrimitive;
 
 public interface NBTPrimitive extends NBTTag {
 
-    //FACTORY
-    static NBTPrimitive ofHandle(Object tag) {
-        return new RTagNBTPrimitive(tag);
-    }
-
-
     //API
     boolean is(NBTType<?> type);
     boolean isNumeric();

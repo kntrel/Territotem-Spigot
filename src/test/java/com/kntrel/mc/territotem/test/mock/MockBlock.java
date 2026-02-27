@@ -1,5 +1,7 @@
 package com.kntrel.mc.territotem.test.mock;
 
+import com.kntrel.mc.nbt.NBTCompound;
+import com.kntrel.mc.nbt.test.MockNBTCompound;
 import com.kntrel.mc.regionLib.Constants;
 import com.kntrel.util.Vec3i;
 import org.bukkit.*;
@@ -34,6 +36,7 @@ public class MockBlock implements Block {
     private boolean blockIndirectlyPowered;
     private int blockPower;
     private final Map<String, List<MetadataValue>> metadata;
+    private NBTCompound nbt_;
 
 
     //CONSTRUCTOR
@@ -51,9 +54,19 @@ public class MockBlock implements Block {
         this.blockIndirectlyPowered = false;
         this.blockPower = 0;
         this.metadata = new HashMap<>();
+        this.nbt_ = new MockNBTCompound();
 
         when(this.blockData.createBlockState()).then(m -> new MockBlockState(this));
     }
+
+
+    public NBTCompound getNbt() {
+        return this.nbt_;
+    }
+    public void setNbt(NBTCompound nbt) {
+        this.nbt_ = nbt;
+    }
+
 
     @Override
     public byte getData() {
@@ -71,7 +84,6 @@ public class MockBlock implements Block {
                              this.coordinates.y() + modY, 
                              this.coordinates.z() + modZ));
     }
-
     @Override
     public Block getRelative(BlockFace face) {
         return getRelative(face, 1);

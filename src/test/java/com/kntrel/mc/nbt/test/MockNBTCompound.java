@@ -2,7 +2,6 @@ package com.kntrel.mc.nbt.test;
 
 import com.kntrel.mc.nbt.NBTCompound;
 import com.kntrel.mc.nbt.NBTTag;
-
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
@@ -11,29 +10,29 @@ import java.util.Set;
 
 public class MockNBTCompound extends MockNBTTag implements NBTCompound {
 
+    //FIELDS
     private final Map<String, NBTTag> values_;
 
+
+    //CONSTRUCTORS
     public MockNBTCompound() {
         this(new HashMap<>());
     }
-
     public MockNBTCompound(Map<String, NBTTag> values) {
-        super(values);
         this.values_ = values;
     }
 
+
+    //IMPLEMENTATION
     @Override public Map<String, NBTTag> get() {
         return Map.copyOf(this.values_);
     }
-
     @Override public Optional<NBTTag> getAt(Object... path) {
         return NBTTag.getAt(this, path);
     }
-
     @Override public Optional<NBTTag> getAt(String path) {
         return NBTTag.getAt(this, path);
     }
-
     @Override public int size() { return this.values_.size(); }
     @Override public boolean isEmpty() { return this.values_.isEmpty(); }
     @Override public boolean containsKey(Object key) { return this.values_.containsKey(key); }

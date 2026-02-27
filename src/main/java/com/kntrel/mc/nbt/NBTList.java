@@ -9,10 +9,6 @@ import java.util.Optional;
 public interface NBTList extends NBTTag, Collection<NBTTag> {
 
     //FACTORY
-    static NBTList ofHandle(Object tag) {
-        return new RTagNBTList(tag);
-    }
-
     static NBTList create() {
         return new RTagNBTList();
     }

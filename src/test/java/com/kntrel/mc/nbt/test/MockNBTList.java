@@ -2,7 +2,6 @@ package com.kntrel.mc.nbt.test;
 
 import com.kntrel.mc.nbt.NBTList;
 import com.kntrel.mc.nbt.NBTTag;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
@@ -11,29 +10,29 @@ import java.util.Optional;
 
 public class MockNBTList extends MockNBTTag implements NBTList {
 
+    //FIELDS
     private final List<NBTTag> values_;
 
+
+    //CONSTRUCTORS
     public MockNBTList() {
         this(new ArrayList<>());
     }
-
     public MockNBTList(List<NBTTag> values) {
-        super(values);
         this.values_ = values;
     }
 
+
+    //IMPLEMENTATION
     @Override public List<NBTTag> get() {
         return List.copyOf(this.values_);
     }
-
     @Override public Optional<NBTTag> getAt(Object... path) {
         return NBTTag.getAt(this, path);
     }
-
     @Override public Optional<NBTTag> getAt(String path) {
         return NBTTag.getAt(this, path);
     }
-
     @Override public int size() { return this.values_.size(); }
     @Override public boolean isEmpty() { return this.values_.isEmpty(); }
     @Override public boolean contains(Object o) { return this.values_.contains(o); }

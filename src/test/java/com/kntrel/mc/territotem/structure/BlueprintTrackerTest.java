@@ -4,6 +4,7 @@ import com.kntrel.mc.territotem.structure.blueprint.Blueprint;
 import com.kntrel.mc.territotem.test.mock.MockBlueprints;
 import com.kntrel.mc.territotem.test.mock.MockPlugin;
 import com.kntrel.mc.territotem.test.mock.MockServer;
+import com.kntrel.mc.territotem.test.mock.MockStructureService;
 import com.kntrel.util.Vec3i;
 import org.bukkit.Material;
 import org.bukkit.Server;
@@ -33,7 +34,7 @@ class BlueprintTrackerTest {
         this.world = this.server.getWorlds().getFirst();
 
         Plugin plugin = new MockPlugin("mock_plugin", this.server);
-        this.service = new StructureService(plugin);
+        this.service = new MockStructureService(plugin);
         this.service.registerBlueprint(blueprint).doNotTrack();
     }
 
@@ -113,11 +114,14 @@ class BlueprintTrackerTest {
         BlueprintTracker tracker = this.newTracker(origin);
         assertTrue(tracker.isComplete());
 
-        tracker.update(new Vec3i(1, 0, 1));;
+        Vec3i mod = new Vec3i(1, 0, 1);
+        this.setBlock(mod, Material.DIRT);
+        tracker.update(mod);;
         assertFalse(tracker.isComplete());
         assertFalse(tracker.isParked());
 
-        tracker.update(new Vec3i(1, 0, 1));;
+        this.setBlock(mod, Material.GOLD_BLOCK);
+        tracker.update(mod);;
         assertTrue(tracker.isComplete());
     }
 

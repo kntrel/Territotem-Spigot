@@ -1,6 +1,8 @@
 package com.kntrel.mc.territotem.structure.worldTile;
 
 import com.kntrel.mc.nbt.NBTCompound;
+import com.kntrel.mc.nbt.impl.RTagNBT;
+import com.kntrel.mc.nbt.impl.RTagNBTCompound;
 import com.kntrel.util.Vec3i;
 import com.saicone.rtag.RtagBlock;
 import com.saicone.rtag.RtagEntity;
@@ -33,9 +35,10 @@ class WorldTileWriterImpl extends WorldTileImpl implements WorldTileWriter {
         block.setType(material);
 
         if (nbt == null) { return; }
+        if (!(nbt instanceof RTagNBT rnbt)) { return; }
 
         RtagBlock rtag = new RtagBlock(block);
-        rtag.set(nbt.handle());
+        rtag.set(rnbt.handle());
     }
     @Override public void killEntity(UUID id) {
         this.getEntity(id).ifPresent(Entity::remove);
@@ -44,16 +47,18 @@ class WorldTileWriterImpl extends WorldTileImpl implements WorldTileWriter {
         this.actualEntities().forEach(Entity::remove);
     }
     @Override public void spawnEntity(EntityType type, Vector offset, @Nullable NBTCompound nbt) {
+        if (!(nbt instanceof RTagNBTCompound rnbt)) { return; }
         Entity entity = this.world_.spawnEntity(this.getLocation(offset), type);
         if (nbt != null) {
-            new RtagEntity(entity).set(nbt.handle());
+            new RtagEntity(entity).set(rnbt.handle());
         }
     }
     @Override public void moveEntity(UUID id, Vector offset) {
         this.getEntity(id).ifPresent(e -> e.teleport(this.getLocation(offset)));
     }
     @Override public void editEntity(UUID id, NBTCompound nbt) {
-        this.getEntity(id).ifPresent(e -> new RtagEntity(e).set(nbt.handle()));
+        if (!(nbt instanceof RTagNBTCompound rnbt)) { return; }
+        this.getEntity(id).ifPresent(e -> new RtagEntity(e).set(rnbt.handle()));
     }
 
 

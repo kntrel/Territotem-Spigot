@@ -16,7 +16,6 @@ public interface NBTTag {
 
 
     //CONTRACT
-    Object handle();
     Object get();
 
 

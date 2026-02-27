@@ -1,6 +1,7 @@
 package com.kntrel.mc.territotem.structure.worldTile;
 
 import com.kntrel.mc.nbt.NBTCompound;
+import com.kntrel.mc.nbt.impl.RTagNBTCompound;
 import com.saicone.rtag.RtagEntity;
 import org.bukkit.Location;
 import org.bukkit.entity.Entity;
@@ -24,7 +25,7 @@ record EntityStateImpl(
                 entity.getType(),
                 entity.getUniqueId(),
                 entity.getLocation(),
-                NBTCompound.ofHandle(rawNbt)
+                new RTagNBTCompound(rawNbt)
         );
     }
 

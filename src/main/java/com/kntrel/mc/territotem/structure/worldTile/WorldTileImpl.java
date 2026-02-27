@@ -1,6 +1,7 @@
 package com.kntrel.mc.territotem.structure.worldTile;
 
 import com.kntrel.mc.nbt.NBTCompound;
+import com.kntrel.mc.nbt.impl.RTagNBTCompound;
 import com.kntrel.util.Vec3i;
 import com.saicone.rtag.RtagBlock;
 import org.bukkit.World;
@@ -38,7 +39,7 @@ class WorldTileImpl implements WorldTile {
     @Override public NBTCompound blockNbt() {
         RtagBlock rtagBlock = new RtagBlock(this.actualBlock());
         Object rawTag = rtagBlock.getTag();
-        return NBTCompound.ofHandle(rawTag);
+        return new RTagNBTCompound(rawTag);
     }
     @Override public List<EntityState> entities() {
         return this.actualEntities()
