@@ -53,7 +53,7 @@ class WorldTileWriterImpl extends WorldTileImpl implements WorldTileWriter {
         this.getEntity(id).ifPresent(e -> e.teleport(this.getLocation(offset)));
     }
     @Override public void editEntity(UUID id, NBTCompound nbt) {
-        this.getEntity(id).ifPresent(e -> new RtagEntity(e).set(nbt));
+        this.getEntity(id).ifPresent(e -> new RtagEntity(e).set(nbt.handle()));
     }
 
 

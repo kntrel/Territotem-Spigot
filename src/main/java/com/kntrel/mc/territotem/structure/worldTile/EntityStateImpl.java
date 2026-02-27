@@ -24,7 +24,7 @@ record EntityStateImpl(
                 entity.getType(),
                 entity.getUniqueId(),
                 entity.getLocation(),
-                new NBTCompound(rawNbt)
+                NBTCompound.ofHandle(rawNbt)
         );
     }
 
