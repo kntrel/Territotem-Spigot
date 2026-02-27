@@ -46,12 +46,14 @@ public class MockServer implements Server {
     private final String name_;
     private final World world_;
     private final BukkitScheduler scheduler_;
+    private final PluginManager pluginManager_;
 
 
     //CONSTRUCTOR
     public MockServer(String name) {
         this.name_ = name;
         this.world_ = new MockWorld("world");
+        this.pluginManager_ = new MockPluginManager();
 
         this.scheduler_ = mock(BukkitScheduler.class);
         when(this.scheduler_.runTask(any(Plugin.class), any(Runnable.class))).then(m -> {
@@ -259,7 +261,7 @@ public class MockServer implements Server {
 
     @Override
     public PluginManager getPluginManager() {
-        return null;
+        return this.pluginManager_;
     }
 
     @Override
