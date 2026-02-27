@@ -38,7 +38,7 @@ class WorldTileImpl implements WorldTile {
     @Override public NBTCompound blockNbt() {
         RtagBlock rtagBlock = new RtagBlock(this.actualBlock());
         Object rawTag = rtagBlock.getTag();
-        return new NBTCompound(rawTag);
+        return NBTCompound.ofHandle(rawTag);
     }
     @Override public List<EntityState> entities() {
         return this.actualEntities()
