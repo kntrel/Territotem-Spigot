@@ -17,4 +17,10 @@ public class Structure {
         this.blueprint_ = blueprint;
         this.origin_ = origin;
     }
+
+
+    //GETTERS
+    public Blueprint blueprint() {
+        return this.blueprint_;
+    }
 }

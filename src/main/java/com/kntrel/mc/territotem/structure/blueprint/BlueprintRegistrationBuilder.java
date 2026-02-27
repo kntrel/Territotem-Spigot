@@ -1,6 +1,9 @@
 package com.kntrel.mc.territotem.structure.blueprint;
 
+import com.kntrel.mc.territotem.structure.Structure;
+import org.bukkit.entity.Entity;
 import org.bukkit.event.Event;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -18,7 +21,15 @@ public final class BlueprintRegistrationBuilder {
 
 
     public interface BlueprintSelector {
-        EventSelector blueprint(Blueprint blueprint);
+        Completer blueprint(Blueprint blueprint);
+    }
+
+    public interface Completer extends EventSelector {
+        Destructor onCompletion(BiConsumer<Structure, Entity> action);
+    }
+
+    public interface Destructor extends EventSelector {
+        EventSelector onDestruction(BiConsumer<Structure, Entity> action);
     }
 
     public interface EventSelector {
@@ -34,7 +45,8 @@ public final class BlueprintRegistrationBuilder {
         BlueprintRegistration track(Function<E, TrackingInfo> locator);
     }
 
-    private static class Impl<E extends Event> implements BlueprintSelector, EventSelector, EventValidator<E>, Tracker<E> {
+    private static class Impl<E extends Event>
+    implements BlueprintSelector, Completer, Destructor, EventSelector, EventValidator<E>, Tracker<E> {
 
         //FIELDS
         private final Consumer<BlueprintRegistration> onBuild_;
@@ -42,6 +54,7 @@ public final class BlueprintRegistrationBuilder {
         private Class<E> eventClass_;
         private Predicate<Event> validator_;
         private Function<Event, TrackingInfo> tracker_;
+        private BiConsumer<Structure, Entity> completionAction_, destructionAction_;
 
 
         //CONSTRUCTOR
@@ -51,13 +64,23 @@ public final class BlueprintRegistrationBuilder {
             this.eventClass_ = null;
             this.validator_ = e -> true;
             this.tracker_ = e -> null;
+            this.completionAction_ = (s, e) -> {};
+            this.destructionAction_ = (s, e) -> {};
         }
         Impl() { this(null); }
 
 
-        //IMPLEMENTATION@Override
-        public EventSelector blueprint(Blueprint blueprint) {
+        //IMPLEMENTATION
+        @Override public Completer blueprint(Blueprint blueprint) {
             this.blueprint_ = blueprint;
+            return this;
+        }
+        @Override public Destructor onCompletion(BiConsumer<Structure, Entity> action) {
+            this.completionAction_ = action;
+            return this;
+        }
+        @Override public EventSelector onDestruction(BiConsumer<Structure, Entity> action) {
+            this.destructionAction_ = action;
             return this;
         }
         @Override @SuppressWarnings("unchecked")
@@ -99,7 +122,9 @@ public final class BlueprintRegistrationBuilder {
                     this.blueprint_,
                     this.eventClass_,
                     this.validator_,
-                    this.tracker_
+                    this.tracker_,
+                    this.completionAction_,
+                    this.destructionAction_
             );
 
             if (this.onBuild_ != null) { this.onBuild_.accept(registration); }
@@ -111,7 +136,9 @@ public final class BlueprintRegistrationBuilder {
             Blueprint blueprint,
             Class<? extends Event> eventClass,
             Predicate<Event> validator,
-            Function<Event, TrackingInfo> locator
+            Function<Event, TrackingInfo> locator,
+            BiConsumer<Structure, Entity> completionAction,
+            BiConsumer<Structure, Entity> destructionAction
     ) implements BlueprintRegistration {
 
         @Override public boolean appliesTo(Event event) {
@@ -120,5 +147,7 @@ public final class BlueprintRegistrationBuilder {
         @Override public TrackingInfo track(Event event) {
             return this.locator.apply(event);
         }
+        @Override public void onCompletion(Structure structure, Entity completer) { this.completionAction.accept(structure, completer); }
+        @Override public void onDestruction(Structure structure, Entity destructor) { this.destructionAction.accept(structure, destructor); }
     }
 }

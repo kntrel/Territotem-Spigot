@@ -1,10 +1,11 @@
 package com.kntrel.mc.territotem.structure;
 
 import com.kntrel.mc.regionLib.Constants;
+import com.kntrel.mc.territotem.event.StructureCompletedEvent;
+import com.kntrel.mc.territotem.event.StructureDestroyedEvent;
 import com.kntrel.mc.territotem.structure.blueprint.Blueprint;
 import com.kntrel.mc.territotem.structure.blueprint.BlueprintRegistration;
 import com.kntrel.mc.territotem.structure.blueprint.BlueprintRegistrationBuilder;
-import com.kntrel.mc.territotem.structure.piece.Piece;
 import com.kntrel.mc.territotem.structure.piece.Tile;
 import com.kntrel.mc.territotem.structure.worldTile.WorldTileWriter;
 import com.kntrel.mc.territotem.util.ChunkCache;
@@ -55,6 +56,7 @@ public class StructureService {
         this.bitsetGenerator_ = new BlueprintBitsetGenerator();
         this.listener_ = new StructureServiceListener(this);
 
+        this.getServer().getPluginManager().registerEvents(this.listener_, this.plugin_);
         LOGGER.info("Tracking totem candidates");
     }
 
@@ -81,8 +83,8 @@ public class StructureService {
             return candidate;
         }
         if (candidate.isComplete()) {
-            this.handleCompleteCandidate(candidate);
             LOGGER.debug("Candidate at {} was complete right away. No tracking needed", origin);
+            this.handleCompleteCandidate(candidate, causer);
             return candidate;
         }
 
@@ -206,16 +208,30 @@ public class StructureService {
     }
     private void updateCandidateTask(Entity who, BlueprintTracker candidate, Vec3i where, Material material, BlockState block) {
         LOGGER.trace("Updating candidate {} at position {}", candidate.blueprint().id(), where);
-        Piece piece = Piece.block(material);
         boolean completed = this.updateCandidate(candidate, where);
-
         if (completed) {
-            handleCompleteCandidate(candidate);
+            handleCompleteCandidate(candidate, who);
         }
     }
-    private void handleCompleteCandidate(BlueprintTracker candidate) {
+    private void handleCompleteCandidate(BlueprintTracker candidate, Entity who) {
         LOGGER.info("Totem candidate completed for blueprint {}", candidate.blueprint().id());
         this.dropCandidate(candidate);
+
+        Structure structure = new Structure(this, candidate.blueprint(), candidate.origin());
+        this.runInMainThreadAsync(() -> {
+            this.getServer().getPluginManager().callEvent(new StructureCompletedEvent(structure, who));
+            return null;
+        });
+    }
+    private void handleDestroyedCandidate(BlueprintTracker candidate, Entity who) {
+        LOGGER.info("Totem candidate destroyed for blueprint {}", candidate.blueprint().id());
+        this.dropCandidate(candidate);
+
+        Structure structure = new Structure(this, candidate.blueprint(), candidate.origin());
+        this.runInMainThreadAsync(() -> {
+            this.getServer().getPluginManager().callEvent(new StructureDestroyedEvent(structure, who));
+            return null;
+        });
     }
     private void dropCandidate(BlueprintTracker candidate) {
         LOGGER.debug("Dropping candidate for blueprint {} at origin {}", candidate.blueprint().id(), candidate.origin());
