@@ -16,7 +16,6 @@ import org.bukkit.plugin.PluginLoader;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.RegisteredListener;
 import org.bukkit.plugin.UnknownDependencyException;
-
 import java.io.File;
 import java.lang.reflect.Method;
 import java.util.Collections;
@@ -25,7 +24,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-import static com.kntrel.mc.territotem.test.mock.Mock.unimplemented;
+import static com.kntrel.mc.territotem.test.mock.Mock.*;
 
 public class MockPluginManager implements PluginManager {
 
@@ -65,6 +64,13 @@ public class MockPluginManager implements PluginManager {
 
     @Override
     public Plugin[] loadPlugins(File directory) {
+        unimplemented();
+        return new Plugin[0];
+    }
+
+    @Override
+    public Plugin[] loadPlugins(File[] files) {
+        unimplemented();
         return new Plugin[0];
     }
 
@@ -106,9 +112,7 @@ public class MockPluginManager implements PluginManager {
             method.setAccessible(true);
 
             EventExecutor executor = (ignored, event) -> {
-                if (!eventType.isInstance(event)) {
-                    return;
-                }
+                if (!eventType.isInstance(event)) { return; }
                 try {
                     method.invoke(listener, event);
                 } catch (ReflectiveOperationException ex) {
