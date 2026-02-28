@@ -77,7 +77,7 @@ public class StructureService {
             return candidate;
         }
 
-        candidate = new BlueprintTracker(this, blueprint, world, origin);
+        candidate = this.newTracker(blueprint, world, origin);
         if (candidate.isEmpty()) {
             LOGGER.debug("Candidate at {} had not a single match. Dropped", origin);
             return candidate;
@@ -98,7 +98,7 @@ public class StructureService {
         this.registerBlueprintInner(registration.blueprint());
         this.listener_.listen(registration);
     }
-    public BlueprintRegistrationBuilder.EventSelector registerBlueprint(Blueprint blueprint) {
+    public BlueprintRegistrationBuilder.Completer registerBlueprint(Blueprint blueprint) {
         this.registerBlueprintInner(blueprint);
         return BlueprintRegistrationBuilder.forBlueprint(blueprint, r -> {
             if (r.eventClass() == null) { return; }
@@ -284,6 +284,9 @@ public class StructureService {
 
 
     //HELPERS
+    protected BlueprintTracker newTracker(Blueprint blueprint, World world, Vec3i origin) {
+        return new BlueprintTracker(this, blueprint, world, origin);
+    }
     private static Vec3i offsetInChunk(Vec3i src) {
         return new Vec3i(
                 Math.floorMod(src.x(), Constants.CHUNK_SIZE),

@@ -10,7 +10,7 @@ import org.jspecify.annotations.Nullable;
 public interface BlueprintRegistration {
 
     //FACTORY
-    static BlueprintRegistrationBuilder.EventSelector forBlueprint(Blueprint blueprint) {
+    static BlueprintRegistrationBuilder.Completer forBlueprint(Blueprint blueprint) {
         return BlueprintRegistrationBuilder.forBlueprint(blueprint);
     }
 

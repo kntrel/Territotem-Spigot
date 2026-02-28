@@ -5,6 +5,8 @@ import com.kntrel.mc.territotem.structure.blueprint.TrackingInfo;
 import com.kntrel.mc.territotem.test.mock.MockBlueprints;
 import com.kntrel.mc.territotem.test.mock.MockPlugin;
 import com.kntrel.mc.territotem.test.mock.MockServer;
+import com.kntrel.mc.territotem.test.mock.MockStructureService;
+import com.kntrel.mc.territotem.util.ChunkKey;
 import com.kntrel.util.Vec3i;
 import org.bukkit.Material;
 import org.bukkit.Server;
@@ -45,7 +47,7 @@ class StructureServiceTest {
         this.server = new MockServer("mock_server");
         this.world = this.server.getWorlds().getFirst();
         Plugin plugin = new MockPlugin("mock_plugin", this.server);
-        this.service = new StructureService(plugin);
+        this.service = new MockStructureService(plugin);
     }
 
     @AfterEach
@@ -94,6 +96,7 @@ class StructureServiceTest {
 
         Player player = mock(Player.class);
         BlueprintTracker tracker = this.service.track(blueprint, origin, this.world, player);
+        assertEquals(1, this.service.getCandidatesInChunk(ChunkKey.ofBlock(origin, this.world.getUID())).size());
         assertFalse(tracker.isComplete());
         assertFalse(tracker.isParked());
 

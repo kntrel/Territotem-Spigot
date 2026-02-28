@@ -12,10 +12,10 @@ public final class BlueprintRegistrationBuilder {
     private BlueprintRegistrationBuilder() {}
 
 
-    public static BlueprintRegistrationBuilder.EventSelector forBlueprint(Blueprint blueprint) {
+    public static BlueprintRegistrationBuilder.Completer forBlueprint(Blueprint blueprint) {
         return new Impl<>().blueprint(blueprint);
     }
-    public static BlueprintRegistrationBuilder.EventSelector forBlueprint(Blueprint blueprint, Consumer<BlueprintRegistration> callBack) {
+    public static BlueprintRegistrationBuilder.Completer forBlueprint(Blueprint blueprint, Consumer<BlueprintRegistration> callBack) {
         return new Impl<>(callBack).blueprint(blueprint);
     }
 
