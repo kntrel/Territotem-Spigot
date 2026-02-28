@@ -44,6 +44,10 @@
                             <artifactSet>
                                 <includes>
                                     <include>com.kntrel:RegionsLib-Spigot</include>
+                                    <include>com.saicone.rtag:rtag</include>
+                                    <include>com.saicone.rtag:rtag-block</include>
+                                    <include>com.saicone.rtag:rtag-entity</include>
+                                    <include>com.saicone.rtag:rtag-item</include>
                                     <include>org.slf4j:slf4j-api</include>
                                     <include>org.slf4j:slf4j-jdk14</include>
                                 </includes>

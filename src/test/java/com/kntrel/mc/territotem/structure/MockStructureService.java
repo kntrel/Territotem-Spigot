@@ -1,4 +1,4 @@
-package com.kntrel.mc.territotem.test.mock;
+package com.kntrel.mc.territotem.structure;
 
 import com.kntrel.mc.territotem.structure.BlueprintTracker;
 import com.kntrel.mc.territotem.structure.StructureService;
@@ -19,8 +19,9 @@ public class MockStructureService extends StructureService {
     }
 
 
+
     @Override
-    protected <T> CompletableFuture<T> runInMainThreadAsync(Callable<T> task) {
+    <T> CompletableFuture<T> runInMainThreadAsync(Callable<T> task) {
         try {
             return CompletableFuture.completedFuture(task.call());
         } catch (Exception e) {
@@ -28,6 +29,10 @@ public class MockStructureService extends StructureService {
         }
     }
 
+    @Override
+    <T> T runInMainThread(Callable<T> task) {
+        try { return task.call(); } catch (Exception e) { throw new RuntimeException(e); }
+    }
 
     @Override
     protected BlueprintTracker newTracker(Blueprint blueprint, World world, Vec3i origin) {

@@ -4,7 +4,6 @@ import com.kntrel.mc.territotem.structure.blueprint.Blueprint;
 import com.kntrel.mc.territotem.test.mock.MockBlueprints;
 import com.kntrel.mc.territotem.test.mock.MockPlugin;
 import com.kntrel.mc.territotem.test.mock.MockServer;
-import com.kntrel.mc.territotem.test.mock.MockStructureService;
 import com.kntrel.util.Vec3i;
 import org.bukkit.Material;
 import org.bukkit.Server;

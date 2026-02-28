@@ -1,6 +1,7 @@
 package com.kntrel.mc.territotem.structure.piece;
 
 import com.kntrel.mc.nbt.NBTCompound;
+import com.kntrel.mc.nbt.check.NBTCheck;
 import com.kntrel.mc.territotem.structure.worldTile.WorldTile;
 import com.kntrel.mc.territotem.structure.worldTile.WorldTileWriter;
 import org.bukkit.Material;

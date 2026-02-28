@@ -5,7 +5,6 @@ import com.kntrel.mc.territotem.structure.blueprint.TrackingInfo;
 import com.kntrel.mc.territotem.test.mock.MockBlueprints;
 import com.kntrel.mc.territotem.test.mock.MockPlugin;
 import com.kntrel.mc.territotem.test.mock.MockServer;
-import com.kntrel.mc.territotem.test.mock.MockStructureService;
 import com.kntrel.mc.territotem.util.ChunkKey;
 import com.kntrel.util.Vec3i;
 import org.bukkit.Material;

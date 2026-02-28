@@ -1,6 +1,7 @@
 package com.kntrel.mc.territotem.structure.piece;
 
 import com.kntrel.mc.nbt.NBTTag;
+import com.kntrel.mc.nbt.check.NBTCheck;
 import com.kntrel.mc.nbt.test.MockNBTCompound;
 import com.kntrel.mc.nbt.test.MockNBTList;
 import com.kntrel.mc.nbt.test.MockNBTPrimitive;

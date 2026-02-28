@@ -26,7 +26,7 @@ public final class Territotem extends JavaPlugin {
         RegionContext ctx = RegionLib.createDefaultContext(this);
 
         StructureService structureService = new StructureService(this);
-        structureService.registerBlueprint(MockBlueprint.get());
+        structureService.registerBlueprint(MockBlueprint.registration());
         new TotemService(ctx, structureService);
 
         LOGGER.info("Territotem is up and running");

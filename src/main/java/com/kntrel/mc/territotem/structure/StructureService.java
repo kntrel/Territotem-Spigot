@@ -70,6 +70,7 @@ public class StructureService {
     }
     public BlueprintTracker track(Blueprint blueprint, Vec3i origin, World world, Entity causer) {
 
+        LOGGER.debug("New blueprint tracker started at {}", origin);
         Triplet<Vec3i, UUID, Long> trackKey = Triplet.of(origin, world.getUID(), blueprint.id());
         BlueprintTracker candidate = this.trackersMap_.get(trackKey);
         if (candidate != null) {
@@ -77,7 +78,7 @@ public class StructureService {
             return candidate;
         }
 
-        candidate = this.newTracker(blueprint, world, origin);
+        candidate = this.runInMainThread(() -> this.newTracker(blueprint, world, origin));
         if (candidate.isEmpty()) {
             LOGGER.debug("Candidate at {} had not a single match. Dropped", origin);
             return candidate;
@@ -122,7 +123,16 @@ public class StructureService {
     BlueprintBitsetGenerator getBitsetGenerator() {
         return this.bitsetGenerator_;
     }
-    protected <T> CompletableFuture<T> runInMainThreadAsync(Callable<T> task) {
+    <T> CompletableFuture<T> runInMainThreadAsync(Callable<T> task) {
+        if (Bukkit.isPrimaryThread()) {
+            try {
+                T res = task.call();
+                return CompletableFuture.completedFuture(res);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
+
         CompletableFuture<T> future = new CompletableFuture<>();
         this.plugin_.getServer().getScheduler().runTask(this.plugin_, () -> {
             try {
@@ -132,6 +142,23 @@ public class StructureService {
             }
         });
         return future;
+    }
+    <T> T runInMainThread(Callable<T> task) {
+        if (Bukkit.isPrimaryThread()) {
+            try {
+                return task.call();
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        FutureTask<T> future = new FutureTask<>(task);
+        this.plugin_.getServer().getScheduler().runTask(this.plugin_, future);
+        try {
+            return future.get();
+        } catch (InterruptedException | ExecutionException e) {
+            throw new RuntimeException(e);
+        }
     }
 
 
