@@ -31,7 +31,8 @@ class NBTCheckImpl {
             }
 
             if (primitive.isNumericArray()) {
-                if (!(this.subject instanceof Number[] arr)) return false;
+                Number[] arr = toNumericArray(this.subject);
+                if (arr == null) { return false; }
 
                 Number[] actual = primitive.getAsNumberArray();
                 if (actual.length != arr.length) { return false; }
@@ -272,5 +273,35 @@ class NBTCheckImpl {
             // Different types: cannot match
             return false;
         }
+    }
+
+
+    //HELPERS
+    private static Number[] toNumericArray(Object object) {
+        if (object instanceof Number[] arr) {
+            return arr;
+        }
+        if (object instanceof byte[] byteArr) {
+            Number[] arr = new Number[byteArr.length];
+            for (int i = 0; i < byteArr.length; i++) {
+                arr[i] = byteArr[i];
+            }
+            return arr;
+        }
+        if (object instanceof int[] intArr) {
+            Number[] arr = new Number[intArr.length];
+            for (int i = 0; i < intArr.length; i++) {
+                arr[i] = intArr[i];
+            }
+            return arr;
+        }
+        if (object instanceof long[] longArr) {
+            Number[] arr = new Number[longArr.length];
+            for (int i = 0; i < longArr.length; i++) {
+                arr[i] = longArr[i];
+            }
+            return arr;
+        }
+        return null;
     }
 }

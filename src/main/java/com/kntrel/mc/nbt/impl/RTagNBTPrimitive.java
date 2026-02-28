@@ -4,6 +4,7 @@ import com.kntrel.mc.nbt.NBTPrimitive;
 import com.kntrel.mc.nbt.NBTType;
 import com.saicone.rtag.tag.TagBase;
 
+import java.util.Arrays;
 import java.util.Set;
 
 public class RTagNBTPrimitive extends RTagNBT implements NBTPrimitive {
@@ -60,7 +61,23 @@ public class RTagNBTPrimitive extends RTagNBT implements NBTPrimitive {
     }
     @Override public Number[] getAsNumberArray() {
         if (!this.isNumericArray()) { return null; }
-        return (Number[]) this.get();
+
+        if (this.type_ == NBTType.LONG_ARRAY) {
+            long[] longs = (long[]) this.get();
+            return Arrays.stream(longs).boxed().toArray(Long[]::new);
+        }
+
+        if (this.type_ == NBTType.INTEGER_ARRAY) {
+            int[] ints = (int[]) this.get();
+            return Arrays.stream(ints).boxed().toArray(Integer[]::new);
+        }
+
+        byte[] bytes = (byte[]) this.get();
+        Number[] result = new Number[bytes.length];
+        for (int i = 0; i < bytes.length; i++) {
+            result[i] = bytes[i];
+        }
+        return result;
     }
     @Override public String getAsString() {
         if (this.isString()) {

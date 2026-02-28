@@ -6,7 +6,6 @@ import com.kntrel.mc.nbt.test.MockNBTList;
 import com.kntrel.mc.nbt.test.MockNBTPrimitive;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
@@ -20,6 +19,20 @@ class NBTCheckTest {
     }
 
     @Test
+    @DisplayName("isEquals worlds across numeric types")
+    void testEqualsAcrossNumeric() {
+        assertTrue(NBTCheck.isEquals(42L).test(p(42)));
+        assertTrue(NBTCheck.isEquals(3.14).test(p(3.14f)));
+        assertFalse(NBTCheck.isEquals(42).test(p(43)));
+        assertFalse(NBTCheck.isEquals(3.14).test(p(3.15)));
+        assertTrue(NBTCheck.isEquals(new int[]{1, 2, 3}).test(p(new long[]{1L, 2L, 3L})));
+        assertTrue(NBTCheck.isEquals(new Number[]{25L, 11.0, 97.0f}).test(p(new int[]{25, 11, 97})));
+        assertTrue(NBTCheck.isEquals(75.0).test(p(75)));
+        assertFalse(NBTCheck.isEquals(75.0).test(p(75.1)));
+        assertTrue(NBTCheck.isEquals(28).test(p(28.0)));
+    }
+
+    @Test
     @DisplayName("not/isEquals/isNotEquals support both matching and failing scenarios")
     void testNotAndEqualsFactories() {
         NBTCheck eq = NBTCheck.isEquals(42);
@@ -28,8 +41,8 @@ class NBTCheckTest {
         assertFalse(eq.test(null));
 
         NBTCheck arrEq = NBTCheck.isEquals(new Number[]{1, 2L, 3.0});
-        assertTrue(arrEq.test(p(new Number[]{1L, 2, 3f})));
-        assertFalse(arrEq.test(p(new Number[]{1, 2})));
+        assertTrue(arrEq.test(p(new long[]{1L, 2L, 3L})));
+        assertFalse(arrEq.test(p(new int[]{1, 2})));
         assertFalse(arrEq.test(p("[1,2,3]")));
 
         NBTCheck notEq = NBTCheck.not(eq);
@@ -67,8 +80,8 @@ class NBTCheckTest {
     @Test
     @DisplayName("contains handles primitives, arrays, lists, compounds and failures")
     void testContainsFactory() {
-        assertTrue(NBTCheck.contains(3).test(p(new Number[]{1, 2, 3L})));
-        assertFalse(NBTCheck.contains(7).test(p(new Number[]{1, 2, 3L})));
+        assertTrue(NBTCheck.contains(3).test(p(new int[]{1, 2, 3})));
+        assertFalse(NBTCheck.contains(7).test(p(new long[]{1L, 2L, 3L})));
 
         assertTrue(NBTCheck.contains(5).test(p(5L)));
         assertFalse(NBTCheck.contains(5).test(p(6L)));

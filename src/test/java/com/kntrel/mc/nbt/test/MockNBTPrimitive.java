@@ -2,6 +2,7 @@ package com.kntrel.mc.nbt.test;
 
 import com.kntrel.mc.nbt.NBTPrimitive;
 import com.kntrel.mc.nbt.NBTType;
+import java.util.Arrays;
 import java.util.Set;
 
 public class MockNBTPrimitive extends MockNBTTag implements NBTPrimitive {
@@ -62,7 +63,23 @@ public class MockNBTPrimitive extends MockNBTTag implements NBTPrimitive {
     }
     @Override public Number[] getAsNumberArray() {
         if (!this.isNumericArray()) { return null; }
-        return (Number[]) this.value_;
+
+        if (this.type_ == NBTType.LONG_ARRAY) {
+            long[] longs = (long[]) this.value_;
+            return Arrays.stream(longs).boxed().toArray(Long[]::new);
+        }
+
+        if (this.type_ == NBTType.INTEGER_ARRAY) {
+            int[] ints = (int[]) this.value_;
+            return Arrays.stream(ints).boxed().toArray(Integer[]::new);
+        }
+
+        byte[] bytes = (byte[]) this.value_;
+        Number[] result = new Number[bytes.length];
+        for (int i = 0; i < bytes.length; i++) {
+            result[i] = bytes[i];
+        }
+        return result;
     }
     @Override public String getAsString() {
         return String.valueOf(this.value_);

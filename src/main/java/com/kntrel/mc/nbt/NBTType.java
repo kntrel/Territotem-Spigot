@@ -3,6 +3,7 @@ package com.kntrel.mc.nbt;
 import com.kntrel.util.Constants;
 import org.jspecify.annotations.Nullable;
 import java.util.Arrays;
+import java.util.Objects;
 
 public final class NBTType<T> {
 
@@ -17,8 +18,9 @@ public final class NBTType<T> {
     }
     @SuppressWarnings("unchecked")
     public static <T> @Nullable NBTType<T> ofType(Class<T> clazz) {
+        Class<?> wrapped = wrap(clazz);
         for (NBTType<?> type : VALUES_) {
-            if (type.type_.equals(clazz)) {
+            if (type.type_.equals(wrapped)) {
                 return (NBTType<T>) type;
             }
         }
@@ -71,5 +73,23 @@ public final class NBTType<T> {
     }
     @Override public int hashCode() {
         return Byte.hashCode(this.typeId_);
+    }
+
+
+    //HELPERS
+    private static Class<?> wrap(Class<?> primitiveClass) {
+        if (primitiveClass == byte.class) { return Byte.class; }
+        if (primitiveClass == short.class) { return Short.class; }
+        if (primitiveClass == int.class) { return Integer.class; }
+        if (primitiveClass == long.class) { return Long.class; }
+        if (primitiveClass == float.class) { return Float.class; }
+        if (primitiveClass == double.class) { return Double.class; }
+        if (primitiveClass == boolean.class) { return Boolean.class; }
+
+        if (primitiveClass == byte[].class) { return Byte[].class; }
+        if (primitiveClass == int[].class) { return Integer[].class; }
+        if (primitiveClass == long[].class) { return Long[].class; }
+    
+        return primitiveClass;
     }
 }
