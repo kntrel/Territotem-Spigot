@@ -39,8 +39,7 @@ class StateCheckImpl {
             if (state == null || this.other == null) { return false; }
 
             for (Map.Entry<String, State.Value> entry : this.other.entrySet()) {
-                State.Value value = state.get(entry.getKey());
-                if (value == null || !StateCheck.valueEquals(value, entry.getValue())) {
+                if (!StateCheck.isEquals(entry.getKey(), entry.getValue()).test(state)) {
                     return false;
                 }
             }

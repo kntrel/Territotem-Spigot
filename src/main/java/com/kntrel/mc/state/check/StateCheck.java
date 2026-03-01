@@ -2,7 +2,6 @@ package com.kntrel.mc.state.check;
 
 import com.kntrel.mc.state.State;
 import org.jspecify.annotations.NonNull;
-
 import java.util.Collection;
 import java.util.List;
 import java.util.function.Predicate;
@@ -107,8 +106,6 @@ public interface StateCheck extends Predicate<State> {
         return new StateCheckImpl.RegexMatches(key, pattern);
     }
 
-
-    // Extra checks
     static StateCheck startsWith(String key, String subject) {
         return StateCheck.check(key, value -> value.getAsString().startsWith(subject));
     }
