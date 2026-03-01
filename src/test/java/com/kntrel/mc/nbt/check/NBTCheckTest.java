@@ -1,4 +1,4 @@
-package com.kntrel.mc.territotem.structure.piece;
+package com.kntrel.mc.nbt.check;
 
 import com.kntrel.mc.nbt.NBTTag;
 import com.kntrel.mc.nbt.check.NBTCheck;
