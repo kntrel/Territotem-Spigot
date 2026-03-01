@@ -95,5 +95,8 @@ public class StateMap extends HashMap<String, StateMap.Value> {
         public Number getAsNumber() {
             return (this.num_ != null) ? this.num_ : Double.NaN;
         }
+        public boolean getAsBoolean() {
+            return Boolean.parseBoolean(this.val_);
+        }
     }
 }
