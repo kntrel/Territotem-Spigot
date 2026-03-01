@@ -11,10 +11,14 @@ import org.bukkit.Material;
 import org.bukkit.entity.EntityType;
 import org.bukkit.util.Vector;
 import org.jspecify.annotations.Nullable;
-
 import java.util.Collection;
 
 final class PieceImpl {
+
+    //CONSTANTS
+    static final StateCheck ALLWAYS_TRUE_STATE = s -> true;
+    static final NBTCheck ALLWAYS_TRUE_NTB = t -> true;
+
 
     record BlockPiece(Material material, StateCheck stateCheck, @Nullable StateMap placeState, NBTCheck nbtCheck, @Nullable NBTCompound placeNbt) implements Piece {
 
@@ -22,16 +26,17 @@ final class PieceImpl {
             this(material, StateCheck.matches(state), state, NBTCheck.matches(nbt), nbt);
         }
         BlockPiece(Material material, StateMap state) {
-            this(material, StateCheck.matches(state), state, t -> true, null);
+            this(material, StateCheck.matches(state), state, ALLWAYS_TRUE_NTB, null);
         }
         BlockPiece(Material material) {
-            this(material, s -> true, null, t -> true, null);
+            this(material, ALLWAYS_TRUE_STATE, null, ALLWAYS_TRUE_NTB, null);
         }
 
         @Override
         public boolean matches(WorldTile tile) {
             if (tile.blockType() != this.material) { return false; }
-            if (!this.stateCheck.test(tile.blockState())) { return false; }
+            if (this.stateCheck != ALLWAYS_TRUE_STATE && !this.stateCheck.test(tile.blockState())) { return false; }
+            if (this.nbtCheck == ALLWAYS_TRUE_NTB) { return true; }
             return this.nbtCheck.test(tile.blockNbt());
         }
 

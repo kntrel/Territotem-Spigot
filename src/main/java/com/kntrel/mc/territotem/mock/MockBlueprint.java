@@ -2,6 +2,7 @@ package com.kntrel.mc.territotem.mock;
 
 import com.kntrel.mc.regionLib.region.hierarchy.Hierarchy;
 import com.kntrel.mc.state.StateMap;
+import com.kntrel.mc.state.check.StateCheck;
 import com.kntrel.mc.territotem.structure.blueprint.Blueprint;
 import com.kntrel.mc.territotem.structure.blueprint.BlueprintRegistration;
 import com.kntrel.mc.territotem.structure.blueprint.TrackingInfo;
@@ -25,7 +26,8 @@ public class MockBlueprint {
         Piece lightningRod = new Piece() {
             @Override
             public boolean matches(WorldTile tile) {
-                return Tag.LIGHTNING_RODS.isTagged(tile.blockType());
+                if (!Tag.LIGHTNING_RODS.isTagged(tile.blockType())) { return false; };
+                return StateCheck.isEquals("facing", "up").test(tile.blockState());
             }
 
             @Override

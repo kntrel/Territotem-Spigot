@@ -47,7 +47,7 @@ public interface Piece {
     }
 
     static Piece block(Material material, StateMap state, StateCheck stateCheck) {
-        return new PieceImpl.BlockPiece(material, stateCheck, state, t -> true, null);
+        return new PieceImpl.BlockPiece(material, stateCheck, state, PieceImpl.ALLWAYS_TRUE_NTB, null);
     }
 
     static Piece entity(EntityType type) {
