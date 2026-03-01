@@ -2,9 +2,12 @@ package com.kntrel.mc.territotem.structure.piece;
 
 import com.kntrel.mc.nbt.NBTCompound;
 import com.kntrel.mc.nbt.check.NBTCheck;
+import com.kntrel.mc.state.StateMap;
+import com.kntrel.mc.state.check.StateCheck;
 import com.kntrel.mc.territotem.structure.worldTile.WorldTile;
 import com.kntrel.mc.territotem.structure.worldTile.WorldTileWriter;
 import org.bukkit.Material;
+import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.EntityType;
 import org.bukkit.util.Vector;
 import java.util.Collection;
@@ -27,16 +30,24 @@ public interface Piece {
         return Piece.either(options.toArray(new Piece[0]));
     }
 
+    static Piece block(BlockData block) {
+        return new PieceImpl.BlockPiece(block.getMaterial(), StateMap.from(block));
+    }
+
     static Piece block(Material material) {
         return new PieceImpl.BlockPiece(material);
     }
 
-    static Piece block(Material material, NBTCompound nbt) {
-        return new PieceImpl.BlockPiece(material, nbt);
+    static Piece block(Material material, StateMap state) {
+        return new PieceImpl.BlockPiece(material, state);
     }
 
-    static Piece block(Material material, NBTCompound placeNbt, NBTCheck matchCheck) {
-        return new PieceImpl.BlockPiece(material, matchCheck, placeNbt);
+    static Piece block(Material material, StateMap state, NBTCompound nbt) {
+        return new PieceImpl.BlockPiece(material, state, nbt);
+    }
+
+    static Piece block(Material material, StateMap state, StateCheck stateCheck) {
+        return new PieceImpl.BlockPiece(material, stateCheck, state, t -> true, null);
     }
 
     static Piece entity(EntityType type) {

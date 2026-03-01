@@ -1,13 +1,13 @@
 package com.kntrel.mc.state.check;
 
-import com.kntrel.mc.state.State;
+import com.kntrel.mc.state.StateMap;
 import org.jspecify.annotations.NonNull;
 import java.util.Collection;
 import java.util.List;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
-public interface StateCheck extends Predicate<State> {
+public interface StateCheck extends Predicate<StateMap> {
 
     // FACTORY: state-level
     static StateCheck has(String key) { return new StateCheckImpl.Has(key); }
@@ -24,7 +24,7 @@ public interface StateCheck extends Predicate<State> {
 
     static StateCheck not(StateCheck negated) { return state -> !negated.test(state); }
 
-    static StateCheck matches(State other) { return new StateCheckImpl.Matches(other); }
+    static StateCheck matches(StateMap other) { return new StateCheckImpl.Matches(other); }
 
     static StateCheck all() { return state -> true; }
 
@@ -80,21 +80,21 @@ public interface StateCheck extends Predicate<State> {
         return StateCheck.check(key, value -> options.stream().anyMatch(option -> StateCheckImpl.valueEquals(value, option)));
     }
 
-    static StateCheck all(String key, Collection<Predicate<State.Value>> checks) {
+    static StateCheck all(String key, Collection<Predicate<StateMap.Value>> checks) {
         return StateCheck.check(key, value -> checks.stream().allMatch(check -> check.test(value)));
     }
 
     @SafeVarargs
-    static StateCheck all(String key, Predicate<State.Value>... checks) {
+    static StateCheck all(String key, Predicate<StateMap.Value>... checks) {
         return StateCheck.all(key, List.of(checks));
     }
 
-    static StateCheck any(String key, Collection<Predicate<State.Value>> checks) {
+    static StateCheck any(String key, Collection<Predicate<StateMap.Value>> checks) {
         return StateCheck.check(key, value -> checks.stream().anyMatch(check -> check.test(value)));
     }
 
     @SafeVarargs
-    static StateCheck any(String key, Predicate<State.Value>... checks) {
+    static StateCheck any(String key, Predicate<StateMap.Value>... checks) {
         return StateCheck.any(key, List.of(checks));
     }
 
@@ -132,13 +132,13 @@ public interface StateCheck extends Predicate<State> {
 
     static StateCheck missing(String key) { return StateCheck.has(key).negate(); }
 
-    static StateCheck check(String key, Predicate<State.Value> check) {
+    static StateCheck check(String key, Predicate<StateMap.Value> check) {
         return new StateCheckImpl.ValuePredicate(key, check);
     }
 
 
     // OVERWRITES
-    @Override default @NonNull StateCheck and(@NonNull Predicate<? super State> other) {
+    @Override default @NonNull StateCheck and(@NonNull Predicate<? super StateMap> other) {
         StateCheck otherCheck = (other instanceof StateCheck chk) ? chk : other::test;
         return StateCheck.all(this, otherCheck);
     }
@@ -147,7 +147,7 @@ public interface StateCheck extends Predicate<State> {
         return StateCheck.not(this);
     }
 
-    @Override default @NonNull StateCheck or(@NonNull Predicate<? super State> other) {
+    @Override default @NonNull StateCheck or(@NonNull Predicate<? super StateMap> other) {
         StateCheck otherCheck = (other instanceof StateCheck chk) ? chk : other::test;
         return StateCheck.any(this, otherCheck);
     }

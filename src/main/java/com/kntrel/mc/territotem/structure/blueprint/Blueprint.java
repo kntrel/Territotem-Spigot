@@ -7,6 +7,8 @@ import com.kntrel.mc.territotem.structure.piece.Piece;
 import com.kntrel.mc.territotem.structure.worldTile.WorldTile;
 import com.kntrel.util.Vec3i;
 import org.bukkit.util.BoundingBox;
+import org.jspecify.annotations.Nullable;
+
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -74,6 +76,12 @@ public class Blueprint {
     }
     public Map<Vec3i, Tile> piecesByOffset() {
         return this.pieceMap_;
+    }
+    public @Nullable Tile pieceAt(Vec3i offset) {
+        return this.pieceMap_.get(offset);
+    }
+    public @Nullable Tile pieceAt(int x, int y, int z) {
+        return this.pieceAt(new Vec3i(x, y, z));
     }
     public boolean isEmptyAt(Vec3i offset) {
         return !this.pieceMap_.containsKey(offset);

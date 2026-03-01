@@ -2,9 +2,11 @@ package com.kntrel.mc.territotem.structure.worldTile;
 
 
 import com.kntrel.mc.nbt.NBTCompound;
+import com.kntrel.mc.state.StateMap;
 import com.kntrel.util.Vec3i;
+import org.bukkit.Material;
 import org.bukkit.World;
-import org.bukkit.block.BlockState;
+
 import java.util.List;
 
 public interface WorldTile {
@@ -15,7 +17,8 @@ public interface WorldTile {
 
     //CONTRACT
     Vec3i coordinates();
-    BlockState block();
+    Material blockType();
+    StateMap blockState();
     NBTCompound blockNbt();
     List<EntityState> entities();
 

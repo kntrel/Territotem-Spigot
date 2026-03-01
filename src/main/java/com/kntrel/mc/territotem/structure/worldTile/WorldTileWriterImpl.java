@@ -3,6 +3,7 @@ package com.kntrel.mc.territotem.structure.worldTile;
 import com.kntrel.mc.nbt.NBTCompound;
 import com.kntrel.mc.nbt.impl.RTagNBT;
 import com.kntrel.mc.nbt.impl.RTagNBTCompound;
+import com.kntrel.mc.state.StateMap;
 import com.kntrel.util.Vec3i;
 import com.saicone.rtag.RtagBlock;
 import com.saicone.rtag.RtagEntity;
@@ -10,6 +11,8 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Block;
+import org.bukkit.block.TileState;
+import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.util.Vector;
@@ -30,15 +33,25 @@ class WorldTileWriterImpl extends WorldTileImpl implements WorldTileWriter {
 
 
     //IMPLEMENTATION
-    @Override public void setBlock(Material material, @Nullable NBTCompound nbt) {
+    @Override public void setBlock(Material material, @Nullable StateMap state, @Nullable NBTCompound nbt) {
+
         Block block = this.world_.getBlockAt(this.x(), this.y(), this.z());
-        block.setType(material);
+        if (state == null) {
+            block.setType(material);
+        } else {
+            BlockData data = state.createBlockData(material);
+            block.setBlockData(data);
+        }
 
         if (nbt == null) { return; }
+        if (!(block.getState() instanceof TileState)) { return; }
         if (!(nbt instanceof RTagNBT rnbt)) { return; }
 
         RtagBlock rtag = new RtagBlock(block);
         rtag.set(rnbt.handle());
+    }
+    @Override public void setBlock(BlockData block) {
+        this.world_.setBlockData(this.x(), this.y(), this.z(), block);
     }
     @Override public void killEntity(UUID id) {
         this.getEntity(id).ifPresent(Entity::remove);

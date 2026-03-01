@@ -2,11 +2,12 @@ package com.kntrel.mc.territotem.structure.piece;
 
 import com.kntrel.mc.nbt.NBTCompound;
 import com.kntrel.mc.nbt.check.NBTCheck;
+import com.kntrel.mc.state.StateMap;
+import com.kntrel.mc.state.check.StateCheck;
 import com.kntrel.mc.territotem.structure.worldTile.EntityState;
 import com.kntrel.mc.territotem.structure.worldTile.WorldTile;
 import com.kntrel.mc.territotem.structure.worldTile.WorldTileWriter;
 import org.bukkit.Material;
-import org.bukkit.block.BlockState;
 import org.bukkit.entity.EntityType;
 import org.bukkit.util.Vector;
 import org.jspecify.annotations.Nullable;
@@ -15,25 +16,28 @@ import java.util.Collection;
 
 final class PieceImpl {
 
-    record BlockPiece(Material material, NBTCheck nbtCheck, @Nullable NBTCompound placeNbt) implements Piece {
+    record BlockPiece(Material material, StateCheck stateCheck, @Nullable StateMap placeState, NBTCheck nbtCheck, @Nullable NBTCompound placeNbt) implements Piece {
 
-        BlockPiece(Material material, NBTCompound nbt) {
-            this(material, NBTCheck.matches(nbt), nbt);
+        BlockPiece(Material material, StateMap state, NBTCompound nbt) {
+            this(material, StateCheck.matches(state), state, NBTCheck.matches(nbt), nbt);
+        }
+        BlockPiece(Material material, StateMap state) {
+            this(material, StateCheck.matches(state), state, t -> true, null);
         }
         BlockPiece(Material material) {
-            this(material, t -> true, null);
+            this(material, s -> true, null, t -> true, null);
         }
 
         @Override
         public boolean matches(WorldTile tile) {
-            BlockState block = tile.block();
-            if (block.getType() != this.material) { return false; }
+            if (tile.blockType() != this.material) { return false; }
+            if (!this.stateCheck.test(tile.blockState())) { return false; }
             return this.nbtCheck.test(tile.blockNbt());
         }
 
         @Override
         public void place(WorldTileWriter tile) {
-            tile.setBlock(this.material, this.placeNbt);
+            tile.setBlock(this.material, this.placeState, this.placeNbt);
         }
     }
 
@@ -84,7 +88,7 @@ final class PieceImpl {
         static final EmptyPiece INSTANCE = new EmptyPiece();
         private EmptyPiece() {}
 
-        @Override public boolean matches(WorldTile tile) { return tile.block().getType() == Material.AIR; }
+        @Override public boolean matches(WorldTile tile) { return tile.blockType() == Material.AIR; }
         @Override public void place(WorldTileWriter tile) { tile.breakBlock(); }
     }
 

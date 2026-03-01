@@ -2,11 +2,14 @@ package com.kntrel.mc.territotem.structure.worldTile;
 
 import com.kntrel.mc.nbt.NBTCompound;
 import com.kntrel.mc.nbt.impl.RTagNBTCompound;
+import com.kntrel.mc.state.StateMap;
 import com.kntrel.util.Vec3i;
 import com.saicone.rtag.RtagBlock;
+import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockState;
+import org.bukkit.block.TileState;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.EnderCrystal;
 import org.bukkit.entity.Entity;
@@ -33,10 +36,15 @@ class WorldTileImpl implements WorldTile {
     @Override public Vec3i coordinates() {
         return this.coordinates_;
     }
-    @Override public BlockState block() {
-        return this.actualBlock().getBlockData().createBlockState();
+    @Override public Material blockType() {
+        return this.actualBlock().getType();
+    }
+    @Override public StateMap blockState() {
+        return StateMap.from(this.actualBlock().getBlockData());
     }
     @Override public NBTCompound blockNbt() {
+        Block block = this.actualBlock();
+        if (!(block.getState() instanceof TileState)) { return new RTagNBTCompound(); }
         RtagBlock rtagBlock = new RtagBlock(this.actualBlock());
         Object rawTag = rtagBlock.getTag();
         return new RTagNBTCompound(rawTag);

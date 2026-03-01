@@ -5,14 +5,14 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class StateTest {
+class StateMapTest {
 
     @Test
     @DisplayName("from parses real BlockData-like strings into key/value entries")
     void testFromParsesBlockDataString() {
         String blockData = "minecraft:oak_stairs[facing=east,half=top,shape=straight,waterlogged=false]";
 
-        State state = State.from(blockData);
+        StateMap state = StateMap.from(blockData);
 
         assertEquals(4, state.size());
         assertTrue(state.containsKey("facing"));
@@ -29,7 +29,7 @@ class StateTest {
     @Test
     @DisplayName("from parses numeric entries as numeric State.Value instances")
     void testFromParsesNumericValues() {
-        State state = State.from("minecraft:wheat[age=3,moisture=7]");
+        StateMap state = StateMap.from("minecraft:wheat[age=3,moisture=7]");
 
         assertEquals(2, state.size());
         assertTrue(state.get("age").isNumeric());
@@ -41,7 +41,7 @@ class StateTest {
     @Test
     @DisplayName("from returns empty state when no block state section is present")
     void testFromNoBracketsReturnsEmpty() {
-        State state = State.from("minecraft:stone");
+        StateMap state = StateMap.from("minecraft:stone");
 
         assertTrue(state.isEmpty());
     }
@@ -49,7 +49,7 @@ class StateTest {
     @Test
     @DisplayName("from rejects malformed entries")
     void testFromMalformedEntryThrows() {
-        assertThrows(InvalidStateException.class, () -> State.from("minecraft:stone[facing]"));
-        assertThrows(InvalidStateException.class, () -> State.from("minecraft:stone[=east]"));
+        assertThrows(InvalidStateException.class, () -> StateMap.from("minecraft:stone[facing]"));
+        assertThrows(InvalidStateException.class, () -> StateMap.from("minecraft:stone[=east]"));
     }
 }

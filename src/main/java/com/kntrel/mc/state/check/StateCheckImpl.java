@@ -1,6 +1,6 @@
 package com.kntrel.mc.state.check;
 
-import com.kntrel.mc.state.State;
+import com.kntrel.mc.state.StateMap;
 import com.kntrel.util.Numbers;
 
 import java.util.Map;
@@ -11,34 +11,34 @@ import java.util.regex.Pattern;
 class StateCheckImpl {
 
     record Has(String key) implements StateCheck {
-        @Override public boolean test(State state) {
+        @Override public boolean test(StateMap state) {
             return state != null && state.containsKey(this.key);
         }
     }
 
     record SizeEquals(int size) implements StateCheck {
-        @Override public boolean test(State state) {
+        @Override public boolean test(StateMap state) {
             return state != null && state.size() == this.size;
         }
     }
 
     record SizeBiggerThan(int size) implements StateCheck {
-        @Override public boolean test(State state) {
+        @Override public boolean test(StateMap state) {
             return state != null && state.size() > this.size;
         }
     }
 
     record SizeLessThan(int size) implements StateCheck {
-        @Override public boolean test(State state) {
+        @Override public boolean test(StateMap state) {
             return state != null && state.size() < this.size;
         }
     }
 
-    record Matches(State other) implements StateCheck {
-        @Override public boolean test(State state) {
+    record Matches(StateMap other) implements StateCheck {
+        @Override public boolean test(StateMap state) {
             if (state == null || this.other == null) { return false; }
 
-            for (Map.Entry<String, State.Value> entry : this.other.entrySet()) {
+            for (Map.Entry<String, StateMap.Value> entry : this.other.entrySet()) {
                 if (!StateCheck.isEquals(entry.getKey(), entry.getValue()).test(state)) {
                     return false;
                 }
@@ -47,40 +47,40 @@ class StateCheckImpl {
         }
     }
 
-    record ValuePredicate(String key, Predicate<State.Value> predicate) implements StateCheck {
-        @Override public boolean test(State state) {
+    record ValuePredicate(String key, Predicate<StateMap.Value> predicate) implements StateCheck {
+        @Override public boolean test(StateMap state) {
             if (state == null) { return false; }
-            State.Value value = state.get(this.key);
+            StateMap.Value value = state.get(this.key);
             return value != null && this.predicate.test(value);
         }
     }
 
     record RegexContains(String key, Pattern pattern) implements StateCheck {
-        @Override public boolean test(State state) {
+        @Override public boolean test(StateMap state) {
             if (state == null) { return false; }
-            State.Value value = state.get(this.key);
+            StateMap.Value value = state.get(this.key);
             return value != null && this.pattern.matcher(value.getAsString()).find();
         }
     }
 
     record RegexMatches(String key, Pattern pattern) implements StateCheck {
-        @Override public boolean test(State state) {
+        @Override public boolean test(StateMap state) {
             if (state == null) { return false; }
-            State.Value value = state.get(this.key);
+            StateMap.Value value = state.get(this.key);
             return value != null && this.pattern.matcher(value.getAsString()).matches();
         }
     }
 
     record KeyMatches(Pattern pattern) implements StateCheck {
-        @Override public boolean test(State state) {
+        @Override public boolean test(StateMap state) {
             return state != null && state.keySet().stream().anyMatch(k -> this.pattern.matcher(k).find());
         }
     }
 
-    static boolean valueEquals(State.Value value, Object subject) {
+    static boolean valueEquals(StateMap.Value value, Object subject) {
         if (value == null) { return false; }
 
-        if (subject instanceof State.Value stateValue) {
+        if (subject instanceof StateMap.Value stateValue) {
             return valueEquals(value, stateValue.getAsString());
         }
 
@@ -91,17 +91,17 @@ class StateCheckImpl {
         return Objects.equals(value.getAsString(), String.valueOf(subject));
     }
 
-    static boolean valueContains(State.Value value, Object subject) {
+    static boolean valueContains(StateMap.Value value, Object subject) {
         return value != null && value.getAsString().contains(String.valueOf(subject));
     }
 
-    static boolean valueGreaterThan(State.Value value, Object subject) {
+    static boolean valueGreaterThan(StateMap.Value value, Object subject) {
         Number subjectNumber = toNumber(subject);
         return value != null && value.isNumeric() && subjectNumber != null
                 && Numbers.greaterThan(value.getAsNumber(), subjectNumber);
     }
 
-    static boolean valueLessThan(State.Value value, Object subject) {
+    static boolean valueLessThan(StateMap.Value value, Object subject) {
         Number subjectNumber = toNumber(subject);
         return value != null && value.isNumeric() && subjectNumber != null
                 && Numbers.lessThan(value.getAsNumber(), subjectNumber);
@@ -110,7 +110,7 @@ class StateCheckImpl {
     static Number toNumber(Object subject) {
         if (subject instanceof Number number) { return number; }
 
-        if (subject instanceof State.Value value) {
+        if (subject instanceof StateMap.Value value) {
             return value.isNumeric() ? value.getAsNumber() : null;
         }
 

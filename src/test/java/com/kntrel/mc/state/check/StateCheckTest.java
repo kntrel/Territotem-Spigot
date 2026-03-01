@@ -1,6 +1,6 @@
 package com.kntrel.mc.state.check;
 
-import com.kntrel.mc.state.State;
+import com.kntrel.mc.state.StateMap;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -11,15 +11,15 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class StateCheckTest {
 
-    private static State state(String blockDataString) {
-        return State.from(blockDataString);
+    private static StateMap state(String blockDataString) {
+        return StateMap.from(blockDataString);
     }
 
     @Test
     @DisplayName("state-level factories cover passing and failing scenarios")
     void testStateLevelFactories() {
-        State sample = state("minecraft:oak_stairs[facing=east,half=top,waterlogged=false]");
-        State other = state("minecraft:oak_stairs[facing=east,waterlogged=false]");
+        StateMap sample = state("minecraft:oak_stairs[facing=east,half=top,waterlogged=false]");
+        StateMap other = state("minecraft:oak_stairs[facing=east,waterlogged=false]");
 
         assertTrue(StateCheck.has("facing").test(sample));
         assertFalse(StateCheck.has("missing").test(sample));
@@ -58,7 +58,7 @@ class StateCheckTest {
     @Test
     @DisplayName("value-level factories cover matching and failing scenarios")
     void testValueLevelFactories() {
-        State sample = state("minecraft:oak_stairs[facing=east,half=top,age=3,shape=straight]");
+        StateMap sample = state("minecraft:oak_stairs[facing=east,half=top,age=3,shape=straight]");
 
         assertTrue(StateCheck.isEquals("facing", "east").test(sample));
         assertFalse(StateCheck.isEquals("facing", "west").test(sample));
@@ -140,7 +140,7 @@ class StateCheckTest {
     @Test
     @DisplayName("default and/or/negate combinators retain StateCheck semantics")
     void testDefaultCombinators() {
-        State sample = state("minecraft:oak_stairs[facing=east,age=3]");
+        StateMap sample = state("minecraft:oak_stairs[facing=east,age=3]");
 
         StateCheck andCheck = StateCheck.has("facing").and(StateCheck.isEquals("age", 3));
         assertTrue(andCheck.test(sample));

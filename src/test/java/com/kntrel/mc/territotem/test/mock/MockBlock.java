@@ -3,6 +3,7 @@ package com.kntrel.mc.territotem.test.mock;
 import com.kntrel.mc.nbt.NBTCompound;
 import com.kntrel.mc.nbt.test.MockNBTCompound;
 import com.kntrel.mc.regionLib.Constants;
+import com.kntrel.mc.state.StateMap;
 import com.kntrel.util.Vec3i;
 import org.bukkit.*;
 import org.bukkit.block.*;
@@ -37,6 +38,7 @@ public class MockBlock implements Block {
     private int blockPower;
     private final Map<String, List<MetadataValue>> metadata;
     private NBTCompound nbt_;
+    private StateMap state_;
 
 
     //CONSTRUCTOR
@@ -55,6 +57,7 @@ public class MockBlock implements Block {
         this.blockPower = 0;
         this.metadata = new HashMap<>();
         this.nbt_ = new MockNBTCompound();
+        this.state_ = new StateMap();
 
         when(this.blockData.createBlockState()).then(m -> new MockBlockState(this));
     }

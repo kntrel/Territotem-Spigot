@@ -1,23 +1,28 @@
 package com.kntrel.mc.state;
 
+import org.bukkit.Bukkit;
+import org.bukkit.Material;
 import org.bukkit.block.data.BlockData;
 import java.util.HashMap;
+import java.util.Locale;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
-public class State extends HashMap<String, State.Value> {
+public class StateMap extends HashMap<String, StateMap.Value> {
 
     //CONSTANTS
     private static final Pattern BRACKETS = Pattern.compile("\\[(?<inside>[^\\]]*)\\]");
 
 
     //FACTORY
-    public static State from(String blockState) {
+    public static StateMap from(String blockState) {
         Matcher m = BRACKETS.matcher(blockState);
-        if (!m.find()) { return new State(); }
+        if (!m.find()) { return new StateMap(); }
 
         String inside = m.group("inside").trim();
-        State out = new State();
+        StateMap out = new StateMap();
 
         if (inside.isEmpty()) { return out; }
 
@@ -36,8 +41,30 @@ public class State extends HashMap<String, State.Value> {
         return out;
     }
 
-    public static State from(BlockData blockData) {
+    public static StateMap from(BlockData blockData) {
         return from(blockData.getAsString());
+    }
+    @SafeVarargs public static StateMap of(Map.Entry<String, String>... entries) {
+        StateMap out = new StateMap();
+        for (Map.Entry<String, String> entry : entries) {
+            out.put(entry.getKey(), new Value(entry.getValue()));
+        }
+        return out;
+    }
+
+
+    //EXTENSION
+    public BlockData createBlockData(Material blockType) {
+        String props = this.entrySet().stream()
+                .map(e -> e.getKey().trim() + "=" + e.getValue().getAsString().trim().toLowerCase(Locale.ROOT))
+                .collect(Collectors.joining(","));
+
+        String full = blockType.getKeyOrThrow() + (props.isEmpty() ? "" : "[" + props + "]");
+
+        return Bukkit.createBlockData(full);
+    }
+    public Value put(String key, String val) {
+        return this.put(key, new Value(val));
     }
 
 

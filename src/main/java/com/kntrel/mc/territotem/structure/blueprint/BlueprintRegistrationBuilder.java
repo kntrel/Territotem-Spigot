@@ -1,8 +1,14 @@
 package com.kntrel.mc.territotem.structure.blueprint;
 
 import com.kntrel.mc.territotem.structure.Structure;
+import com.kntrel.mc.territotem.structure.piece.Piece;
+import com.kntrel.mc.territotem.structure.piece.Tile;
+import com.kntrel.mc.territotem.structure.worldTile.WorldTile;
+import com.kntrel.util.Vec3i;
+import org.bukkit.block.Block;
 import org.bukkit.entity.Entity;
 import org.bukkit.event.Event;
+import org.bukkit.event.block.BlockPlaceEvent;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -34,6 +40,7 @@ public final class BlueprintRegistrationBuilder {
 
     public interface EventSelector {
         BlueprintRegistration doNotTrack();
+        BlueprintRegistration onBlockPiecePlaced(Function<Blueprint, Tile> pieceExtractor);
         <E extends Event> EventValidator<E> on(Class<E> eventClass);
     }
 
@@ -89,6 +96,24 @@ public final class BlueprintRegistrationBuilder {
             turned.eventClass_ = eventClass;
             return turned;
         }
+
+        @Override
+        public BlueprintRegistration onBlockPiecePlaced(Function<Blueprint, Tile> pieceExtractor) {
+            Tile piece = pieceExtractor.apply(this.blueprint_);
+            if (piece == null) { return this.doNotTrack(); }
+            return this
+                    .on(BlockPlaceEvent.class)
+                    .when(e -> {
+                       Block b = e.getBlock();
+                       WorldTile tile = WorldTile.of(Vec3i.ofBlock(b), b.getWorld());
+                       return piece.matches(tile);
+                    })
+                    .track(e -> {
+                        Block b = e.getBlock();
+                        return new TrackingInfo(Vec3i.ofBlock(b).subtract(piece.offset()), b.getWorld(), e.getPlayer());
+                    });
+        }
+
         @Override public Tracker<E> when(Predicate<E> validator) {
             this.validator_ = e -> {
                 if (!this.eventClass_.isInstance(e)) { return false; }
