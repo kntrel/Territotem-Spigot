@@ -4,26 +4,31 @@ import com.kntrel.mc.regionLib.Constants;
 import com.kntrel.util.Vec3i;
 import org.bukkit.Chunk;
 import org.bukkit.NamespacedKey;
+import org.bukkit.Server;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.plugin.Plugin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class TotemService {
 
+    //CONSTANTS
     private static final Logger LOGGER = LoggerFactory.getLogger(TotemService.class);
     private static final String CORES_KEY = "totem_cores";
 
+
+    //FIELDS
     private final Plugin plugin_;
     private final NamespacedKey coresNSK_;
     private final TotemServiceListener listener_;
     private final Map<UUID, Map<Vec3i, TotemCore>> coresByWorld_;
 
+
+    //CONSTRUCTORS
     public TotemService(Plugin plugin) {
         this.plugin_ = plugin;
         this.coresNSK_ = new NamespacedKey(plugin, CORES_KEY);
@@ -33,6 +38,17 @@ public class TotemService {
         this.plugin_.getServer().getPluginManager().registerEvents(this.listener_, this.plugin_);
     }
 
+
+    //GETTERS
+    public Plugin getPlugin() {
+        return this.plugin_;
+    }
+    public Server getServer() {
+        return this.plugin_.getServer();
+    }
+
+
+    //SERVICES
     public TotemCore createCore(Vec3i coordinates, World world, TotemCore.State state, TotemCore.Direction direction) {
         Map<Vec3i, TotemCore> worldCores = this.coresByWorld_.computeIfAbsent(world.getUID(), ignored -> new ConcurrentHashMap<>());
         TotemCore existing = worldCores.get(coordinates);
@@ -47,17 +63,23 @@ public class TotemService {
         return core;
     }
 
-    public void breakCore(Block block) {
-        TotemCore core = this.getCore(block);
-        if (core == null) {
-            return;
-        }
-
+    public void breakCore(TotemCore core) {
         core.breakDown();
         this.dropCore(core);
     }
 
-    public Collection<TotemCore> getExistingCores() {
+    public boolean breakCore(Block block) {
+        TotemCore core = this.getCore(block);
+        if (core == null) {
+            return false;
+        }
+
+        core.breakDown();
+        this.dropCore(core);
+        return true;
+    }
+
+    public Collection<TotemCore> getLoadedCores() {
         List<TotemCore> out = new ArrayList<>();
         for (Map<Vec3i, TotemCore> worldCores : this.coresByWorld_.values()) {
             out.addAll(worldCores.values());
@@ -65,17 +87,51 @@ public class TotemService {
         return Collections.unmodifiableList(out);
     }
 
-    public boolean isCore(Block block) {
-        return this.getCore(block) != null;
+    public boolean isCoreAt(World world, Vec3i coordinates) {
+        return this.getCoreAt(world, coordinates) != null;
     }
 
-    TotemCore getCore(Block block) {
-        Map<Vec3i, TotemCore> worldCores = this.coresByWorld_.get(block.getWorld().getUID());
+    public boolean isCore(Block block) {
+        return this.isCoreAt(block.getWorld(), Vec3i.ofBlock(block));
+    }
+
+    public List<TotemCore> getNearByCores(World world, Vec3i coordinates) {
+
+        Map<Vec3i, TotemCore> worldTotems = this.coresByWorld_.get(world.getUID());
+        if (worldTotems == null) { return Collections.emptyList(); }
+
+        int     chunkX = coordinates.x() >> Constants.CHUNK_SHIFT,
+                chunkZ = coordinates.z() >> Constants.CHUNK_SHIFT,
+                minX = (chunkX - 1) << Constants.CHUNK_SHIFT,
+                minZ = (chunkZ - 1) << Constants.CHUNK_SHIFT,
+                maxX = ((chunkX + 2) << Constants.CHUNK_SHIFT),
+                maxZ = ((chunkZ + 2) << Constants.CHUNK_SHIFT);
+
+        return worldTotems.values().stream()
+                .filter(c -> {
+                    int x = c.getCoordinates().x(), z = c.getCoordinates().z();
+                    return     x >= minX
+                            && x <  maxX
+                            && z >= minZ
+                            && z <  maxZ;
+                })
+                .toList();
+    }
+
+    public List<TotemCore> getNearByCores(Block block) {
+        return this.getNearByCores(block.getWorld(), Vec3i.ofBlock(block));
+    }
+
+    TotemCore getCoreAt(World world, Vec3i coordinates) {
+        Map<Vec3i, TotemCore> worldCores = this.coresByWorld_.get(world.getUID());
         if (worldCores == null) {
             return null;
         }
+        return worldCores.get(coordinates);
+    }
 
-        return worldCores.get(Vec3i.ofBlock(block));
+    TotemCore getCore(Block block) {
+        return this.getCoreAt(block.getWorld(), Vec3i.ofBlock(block));
     }
 
     void handleChunkUnload(Chunk chunk) {
@@ -133,8 +189,10 @@ public class TotemService {
         LOGGER.debug("Deserialized {} totem cores in chunk [{}, {}]", cores.size(), chunk.getX(), chunk.getZ());
     }
 
+
+    //HELPERS
     private static boolean isInChunk(Vec3i position, Chunk chunk) {
-        return (position.x() >> 4) == chunk.getX() && (position.z() >> 4) == chunk.getZ();
+        return (position.x() >> Constants.CHUNK_SHIFT) == chunk.getX() && (position.z() >> Constants.CHUNK_SHIFT) == chunk.getZ();
     }
 
     private void dropCore(TotemCore core) {

@@ -111,9 +111,11 @@ public class TotemCore {
             kill(this.amethist_);
             kill(this.enderEye_);
             kill(this.hitBox_);
+            kill(this.directional_);
             this.amethist_ = null;
             this.enderEye_ = null;
             this.hitBox_ = null;
+            this.directional_ = null;
             return;
         }
 
@@ -176,12 +178,17 @@ public class TotemCore {
         Block b = this.world_.getBlockAt(this.coordinates_.x(), this.coordinates_.y(), this.coordinates_.z());
         b.setType(Material.AIR, false);
 
-        this.world_.dropItemNaturally(this.location(CENTER), new ItemStack(Material.TINTED_GLASS, 1));
-        if (this.state_ == State.END_EYE || this.state_ == State.FULL) {
+        if (this.state_ != State.ACTIVE) {
+            this.world_.dropItemNaturally(this.location(CENTER), new ItemStack(Material.TINTED_GLASS, 1));
+        }
+        if (this.state_ == State.END_EYE || this.state_ == State.FULL || this.state_ == State.ACTIVE) {
             this.world_.dropItemNaturally(this.location(CENTER), new ItemStack(Material.ENDER_EYE, 1));
         }
         if (this.state_ != State.END_EYE) {
             this.world_.dropItemNaturally(this.location(CENTER), new ItemStack(Material.AMETHYST_SHARD, 1));
+        }
+        if (this.direction_ != Direction.ALL) {
+            this.world_.dropItemNaturally(this.location(CENTER), new ItemStack(Material.AMETHYST_BLOCK, 1));
         }
 
         this.setState(State.EMPTY);

@@ -5,28 +5,29 @@ import com.kntrel.util.Vec3i;
 import org.bukkit.persistence.PersistentDataAdapterContext;
 import org.bukkit.persistence.PersistentDataType;
 import org.jspecify.annotations.NonNull;
-
 import java.util.ArrayList;
 import java.util.List;
 
 class TotemCorePersistentDataType implements PersistentDataType<byte[], List<TotemCoreChunkData>> {
 
+    //CONSTANTS
     private static final int ENTRY_SIZE = 6;
-    private static final TotemCorePersistentDataType INSTANCE = new TotemCorePersistentDataType();
 
+
+    //SINGLETON
+    private static final TotemCorePersistentDataType INSTANCE = new TotemCorePersistentDataType();
     static TotemCorePersistentDataType instance() {
         return INSTANCE;
     }
-
     private TotemCorePersistentDataType() {}
 
+
+    //IMPLEMENTATION
     @Override
-    public @NonNull Class<byte[]> getPrimitiveType() {
-        return byte[].class;
-    }
+    public @NonNull Class<byte[]> getPrimitiveType() { return byte[].class; }
 
     @Override
-    @SuppressWarnings({"unchecked", "rawtypes"})
+    @SuppressWarnings("unchecked")
     public @NonNull Class<List<TotemCoreChunkData>> getComplexType() {
         return (Class<List<TotemCoreChunkData>>) (Class<?>) List.class;
     }

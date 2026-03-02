@@ -3,6 +3,7 @@ package com.kntrel.mc.territotem.totem;
 import com.kntrel.mc.regionLib.event.BlockRightClickedEvent;
 import com.kntrel.util.Vec3i;
 import org.bukkit.Material;
+import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Interaction;
 import org.bukkit.event.EventHandler;
@@ -13,7 +14,6 @@ import org.bukkit.event.player.PlayerInteractAtEntityEvent;
 import org.bukkit.event.world.ChunkLoadEvent;
 import org.bukkit.event.world.ChunkUnloadEvent;
 import org.bukkit.inventory.ItemStack;
-
 import java.util.Arrays;
 import java.util.List;
 
@@ -54,6 +54,7 @@ class TotemServiceListener implements Listener {
 
             if (core.getState() != previous) {
                 consumeOneItem(e, itemStack);
+                e.setCancelled(true);
             }
             return;
         }
@@ -75,6 +76,7 @@ class TotemServiceListener implements Listener {
 
         this.service_.createCore(Vec3i.ofBlock(clicked), clicked.getWorld(), initialState, TotemCore.Direction.ALL);
         consumeOneItem(e, itemStack);
+        e.setCancelled(true);
     }
 
     @EventHandler
@@ -83,7 +85,7 @@ class TotemServiceListener implements Listener {
             return;
         }
 
-        TotemCore core = this.service_.getExistingCores().stream()
+        TotemCore core = this.service_.getLoadedCores().stream()
                 .filter(candidate -> interaction.equals(candidate.getHitBox()))
                 .findFirst()
                 .orElse(null);
@@ -96,7 +98,24 @@ class TotemServiceListener implements Listener {
 
     @EventHandler
     void onBlockBreak(BlockBreakEvent e) {
-        this.service_.breakCore(e.getBlock());
+        Block b = e.getBlock();
+        if (this.service_.breakCore(b)) {
+            e.setDropItems(false);
+            return;
+        }
+
+        World world = b.getWorld();
+        this.service_.getNearByCores(b).stream()
+                .filter(c -> isAdjacent(c.getCoordinates(), Vec3i.ofBlock(b)))
+                .forEach(c ->
+                    this.service_.getServer().getScheduler().runTaskLater(this.service_.getPlugin(), () -> {
+                        Vec3i loc = c.getCoordinates();
+                        Material newType = world.getBlockAt(loc.x(), loc.y(), loc.z()).getType();
+                        if (newType != Material.MEDIUM_AMETHYST_BUD && newType != Material.TINTED_GLASS) {
+                            this.service_.breakCore(c);
+                        }
+                    }, 1)
+                );
     }
 
     @EventHandler
@@ -148,5 +167,12 @@ class TotemServiceListener implements Listener {
             stack.setAmount(stack.getAmount() - 1);
         }
         e.getPlayer().getInventory().setItem(e.getHand(), stack);
+    }
+
+    private static boolean isAdjacent(Vec3i a, Vec3i b) {
+        int dx = Math.abs(a.x() - b.x());
+        int dy = Math.abs(a.y() - b.y());
+        int dz = Math.abs(a.z() - b.z());
+        return (dx + dy + dz) == 1;
     }
 }
