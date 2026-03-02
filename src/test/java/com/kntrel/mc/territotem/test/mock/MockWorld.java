@@ -1297,8 +1297,7 @@ public class MockWorld implements World {
 
     @Override
     public NamespacedKey getKey() {
-        unimplemented();
-        return null;
+        return NamespacedKey.minecraft(this.name_);
     }
 
     @Override
