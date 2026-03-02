@@ -187,7 +187,7 @@ public class TotemCore {
         if (this.state_ != State.END_EYE) {
             this.world_.dropItemNaturally(this.location(CENTER), new ItemStack(Material.AMETHYST_SHARD, 1));
         }
-        if (this.direction_ != Direction.ALL) {
+        if (this.state_ == State.ACTIVE && this.direction_ != Direction.ALL) {
             this.world_.dropItemNaturally(this.location(CENTER), new ItemStack(Material.AMETHYST_BLOCK, 1));
         }
 
