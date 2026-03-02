@@ -18,6 +18,7 @@ public interface WorldTileWriter extends WorldTile {
 
 
     //CONTRACT
+    World actualWorld();
     void setBlock(Material material, @Nullable StateMap state, @Nullable NBTCompound nbt);
     void setBlock(BlockData block);
     void killEntity(UUID id);

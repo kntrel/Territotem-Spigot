@@ -114,7 +114,7 @@ public class StructureService {
             Vec3i loc = location.add(piece.offset());
             piece.place(WorldTileWriter.of(loc, world));
         }
-        return new Structure(this, blueprint, location);
+        return new Structure(this, blueprint, world, location);
     }
 
 
@@ -244,7 +244,7 @@ public class StructureService {
         LOGGER.info("Totem candidate completed for blueprint {}", candidate.blueprint().id());
         this.dropCandidate(candidate);
 
-        Structure structure = new Structure(this, candidate.blueprint(), candidate.origin());
+        Structure structure = new Structure(this, candidate.blueprint(), candidate.world(), candidate.origin());
         this.runInMainThreadAsync(() -> {
             this.getServer().getPluginManager().callEvent(new StructureCompletedEvent(structure, who));
             return null;
@@ -254,7 +254,7 @@ public class StructureService {
         LOGGER.info("Totem candidate destroyed for blueprint {}", candidate.blueprint().id());
         this.dropCandidate(candidate);
 
-        Structure structure = new Structure(this, candidate.blueprint(), candidate.origin());
+        Structure structure = new Structure(this, candidate.blueprint(), candidate.world(), candidate.origin());
         this.runInMainThreadAsync(() -> {
             this.getServer().getPluginManager().callEvent(new StructureDestroyedEvent(structure, who));
             return null;

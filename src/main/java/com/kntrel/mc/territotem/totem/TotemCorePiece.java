@@ -24,16 +24,19 @@ public class TotemCorePiece implements Piece {
         this.service_ = service;
     }
 
-    @Override public boolean matches(WorldTile tile) {
-
-    }
-
-    @Override
-    public void place(WorldTileWriter tile) {
-
-    }
-
 
     //IMPLEMENTATION
+    @Override public boolean matches(WorldTile tile) {
+        TotemCore core = this.service_.getCoreAt(tile.world(), tile.coordinates());
+        return core != null;
 
+
+        /* TODO: add update listeners to structure service
+        TotemCore.State state = core.getState();
+        return state == TotemCore.State.FULL || state == TotemCore.State.ACTIV
+         */
+    }
+    @Override public void place(WorldTileWriter tile) {
+        this.service_.createCore(tile.coordinates(), tile.actualWorld(), TotemCore.State.ACTIVE, TotemCore.Direction.ALL);
+    }
 }

@@ -32,6 +32,11 @@ public class MockWorldTile extends WorldTileImpl implements WorldTileWriter {
     }
 
     @Override
+    public World actualWorld() {
+        return this.world_;
+    }
+
+    @Override
     public void setBlock(Material material, @Nullable StateMap state, @Nullable NBTCompound nbt) {
         Block block = this.world_.getBlockAt(this.x(), this.y(), this.z());
         block.setType(material);

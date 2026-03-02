@@ -1,6 +1,8 @@
 package com.kntrel.mc.territotem.totem;
 
 import com.kntrel.mc.regionLib.Constants;
+import com.kntrel.mc.regionLib.region.context.RegionContext;
+import com.kntrel.mc.territotem.structure.worldTile.WorldView;
 import com.kntrel.util.Vec3i;
 import org.bukkit.Chunk;
 import org.bukkit.NamespacedKey;
@@ -22,29 +24,32 @@ public class TotemService {
 
 
     //FIELDS
-    private final Plugin plugin_;
+    private final RegionContext regionContext_;
     private final NamespacedKey coresNSK_;
     private final TotemServiceListener listener_;
     private final Map<UUID, Map<Vec3i, TotemCore>> coresByWorld_;
 
 
     //CONSTRUCTORS
-    public TotemService(Plugin plugin) {
-        this.plugin_ = plugin;
-        this.coresNSK_ = new NamespacedKey(plugin, CORES_KEY);
+    public TotemService(RegionContext regionContext) {
+        this.regionContext_ = regionContext;
+        this.coresNSK_ = new NamespacedKey(regionContext.getPlugin(), CORES_KEY);
         this.coresByWorld_ = new ConcurrentHashMap<>();
         this.listener_ = new TotemServiceListener(this);
 
-        this.plugin_.getServer().getPluginManager().registerEvents(this.listener_, this.plugin_);
+        this.regionContext_.getServer().getPluginManager().registerEvents(this.listener_, this.getPlugin());
     }
 
 
     //GETTERS
+    public RegionContext getRegionContext() {
+        return this.regionContext_;
+    }
     public Plugin getPlugin() {
-        return this.plugin_;
+        return this.regionContext_.getPlugin();
     }
     public Server getServer() {
-        return this.plugin_.getServer();
+        return this.regionContext_.getServer();
     }
 
 
@@ -88,7 +93,7 @@ public class TotemService {
     }
 
     public boolean isCoreAt(World world, Vec3i coordinates) {
-        return this.getCoreAt(world, coordinates) != null;
+        return this.getCoreAt(world.getUID(), coordinates) != null;
     }
 
     public boolean isCore(Block block) {
@@ -122,8 +127,16 @@ public class TotemService {
         return this.getNearByCores(block.getWorld(), Vec3i.ofBlock(block));
     }
 
-    TotemCore getCoreAt(World world, Vec3i coordinates) {
-        Map<Vec3i, TotemCore> worldCores = this.coresByWorld_.get(world.getUID());
+    TotemCore getCoreAt(UUID worldUUID, Vec3i coordinates) {
+        Map<Vec3i, TotemCore> worldCores = this.coresByWorld_.get(worldUUID);
+        if (worldCores == null) {
+            return null;
+        }
+        return worldCores.get(coordinates);
+    }
+
+    TotemCore getCoreAt(WorldView world, Vec3i coordinates) {
+        Map<Vec3i, TotemCore> worldCores = this.coresByWorld_.get(world.id());
         if (worldCores == null) {
             return null;
         }
@@ -131,7 +144,7 @@ public class TotemService {
     }
 
     TotemCore getCore(Block block) {
-        return this.getCoreAt(block.getWorld(), Vec3i.ofBlock(block));
+        return this.getCoreAt(block.getWorld().getUID(), Vec3i.ofBlock(block));
     }
 
     void handleChunkUnload(Chunk chunk) {
@@ -195,7 +208,7 @@ public class TotemService {
         return (position.x() >> Constants.CHUNK_SHIFT) == chunk.getX() && (position.z() >> Constants.CHUNK_SHIFT) == chunk.getZ();
     }
 
-    private void dropCore(TotemCore core) {
+    void dropCore(TotemCore core) {
         Map<Vec3i, TotemCore> worldCores = this.coresByWorld_.get(core.getWorld().getUID());
         if (worldCores == null) {
             return;

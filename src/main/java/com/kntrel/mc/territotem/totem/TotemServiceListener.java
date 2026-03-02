@@ -1,11 +1,19 @@
 package com.kntrel.mc.territotem.totem;
 
 import com.kntrel.mc.regionLib.event.BlockRightClickedEvent;
+import com.kntrel.mc.regionLib.region.Region;
+import com.kntrel.mc.territotem.event.StructureCompletedEvent;
+import com.kntrel.mc.territotem.event.TotemCoreCreatedEvent;
+import com.kntrel.mc.territotem.structure.blueprint.Blueprint;
+import com.kntrel.mc.territotem.structure.piece.Piece;
+import com.kntrel.mc.territotem.structure.piece.Tile;
+import com.kntrel.mc.territotem.structure.worldTile.WorldTileWriter;
 import com.kntrel.util.Vec3i;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Interaction;
+import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.*;
@@ -14,6 +22,7 @@ import org.bukkit.event.player.PlayerInteractAtEntityEvent;
 import org.bukkit.event.world.ChunkLoadEvent;
 import org.bukkit.event.world.ChunkUnloadEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.util.Vector;
 import java.util.Arrays;
 import java.util.List;
 
@@ -42,13 +51,13 @@ class TotemServiceListener implements Listener {
                 if (previous == TotemCore.State.EMPTY) {
                     core.setState(TotemCore.State.END_EYE);
                 } else if (previous == TotemCore.State.AMETHIST) {
-                    core.setState(TotemCore.State.ACTIVE);
+                    core.setState(TotemCore.State.FULL);
                 }
             } else if (itemStack.getType() == Material.AMETHYST_SHARD) {
                 if (previous == TotemCore.State.EMPTY) {
                     core.setState(TotemCore.State.AMETHIST);
                 } else if (previous == TotemCore.State.END_EYE) {
-                    core.setState(TotemCore.State.ACTIVE);
+                    core.setState(TotemCore.State.FULL);
                 }
             }
 
@@ -70,11 +79,15 @@ class TotemServiceListener implements Listener {
             initialState = TotemCore.State.AMETHIST;
         }
 
-        if (initialState == null) {
+        if (initialState == null) { return; }
+
+        core = this.service_.createCore(Vec3i.ofBlock(clicked), clicked.getWorld(), initialState, TotemCore.Direction.ALL);
+        TotemCoreCreatedEvent event = new TotemCoreCreatedEvent(core, e.getPlayer());
+        this.service_.getServer().getPluginManager().callEvent(event);
+        if (event.isCancelled()) {
+            this.service_.dropCore(core);
             return;
         }
-
-        this.service_.createCore(Vec3i.ofBlock(clicked), clicked.getWorld(), initialState, TotemCore.Direction.ALL);
         consumeOneItem(e, itemStack);
         e.setCancelled(true);
     }
@@ -158,6 +171,29 @@ class TotemServiceListener implements Listener {
             i = 0;
         }
         return DIRECTIONS.get(i);
+    }
+
+    @EventHandler
+    void onTotemCompletedEvent(StructureCompletedEvent e) {
+        Blueprint blueprint = e.getStructure().blueprint();
+        if (blueprint.id() != 25) { return; }
+        Vec3i coreOffset = new Vec3i(0, 2, 0);
+        Tile piece = blueprint.pieceAt(coreOffset);
+        if (piece == null) {return; }
+        piece.place(WorldTileWriter.of(e.getStructure().origin().add(piece.offset()), e.getStructure().world()));
+
+        Vector shift = e.getStructure().origin().toDouble();
+        Region region = this.service_.getRegionContext().create(
+                e.getCompleter(),
+                blueprint.initialRegionBounds().shift(shift),
+                e.getStructure().world(),
+                "totem_region",
+                blueprint.hierarchy()
+        );
+        if (e.getCompleter() instanceof Player p) {
+            region.display(p);
+            p.sendMessage("regionCreated");
+        }
     }
 
     private static void consumeOneItem(BlockRightClickedEvent e, ItemStack stack) {
