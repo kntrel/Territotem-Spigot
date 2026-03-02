@@ -36,6 +36,9 @@ class WorldTileImpl implements WorldTile {
     @Override public Vec3i coordinates() {
         return this.coordinates_;
     }
+    @Override public WorldView world() {
+        return WorldView.of(this.world_);
+    }
     @Override public Material blockType() {
         return this.actualBlock().getType();
     }

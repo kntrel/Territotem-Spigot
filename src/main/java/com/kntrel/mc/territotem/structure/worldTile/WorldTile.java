@@ -17,6 +17,7 @@ public interface WorldTile {
 
     //CONTRACT
     Vec3i coordinates();
+    WorldView world();
     Material blockType();
     StateMap blockState();
     NBTCompound blockNbt();
