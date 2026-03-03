@@ -5,7 +5,6 @@ import com.kntrel.mc.regionLib.RegionLib;
 import com.kntrel.mc.regionLib.region.context.RegionContext;
 import com.kntrel.mc.regionLib.region.hierarchy.Hierarchy;
 import com.kntrel.mc.territotem.event.TotemCoreCreatedEvent;
-import com.kntrel.mc.territotem.mock.MockBlueprint;
 import com.kntrel.mc.territotem.structure.StructureService;
 import com.kntrel.mc.territotem.structure.blueprint.Blueprint;
 import com.kntrel.mc.territotem.structure.blueprint.TrackingInfo;
@@ -29,6 +28,9 @@ public final class Territotem extends JavaPlugin {
     //CONSTANTS
     private static final Logger LOGGER = LoggerFactory.getLogger(Territotem.class);
 
+    //FIELDS
+    private ChunkPersister chunkPersister_ = null;
+
 
     //IMPLEMENTATION
     @Override
@@ -39,9 +41,9 @@ public final class Territotem extends JavaPlugin {
         RegionContext regionContext = RegionLib.createDefaultContext(this);
         Hierarchy hierarchy = regionContext.getHierarchyRepository().get(1).orElse(null);
 
-        ChunkPersister chunkPersister = new ChunkPersister(this);
-        StructureService structureService = new StructureService(this, chunkPersister);
-        TotemService totemService = new TotemService(regionContext, structureService, chunkPersister);
+        this.chunkPersister_ = new ChunkPersister(this);
+        StructureService structureService = new StructureService(this, this.chunkPersister_);
+        TotemService totemService = new TotemService(regionContext, structureService, this.chunkPersister_);
         structureService.registerBlueprint(createTotemBlueprint(totemService, hierarchy))
                     .on(TotemCoreCreatedEvent.class)
                     .track(e -> {
@@ -54,7 +56,11 @@ public final class Territotem extends JavaPlugin {
     }
     @Override
     public void onDisable() {
-        // Plugin shutdown logic
+        if (this.chunkPersister_ == null) {
+            LOGGER.error("ChunkPersister instance was null on Territotem unload.");
+        } else {
+            this.chunkPersister_.flushAll();
+        }
     }
 
 

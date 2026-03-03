@@ -2,12 +2,16 @@ package com.kntrel.mc.chunkPersistence;
 
 import org.bukkit.Chunk;
 import org.bukkit.NamespacedKey;
+import org.bukkit.World;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.world.ChunkUnloadEvent;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.Plugin;
+import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -16,12 +20,18 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class ChunkPersister implements Listener {
 
+    //CONSTANTS
+    private static final Logger LOGGER = LoggerFactory.getLogger(ChunkPersister.class);
+
+
     //FIELDS
     private final Map<ChunkRef, DirtyChunk> dirtyChunks_;
+    private final Plugin plugin_;
 
 
     //CONSTRUCTOR
     public ChunkPersister(Plugin plugin) {
+        this.plugin_ = plugin;
         this.dirtyChunks_ = new ConcurrentHashMap<>();
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
     }
@@ -33,40 +43,55 @@ public class ChunkPersister implements Listener {
         dirty.removals_.remove(key);
         dirty.inserts_.put(key, new Entry(type, value));
     }
-    public <P, C> C retrieve(Chunk chunk, NamespacedKey key, PersistentDataType<P, C> type) {
+    public <P, C> @Nullable C retrieve(Chunk chunk, NamespacedKey key, PersistentDataType<P, C> type) {
         DirtyChunk dirty = this.dirtyChunks_.get(ChunkRef.of(chunk));
-        if (dirty != null) {
-            if (dirty.removals_.contains(key)) {
-                return null;
-            }
-            Entry pending = dirty.inserts_.get(key);
-            if (pending != null) {
-                return castValue(pending.value_);
-            }
+        if (dirty == null) {
+            return chunk.getPersistentDataContainer().get(key, type);
         }
 
-        return chunk.getPersistentDataContainer().get(key, type);
+        if (dirty.removals_.contains(key)) { return null; }
+        Entry pending = dirty.inserts_.get(key);
+        if (pending == null) { return null; }
+        return castValue(pending.value_);
     }
     public void drop(Chunk chunk, NamespacedKey key) {
         DirtyChunk dirty = this.dirtyChunks_.computeIfAbsent(ChunkRef.of(chunk), ignored -> new DirtyChunk());
         dirty.inserts_.remove(key);
         dirty.removals_.add(key);
     }
-
-
-    //LISTERNER
-    @EventHandler void onChunkUnload(ChunkUnloadEvent event) {
-        Chunk chunk = event.getChunk();
+    public void flushChunk(Chunk chunk) {
         DirtyChunk dirty = this.dirtyChunks_.remove(ChunkRef.of(chunk));
         if (dirty == null) { return; }
 
         PersistentDataContainer pdc = chunk.getPersistentDataContainer();
         for (NamespacedKey key : dirty.removals_) {
+            LOGGER.debug("Removing data entry from chunk ({}, {}). Key: {}", chunk.getX(), chunk.getZ(), key);
             pdc.remove(key);
         }
         for (Map.Entry<NamespacedKey, Entry> entry : dirty.inserts_.entrySet()) {
-            setUnchecked(pdc, entry.getKey(), entry.getValue());
+            NamespacedKey key = entry.getKey();
+            Entry val = entry.getValue();
+            LOGGER.debug("Persisting data to chunk ({}, {}). Key: {}, Type: {}", chunk.getX(), chunk.getZ(), key, val.value_);
+            setUnchecked(pdc, key, val);
         }
+    }
+    public void flushAll() {
+        for (ChunkRef ref : this.dirtyChunks_.keySet()) {
+            World world = this.plugin_.getServer().getWorld(ref.world());
+            if (world == null) {
+                LOGGER.error("Trying to persist data to a chunk in word {}, but such a world wasn't found", ref.world());
+                continue;
+            }
+            Chunk chunk = world.getChunkAt(ref.x(), ref.z());
+            this.flushChunk(chunk);
+        }
+    }
+
+
+    //LISTERNER
+    @EventHandler void onChunkUnload(ChunkUnloadEvent event) {
+        Chunk chunk = event.getChunk();
+        this.flushChunk(chunk);
     }
 
 

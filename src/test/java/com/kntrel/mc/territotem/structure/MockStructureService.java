@@ -1,5 +1,6 @@
 package com.kntrel.mc.territotem.structure;
 
+import com.kntrel.mc.chunkPersistence.ChunkPersister;
 import com.kntrel.mc.territotem.structure.BlueprintTracker;
 import com.kntrel.mc.territotem.structure.StructureService;
 import com.kntrel.mc.territotem.structure.blueprint.Blueprint;
@@ -15,7 +16,7 @@ import java.util.concurrent.CompletableFuture;
 public class MockStructureService extends StructureService {
 
     public MockStructureService(Plugin plugin) {
-        super(plugin);
+        super(plugin, new ChunkPersister(plugin));
     }
 
 

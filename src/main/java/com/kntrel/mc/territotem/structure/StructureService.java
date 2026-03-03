@@ -301,7 +301,7 @@ public class StructureService {
     }
 
     private void persistCandidatesInChunk(ChunkKey chunkKey) {
-        World world = Bukkit.getWorld(chunkKey.world());
+        World world = this.plugin_.getServer().getWorld(chunkKey.world());
         if (world == null || !world.isChunkLoaded(chunkKey.x(), chunkKey.z())) {
             return;
         }
