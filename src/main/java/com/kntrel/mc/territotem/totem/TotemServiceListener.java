@@ -19,7 +19,6 @@ import org.bukkit.event.block.*;
 import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.player.PlayerInteractAtEntityEvent;
 import org.bukkit.event.world.ChunkLoadEvent;
-import org.bukkit.event.world.ChunkUnloadEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.Vector;
 import java.util.Arrays;
@@ -62,6 +61,7 @@ class TotemServiceListener implements Listener {
 
             if (core.getState() != previous) {
                 consumeOneItem(e, itemStack);
+                this.service_.persistCore(core);
                 this.service_.getStructureService().updateAt(e.getPlayer(), core.getCoordinates(), core.getWorld());
                 e.setCancelled(true);
             }
@@ -107,6 +107,7 @@ class TotemServiceListener implements Listener {
         }
 
         core.setDirection(cycleDirection(core.getDirection()));
+        this.service_.persistCore(core);
     }
 
     @EventHandler
@@ -158,11 +159,6 @@ class TotemServiceListener implements Listener {
     @EventHandler
     void onChunkLoad(ChunkLoadEvent e) {
         this.service_.handleChunkLoad(e.getChunk());
-    }
-
-    @EventHandler
-    void onChunkUnload(ChunkUnloadEvent e) {
-        this.service_.handleChunkUnload(e.getChunk());
     }
 
     private static TotemCore.Direction cycleDirection(TotemCore.Direction direction) {

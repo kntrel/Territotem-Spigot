@@ -12,7 +12,6 @@ import org.bukkit.event.*;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.world.ChunkLoadEvent;
-import org.bukkit.event.world.ChunkUnloadEvent;
 import org.bukkit.plugin.EventExecutor;
 import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
@@ -88,9 +87,6 @@ class StructureServiceListener implements Listener {
         this.service_.handleChunkLoad(e.getChunk());
     }
 
-    @EventHandler void onChunkUnload(ChunkUnloadEvent e) {
-        this.service_.handleChunkUnload(e.getChunk());
-    }
 
     @EventHandler void onStructureCompleted(StructureCompletedEvent e) {
         long id = e.getStructure().blueprint().id();

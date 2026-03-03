@@ -1,5 +1,6 @@
 package com.kntrel.mc.territotem.structure;
 
+import com.kntrel.mc.chunkPersistence.ChunkPersister;
 import com.kntrel.mc.regionLib.Constants;
 import com.kntrel.mc.territotem.event.StructureCompletedEvent;
 import com.kntrel.mc.territotem.event.StructureDestroyedEvent;
@@ -15,7 +16,6 @@ import com.kntrel.util.tuple.Triplet;
 import org.bukkit.*;
 import org.bukkit.block.BlockState;
 import org.bukkit.entity.Entity;
-import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.plugin.Plugin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,6 +33,7 @@ public class StructureService {
 
     //FIELDS
     private final Plugin plugin_;
+    private final ChunkPersister chunkPersister_;
     private final Map<Long, Blueprint> blueprints_;
     private final ChunkCache<BlueprintTracker> candidatesByChunk_;
     private final Map<BlueprintTracker, ReentrantLock> candidateLocks_;
@@ -45,8 +46,9 @@ public class StructureService {
 
 
     //CONSTRUCTOR
-    public StructureService(Plugin plugin) {
+    public StructureService(Plugin plugin, ChunkPersister chunkPersister) {
         this.plugin_ = plugin;
+        this.chunkPersister_ = chunkPersister;
         this.blueprints_ = new ConcurrentHashMap<>();
         this.candidatesByChunk_ = new ChunkCache<>(c -> ChunkKey.ofBlock(c.origin(), c.world().getUID()));
         this.candidateLocks_ = new ConcurrentHashMap<>();
@@ -92,6 +94,7 @@ public class StructureService {
         this.trackersMap_.put(trackKey, candidate);
         this.candidatesByChunk_.put(candidate);
         this.candidateLocks_.put(candidate, new ReentrantLock());
+        this.persistCandidatesInChunk(ChunkKey.ofBlock(candidate.origin(), candidate.world().getUID()));
 
         return candidate;
     }
@@ -167,17 +170,10 @@ public class StructureService {
 
     //LISTENERS
     void handleChunkLoad(Chunk chunk) {
-        PersistentDataContainer pdc = chunk.getPersistentDataContainer();
-        if (!pdc.has(this.candidatesNSK_)) { 
+        List<ChunkTotemCandidate> candidates = this.chunkPersister_.retrieve(chunk, this.candidatesNSK_, StructureCandidatePersistentDataType.instance());
+        if (candidates == null || candidates.isEmpty()) {
             LOGGER.trace("No totem candidates found in chunk [{}, {}]", chunk.getX(), chunk.getZ());
-            return; 
-        }
-
-        List<ChunkTotemCandidate> candidates = pdc.get(this.candidatesNSK_, StructureCandidatePersistentDataType.instance());
-        if (candidates == null || candidates.isEmpty()) { 
-            LOGGER.warn("Totem candidates list is null or empty for chunk [{}, {}]", chunk.getX(), chunk.getZ());
-            pdc.remove(this.candidatesNSK_);
-            return; 
+            return;
         }
 
         LOGGER.info("Found {} totem candidates in chunk [{}, {}]", candidates.size(), chunk.getX(), chunk.getZ());
@@ -196,33 +192,6 @@ public class StructureService {
             this.executor_.execute(() -> this.track(blueprint, origin, chunk.getWorld(), null));
         }
     }
-    void handleChunkUnload(Chunk chunk) {
-        LOGGER.trace("Chunk unloading at [{}, {}] in world {}. Checking for totem candidates to serialize", chunk.getX(), chunk.getZ(), chunk.getWorld().getName());
-        ChunkKey chunkKey = ChunkKey.ofBlock(new Vec3i(chunk.getX() * 16, 0, chunk.getZ() * 16), chunk.getWorld().getUID());
-        Collection<BlueprintTracker> candidatesInChunk = this.candidatesByChunk_.evict(chunkKey);
-
-        PersistentDataContainer pdc = chunk.getPersistentDataContainer();
-        if (candidatesInChunk.isEmpty()) {
-            LOGGER.trace("No candidates to persist in chunk [{}, {}]", chunk.getX(), chunk.getZ());
-            pdc.remove(this.candidatesNSK_);
-            return;
-        }
-
-        LOGGER.debug("Persisting {} totem candidates in chunk [{}, {}]", candidatesInChunk.size(), chunk.getX(), chunk.getZ());
-        List<ChunkTotemCandidate> toSerialize = new ArrayList<>();
-        for (BlueprintTracker candidate : candidatesInChunk) {
-            LOGGER.debug("Persisting candidate for blueprint {} at origin {}", candidate.blueprint().id(), candidate.origin());
-            toSerialize.add(new ChunkTotemCandidate(offsetInChunk(candidate.origin()), candidate.blueprint().id()));
-
-            Triplet<Vec3i, UUID, Long> trackKey = Triplet.of(candidate.origin(), candidate.world().getUID(), candidate.blueprint().id());
-            this.trackersMap_.remove(trackKey);
-            this.candidateLocks_.remove(candidate);
-        }
-
-        pdc.set(this.candidatesNSK_, StructureCandidatePersistentDataType.instance(), toSerialize);
-    }
-
-
     //TASKS
     private void handleCandidatesUpdateTask(Entity who, Vec3i where, World world) {
         ChunkKey chunk = ChunkKey.ofBlock(where, world.getUID());
@@ -266,6 +235,7 @@ public class StructureService {
 
         Triplet<Vec3i, UUID, Long> trackKey = Triplet.of(candidate.origin(), candidate.world().getUID(), candidate.blueprint().id());
         this.trackersMap_.remove(trackKey);
+        this.persistCandidatesInChunk(ChunkKey.ofBlock(candidate.origin(), candidate.world().getUID()));
     }
     public Collection<BlueprintTracker> getCandidatesInChunk(ChunkKey chunk) {
         Collection<BlueprintTracker> candidates = List.copyOf(this.candidatesByChunk_.get(chunk));
@@ -328,5 +298,25 @@ public class StructureService {
         }
 
         this.blueprints_.put(id, blueprint);
+    }
+
+    private void persistCandidatesInChunk(ChunkKey chunkKey) {
+        World world = Bukkit.getWorld(chunkKey.world());
+        if (world == null || !world.isChunkLoaded(chunkKey.x(), chunkKey.z())) {
+            return;
+        }
+
+        Chunk chunk = world.getChunkAt(chunkKey.x(), chunkKey.z());
+        Collection<BlueprintTracker> candidates = this.getCandidatesInChunk(chunkKey);
+        if (candidates.isEmpty()) {
+            this.chunkPersister_.drop(chunk, this.candidatesNSK_);
+            return;
+        }
+
+        List<ChunkTotemCandidate> toSerialize = new ArrayList<>(candidates.size());
+        for (BlueprintTracker candidate : candidates) {
+            toSerialize.add(new ChunkTotemCandidate(offsetInChunk(candidate.origin()), candidate.blueprint().id()));
+        }
+        this.chunkPersister_.persist(chunk, this.candidatesNSK_, StructureCandidatePersistentDataType.instance(), toSerialize);
     }
 }

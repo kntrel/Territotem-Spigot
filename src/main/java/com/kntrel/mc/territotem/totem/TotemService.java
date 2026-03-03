@@ -1,5 +1,6 @@
 package com.kntrel.mc.territotem.totem;
 
+import com.kntrel.mc.chunkPersistence.ChunkPersister;
 import com.kntrel.mc.regionLib.Constants;
 import com.kntrel.mc.regionLib.region.context.RegionContext;
 import com.kntrel.mc.territotem.structure.StructureService;
@@ -10,7 +11,6 @@ import org.bukkit.NamespacedKey;
 import org.bukkit.Server;
 import org.bukkit.World;
 import org.bukkit.block.Block;
-import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.plugin.Plugin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,15 +27,17 @@ public class TotemService {
     //FIELDS
     private final RegionContext regionContext_;
     private final StructureService structureService_;
+    private final ChunkPersister chunkPersister_;
     private final NamespacedKey coresNSK_;
     private final TotemServiceListener listener_;
     private final Map<UUID, Map<Vec3i, TotemCore>> coresByWorld_;
 
 
     //CONSTRUCTORS
-    public TotemService(RegionContext regionContext, StructureService structureService) {
+    public TotemService(RegionContext regionContext, StructureService structureService, ChunkPersister chunkPersister) {
         this.regionContext_ = regionContext;
         this.structureService_ = structureService;
+        this.chunkPersister_ = chunkPersister;
         this.coresNSK_ = new NamespacedKey(regionContext.getPlugin(), CORES_KEY);
         this.coresByWorld_ = new ConcurrentHashMap<>();
         this.listener_ = new TotemServiceListener(this);
@@ -66,11 +68,13 @@ public class TotemService {
         if (existing != null) {
             existing.setState(state);
             existing.setDirection(direction);
+            this.persistCore(existing);
             return existing;
         }
 
         TotemCore core = new TotemCore(coordinates, world, state, direction);
         worldCores.put(coordinates, core);
+        this.persistCore(core);
         return core;
     }
 
@@ -153,46 +157,8 @@ public class TotemService {
         return this.getCoreAt(block.getWorld().getUID(), Vec3i.ofBlock(block));
     }
 
-    void handleChunkUnload(Chunk chunk) {
-        Map<Vec3i, TotemCore> worldCores = this.coresByWorld_.get(chunk.getWorld().getUID());
-        PersistentDataContainer pdc = chunk.getPersistentDataContainer();
-        if (worldCores == null || worldCores.isEmpty()) {
-            pdc.remove(this.coresNSK_);
-            return;
-        }
-
-        int baseX = chunk.getX() * Constants.CHUNK_SIZE;
-        int baseZ = chunk.getZ() * Constants.CHUNK_SIZE;
-
-        List<TotemCoreChunkData> serialized = new ArrayList<>();
-        for (Map.Entry<Vec3i, TotemCore> entry : worldCores.entrySet()) {
-            Vec3i pos = entry.getKey();
-            if (!isInChunk(pos, chunk)) {
-                continue;
-            }
-
-            TotemCore core = entry.getValue();
-            Vec3i rel = new Vec3i(pos.x() - baseX, pos.y(), pos.z() - baseZ);
-            serialized.add(new TotemCoreChunkData(rel, core.getState(), core.getDirection()));
-        }
-
-        if (serialized.isEmpty()) {
-            pdc.remove(this.coresNSK_);
-            return;
-        }
-
-        for (TotemCoreChunkData data : serialized) {
-            Vec3i absolute = data.offset().add(new Vec3i(baseX, 0, baseZ));
-            worldCores.remove(absolute);
-        }
-
-        pdc.set(this.coresNSK_, TotemCorePersistentDataType.instance(), serialized);
-        LOGGER.debug("Serialized {} totem cores in chunk [{}, {}]", serialized.size(), chunk.getX(), chunk.getZ());
-    }
-
     void handleChunkLoad(Chunk chunk) {
-        PersistentDataContainer pdc = chunk.getPersistentDataContainer();
-        List<TotemCoreChunkData> cores = pdc.get(this.coresNSK_, TotemCorePersistentDataType.instance());
+        List<TotemCoreChunkData> cores = this.chunkPersister_.retrieve(chunk, this.coresNSK_, TotemCorePersistentDataType.instance());
         if (cores == null || cores.isEmpty()) {
             return;
         }
@@ -210,10 +176,6 @@ public class TotemService {
 
 
     //HELPERS
-    private static boolean isInChunk(Vec3i position, Chunk chunk) {
-        return (position.x() >> Constants.CHUNK_SHIFT) == chunk.getX() && (position.z() >> Constants.CHUNK_SHIFT) == chunk.getZ();
-    }
-
     void dropCore(TotemCore core) {
         Map<Vec3i, TotemCore> worldCores = this.coresByWorld_.get(core.getWorld().getUID());
         if (worldCores == null) {
@@ -221,8 +183,47 @@ public class TotemService {
         }
 
         worldCores.remove(core.getCoordinates());
+        this.persistChunk(core.getWorld(), core.getCoordinates().x() >> Constants.CHUNK_SHIFT, core.getCoordinates().z() >> Constants.CHUNK_SHIFT);
         if (worldCores.isEmpty()) {
             this.coresByWorld_.remove(core.getWorld().getUID());
         }
+    }
+
+    void persistCore(TotemCore core) {
+        this.persistChunk(core.getWorld(), core.getCoordinates().x() >> Constants.CHUNK_SHIFT, core.getCoordinates().z() >> Constants.CHUNK_SHIFT);
+    }
+
+    private void persistChunk(World world, int chunkX, int chunkZ) {
+        if (!world.isChunkLoaded(chunkX, chunkZ)) {
+            return;
+        }
+
+        Chunk chunk = world.getChunkAt(chunkX, chunkZ);
+        Map<Vec3i, TotemCore> worldCores = this.coresByWorld_.get(world.getUID());
+        if (worldCores == null || worldCores.isEmpty()) {
+            this.chunkPersister_.drop(chunk, this.coresNSK_);
+            return;
+        }
+
+        int baseX = chunkX * Constants.CHUNK_SIZE;
+        int baseZ = chunkZ * Constants.CHUNK_SIZE;
+
+        List<TotemCoreChunkData> serialized = new ArrayList<>();
+        for (Map.Entry<Vec3i, TotemCore> entry : worldCores.entrySet()) {
+            Vec3i pos = entry.getKey();
+            if ((pos.x() >> Constants.CHUNK_SHIFT) != chunkX || (pos.z() >> Constants.CHUNK_SHIFT) != chunkZ) {
+                continue;
+            }
+            TotemCore c = entry.getValue();
+            Vec3i rel = new Vec3i(pos.x() - baseX, pos.y(), pos.z() - baseZ);
+            serialized.add(new TotemCoreChunkData(rel, c.getState(), c.getDirection()));
+        }
+
+        if (serialized.isEmpty()) {
+            this.chunkPersister_.drop(chunk, this.coresNSK_);
+            return;
+        }
+
+        this.chunkPersister_.persist(chunk, this.coresNSK_, TotemCorePersistentDataType.instance(), serialized);
     }
 }
