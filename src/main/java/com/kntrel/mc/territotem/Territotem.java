@@ -1,5 +1,6 @@
 package com.kntrel.mc.territotem;
 
+import com.kntrel.mc.chunkPersistence.ChunkPersister;
 import com.kntrel.mc.regionLib.RegionLib;
 import com.kntrel.mc.regionLib.region.context.RegionContext;
 import com.kntrel.mc.regionLib.region.hierarchy.Hierarchy;
@@ -38,8 +39,9 @@ public final class Territotem extends JavaPlugin {
         RegionContext regionContext = RegionLib.createDefaultContext(this);
         Hierarchy hierarchy = regionContext.getHierarchyRepository().get(1).orElse(null);
 
-        StructureService structureService = new StructureService(this);
-        TotemService totemService = new TotemService(regionContext, structureService);
+        ChunkPersister chunkPersister = new ChunkPersister(this);
+        StructureService structureService = new StructureService(this, chunkPersister);
+        TotemService totemService = new TotemService(regionContext, structureService, chunkPersister);
         structureService.registerBlueprint(createTotemBlueprint(totemService, hierarchy))
                     .on(TotemCoreCreatedEvent.class)
                     .track(e -> {
