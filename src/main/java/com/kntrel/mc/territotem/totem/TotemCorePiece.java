@@ -28,13 +28,9 @@ public class TotemCorePiece implements Piece {
     //IMPLEMENTATION
     @Override public boolean matches(WorldTile tile) {
         TotemCore core = this.service_.getCoreAt(tile.world(), tile.coordinates());
-        return core != null;
-
-
-        /* TODO: add update listeners to structure service
+        if (core == null) { return false; }
         TotemCore.State state = core.getState();
-        return state == TotemCore.State.FULL || state == TotemCore.State.ACTIV
-         */
+        return state == TotemCore.State.FULL || state == TotemCore.State.ACTIVE;
     }
     @Override public void place(WorldTileWriter tile) {
         this.service_.createCore(tile.coordinates(), tile.actualWorld(), TotemCore.State.ACTIVE, TotemCore.Direction.ALL);

@@ -39,7 +39,7 @@ public final class Territotem extends JavaPlugin {
         Hierarchy hierarchy = regionContext.getHierarchyRepository().get(1).orElse(null);
 
         StructureService structureService = new StructureService(this);
-        TotemService totemService = new TotemService(regionContext);
+        TotemService totemService = new TotemService(regionContext, structureService);
         structureService.registerBlueprint(createTotemBlueprint(totemService, hierarchy))
                     .on(TotemCoreCreatedEvent.class)
                     .track(e -> {

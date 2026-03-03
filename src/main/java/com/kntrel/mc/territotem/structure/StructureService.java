@@ -116,7 +116,10 @@ public class StructureService {
         }
         return new Structure(this, blueprint, world, location);
     }
-
+    public void updateAt(Entity who, Vec3i where, World world) {
+        // Execute candidate update task asynchronously
+        this.executor_.execute(() -> handleCandidatesUpdateTask(who, where, world));
+    }
 
 
     //PACKAGE-PRIVATE SERVICES
@@ -218,22 +221,18 @@ public class StructureService {
 
         pdc.set(this.candidatesNSK_, StructureCandidatePersistentDataType.instance(), toSerialize);
     }
-    void handleBlockUpdate(Entity who, Vec3i where, World world, Material material, BlockState block) {
-        // Execute candidate update task asynchronously
-        this.executor_.execute(() -> handleCandidatesUpdateTask(who, where, world, material, block));
-    }
 
 
     //TASKS
-    private void handleCandidatesUpdateTask(Entity who, Vec3i where, World world, Material material, BlockState block) {
+    private void handleCandidatesUpdateTask(Entity who, Vec3i where, World world) {
         ChunkKey chunk = ChunkKey.ofBlock(where, world.getUID());
         Collection<BlueprintTracker> candidates = this.getCandidatesInChunk(chunk);
 
         for (BlueprintTracker candidate : candidates) {
-            this.executor_.execute(() -> updateCandidateTask(who, candidate, where, material, block));
+            this.executor_.execute(() -> updateCandidateTask(who, candidate, where));
         }
     }
-    private void updateCandidateTask(Entity who, BlueprintTracker candidate, Vec3i where, Material material, BlockState block) {
+    private void updateCandidateTask(Entity who, BlueprintTracker candidate, Vec3i where) {
         LOGGER.trace("Updating candidate {} at position {}", candidate.blueprint().id(), where);
         boolean completed = this.updateCandidate(candidate, where);
         if (completed) {

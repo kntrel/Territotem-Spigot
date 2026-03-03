@@ -68,23 +68,19 @@ class StructureServiceListener implements Listener {
     //LISTENERS
     @EventHandler void onBlockPlaced(BlockPlaceEvent e) {
         Block b = e.getBlock();
-        this.service_.handleBlockUpdate(
+        this.service_.updateAt(
                 e.getPlayer(),
                 Vec3i.ofBlock(b),
-                b.getWorld(),
-                b.getType(),
-                b.getBlockData().createBlockState()
+                b.getWorld()
         );
     }
 
     @EventHandler void onBlockBroken(BlockBreakEvent e) {
         Block b = e.getBlock();
-        this.service_.handleBlockUpdate(
+        this.service_.updateAt(
                 e.getPlayer(),
                 Vec3i.ofBlock(b),
-                b.getWorld(),
-                Material.AIR,
-                b.getBlockData().createBlockState()
+                b.getWorld()
         );
     }
 

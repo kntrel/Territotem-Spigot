@@ -148,7 +148,7 @@ class StructureServiceTest {
         Block completionBlock = this.world.getBlockAt(completionPos.x(), completionPos.y(), completionPos.z());
         completionBlock.setType(Material.GOLD_BLOCK);
 
-        this.service.handleBlockUpdate(player, completionPos, this.world, Material.GOLD_BLOCK, completionBlock.getState());
+        this.service.updateAt(player, completionPos, this.world);
 
         waitFor(() -> completionCalls.get() == 1 && completedEventRef.get() != null);
 

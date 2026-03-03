@@ -127,11 +127,6 @@ public class TotemCore {
             this.enderEye_.setBillboard(
                     (state == State.ACTIVE) ? Display.Billboard.CENTER : Display.Billboard.FIXED
             );
-            if (state == State.END_EYE) {
-                this.enderEye_.setBrightness(BRIGHTNESS);
-            } else {
-                this.enderEye_.setBrightness(null);
-            }
         } else {
             kill(this.enderEye_);
             this.enderEye_ = null;
@@ -226,6 +221,7 @@ public class TotemCore {
 
         this.enderEye_.setItemStack(new ItemStack(Material.ENDER_EYE));
         this.enderEye_.teleport(this.location(ENDER_EYE_OFFSET));
+        this.enderEye_.setBrightness(BRIGHTNESS);
     }
     private void refinishBlock() {
         Block b = this.world_.getBlockAt(this.coordinates_.x(), this.coordinates_.y(), this.coordinates_.z());
@@ -277,8 +273,7 @@ public class TotemCore {
         Transformation transformation = new Transformation(new Vector3f(0, 0, 0), rotation, scale, rotation);
 
         this.enderEye_.setTransformation(transformation);
-        this.enderEye_.teleport(this.location(ENDER_EYE_OFFSET.clone().add(correction)));
-
+        this.enderEye_.teleport(this.location(correction.add(ENDER_EYE_OFFSET)));
     }
 
     private BlockDisplay spawnBlockDisplay() {

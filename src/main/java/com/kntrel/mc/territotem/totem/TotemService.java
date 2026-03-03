@@ -2,6 +2,7 @@ package com.kntrel.mc.territotem.totem;
 
 import com.kntrel.mc.regionLib.Constants;
 import com.kntrel.mc.regionLib.region.context.RegionContext;
+import com.kntrel.mc.territotem.structure.StructureService;
 import com.kntrel.mc.territotem.structure.worldTile.WorldView;
 import com.kntrel.util.Vec3i;
 import org.bukkit.Chunk;
@@ -25,14 +26,16 @@ public class TotemService {
 
     //FIELDS
     private final RegionContext regionContext_;
+    private final StructureService structureService_;
     private final NamespacedKey coresNSK_;
     private final TotemServiceListener listener_;
     private final Map<UUID, Map<Vec3i, TotemCore>> coresByWorld_;
 
 
     //CONSTRUCTORS
-    public TotemService(RegionContext regionContext) {
+    public TotemService(RegionContext regionContext, StructureService structureService) {
         this.regionContext_ = regionContext;
+        this.structureService_ = structureService;
         this.coresNSK_ = new NamespacedKey(regionContext.getPlugin(), CORES_KEY);
         this.coresByWorld_ = new ConcurrentHashMap<>();
         this.listener_ = new TotemServiceListener(this);
@@ -50,6 +53,9 @@ public class TotemService {
     }
     public Server getServer() {
         return this.regionContext_.getServer();
+    }
+    public StructureService getStructureService() {
+        return this.structureService_;
     }
 
 

@@ -5,7 +5,6 @@ import com.kntrel.mc.regionLib.region.Region;
 import com.kntrel.mc.territotem.event.StructureCompletedEvent;
 import com.kntrel.mc.territotem.event.TotemCoreCreatedEvent;
 import com.kntrel.mc.territotem.structure.blueprint.Blueprint;
-import com.kntrel.mc.territotem.structure.piece.Piece;
 import com.kntrel.mc.territotem.structure.piece.Tile;
 import com.kntrel.mc.territotem.structure.worldTile.WorldTileWriter;
 import com.kntrel.util.Vec3i;
@@ -63,6 +62,7 @@ class TotemServiceListener implements Listener {
 
             if (core.getState() != previous) {
                 consumeOneItem(e, itemStack);
+                this.service_.getStructureService().updateAt(e.getPlayer(), core.getCoordinates(), core.getWorld());
                 e.setCancelled(true);
             }
             return;
