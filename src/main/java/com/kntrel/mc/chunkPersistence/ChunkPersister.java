@@ -40,8 +40,10 @@ public class ChunkPersister implements Listener {
     //API
     public <P, C> void persist(Chunk chunk, NamespacedKey key, PersistentDataType<P, C> type, C value) {
         DirtyChunk dirty = this.dirtyChunks_.computeIfAbsent(ChunkRef.of(chunk), ignored -> new DirtyChunk());
-        dirty.removals_.remove(key);
-        dirty.inserts_.put(key, new Entry(type, value));
+        synchronized (dirty) {
+            dirty.removals_.remove(key);
+            dirty.inserts_.put(key, new Entry(type, value));
+        }
     }
     public <P, C> @Nullable C retrieve(Chunk chunk, NamespacedKey key, PersistentDataType<P, C> type) {
         DirtyChunk dirty = this.dirtyChunks_.get(ChunkRef.of(chunk));
@@ -60,19 +62,23 @@ public class ChunkPersister implements Listener {
         dirty.removals_.add(key);
     }
     public void flushChunk(Chunk chunk) {
-        DirtyChunk dirty = this.dirtyChunks_.remove(ChunkRef.of(chunk));
+        ChunkRef ref = ChunkRef.of(chunk);
+        DirtyChunk dirty = this.dirtyChunks_.get(ref);
         if (dirty == null) { return; }
 
-        PersistentDataContainer pdc = chunk.getPersistentDataContainer();
-        for (NamespacedKey key : dirty.removals_) {
-            LOGGER.debug("Removing data entry from chunk ({}, {}). Key: {}", chunk.getX(), chunk.getZ(), key);
-            pdc.remove(key);
-        }
-        for (Map.Entry<NamespacedKey, Entry> entry : dirty.inserts_.entrySet()) {
-            NamespacedKey key = entry.getKey();
-            Entry val = entry.getValue();
-            LOGGER.debug("Persisting data to chunk ({}, {}). Key: {}, Type: {}", chunk.getX(), chunk.getZ(), key, val.value_);
-            setUnchecked(pdc, key, val);
+        synchronized (dirty) {
+            this.dirtyChunks_.remove(ref);
+            PersistentDataContainer pdc = chunk.getPersistentDataContainer();
+            for (NamespacedKey key : dirty.removals_) {
+                LOGGER.debug("Removing data entry from chunk ({}, {}). Key: {}", chunk.getX(), chunk.getZ(), key);
+                pdc.remove(key);
+            }
+            for (Map.Entry<NamespacedKey, Entry> entry : dirty.inserts_.entrySet()) {
+                NamespacedKey key = entry.getKey();
+                Entry val = entry.getValue();
+                LOGGER.debug("Persisting data to chunk ({}, {}). Key: {}, Type: {}", chunk.getX(), chunk.getZ(), key, val.value_);
+                setUnchecked(pdc, key, val);
+            }
         }
     }
     public void flushAll() {

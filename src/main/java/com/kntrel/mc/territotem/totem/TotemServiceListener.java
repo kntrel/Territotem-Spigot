@@ -8,6 +8,7 @@ import com.kntrel.mc.territotem.structure.blueprint.Blueprint;
 import com.kntrel.mc.territotem.structure.piece.Tile;
 import com.kntrel.mc.territotem.structure.worldTile.WorldTileWriter;
 import com.kntrel.util.Vec3i;
+import org.bukkit.Chunk;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Block;
@@ -19,6 +20,7 @@ import org.bukkit.event.block.*;
 import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.player.PlayerInteractAtEntityEvent;
 import org.bukkit.event.world.ChunkLoadEvent;
+import org.bukkit.event.world.ChunkUnloadEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.Vector;
 import java.util.Arrays;
@@ -85,7 +87,7 @@ class TotemServiceListener implements Listener {
         TotemCoreCreatedEvent event = new TotemCoreCreatedEvent(core, e.getPlayer());
         this.service_.getServer().getPluginManager().callEvent(event);
         if (event.isCancelled()) {
-            this.service_.dropCore(core);
+            this.service_.destroyCore(core);
             return;
         }
         consumeOneItem(e, itemStack);
@@ -118,10 +120,11 @@ class TotemServiceListener implements Listener {
             return;
         }
 
+        Vec3i pos = Vec3i.ofBlock(b);
         World world = b.getWorld();
-        this.service_.getNearByCores(b).stream()
-                .filter(c -> isAdjacent(c.getCoordinates(), Vec3i.ofBlock(b)))
-                .forEach(c ->
+        this.service_.getNearByCores(b)
+                .thenApply(l -> l.stream().filter(c -> isAdjacent(c.getCoordinates(), pos)))
+                .thenAccept(l -> l.forEach(c ->
                     this.service_.getServer().getScheduler().runTaskLater(this.service_.getPlugin(), () -> {
                         Vec3i loc = c.getCoordinates();
                         Material newType = world.getBlockAt(loc.x(), loc.y(), loc.z()).getType();
@@ -129,7 +132,7 @@ class TotemServiceListener implements Listener {
                             this.service_.breakCore(c);
                         }
                     }, 1)
-                );
+                ));
     }
 
     @EventHandler
@@ -167,6 +170,12 @@ class TotemServiceListener implements Listener {
             i = 0;
         }
         return DIRECTIONS.get(i);
+    }
+
+    @EventHandler
+    void onChunkUnload(ChunkUnloadEvent e) {
+        Chunk c = e.getChunk();
+        this.service_.unloadChunk(e.getWorld(), c.getX(), c.getZ());
     }
 
     @EventHandler
