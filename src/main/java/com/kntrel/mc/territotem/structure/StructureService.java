@@ -27,7 +27,7 @@ public class StructureService {
 
     //CONSTANTS
     private static final Logger LOGGER = LoggerFactory.getLogger(StructureService.class);
-    private static final String CANDIDATES_KEY = "structure_candidates";
+    private static final String STRUCTURES_KEY = "structures";
 
 
     //FIELDS
@@ -53,7 +53,7 @@ public class StructureService {
         this.candidateLocks_ = new ConcurrentHashMap<>();
         this.trackersMap_ = new  ConcurrentHashMap<>();
         this.executor_ = Executors.newVirtualThreadPerTaskExecutor();
-        this.candidatesNSK_ = new NamespacedKey(this.plugin_, CANDIDATES_KEY);
+        this.candidatesNSK_ = new NamespacedKey(this.plugin_, STRUCTURES_KEY);
         this.bitsetGenerator_ = new BlueprintBitsetGenerator();
         this.listener_ = new StructureServiceListener(this);
 
@@ -169,14 +169,14 @@ public class StructureService {
 
     //LISTENERS
     void handleChunkLoad(Chunk chunk) {
-        List<ChunkTotemCandidate> candidates = this.chunkPersister_.retrieve(chunk, this.candidatesNSK_, StructureCandidatePersistentDataType.instance());
-        if (candidates == null || candidates.isEmpty()) {
-            LOGGER.trace("No totem candidates found in chunk [{}, {}]", chunk.getX(), chunk.getZ());
+        List<StructureChunkData> data = this.chunkPersister_.retrieve(chunk, this.candidatesNSK_, StructureCandidatePersistentDataType.instance());
+        if (data == null || data.isEmpty()) {
+            LOGGER.trace("No totem data found in chunk [{}, {}]", chunk.getX(), chunk.getZ());
             return;
         }
 
-        LOGGER.info("Found {} totem candidates in chunk [{}, {}]", candidates.size(), chunk.getX(), chunk.getZ());
-        for (ChunkTotemCandidate candidate : candidates) {
+        LOGGER.info("Found {} totem data in chunk [{}, {}]", data.size(), chunk.getX(), chunk.getZ());
+        for (StructureChunkData candidate : data) {
             Blueprint blueprint = blueprints_.get(candidate.blueprintId());
             if (blueprint == null) { 
                 LOGGER.warn("Blueprint with ID {} not found in registry", candidate.blueprintId());
@@ -312,9 +312,9 @@ public class StructureService {
             return;
         }
 
-        List<ChunkTotemCandidate> toSerialize = new ArrayList<>(candidates.size());
+        List<StructureChunkData> toSerialize = new ArrayList<>(candidates.size());
         for (Structure candidate : candidates) {
-            toSerialize.add(new ChunkTotemCandidate(offsetInChunk(candidate.origin()), candidate.blueprint().id()));
+            toSerialize.add(new StructureChunkData(offsetInChunk(candidate.origin()), candidate.blueprint().id()));
         }
         this.chunkPersister_.persist(chunk, this.candidatesNSK_, StructureCandidatePersistentDataType.instance(), toSerialize);
     }

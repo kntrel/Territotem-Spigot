@@ -75,8 +75,8 @@ public class StructureCandidatePersistentDataTypeTest {
         @Test
         @DisplayName("Should convert single candidate with zero coordinates")
         void testToPrimitiveSingleCandidateZeroCoordinates() {
-            List<ChunkTotemCandidate> candidates = new ArrayList<>();
-            candidates.add(new ChunkTotemCandidate(new Vec3i(0, 0, 0), 0L));
+            List<StructureChunkData> candidates = new ArrayList<>();
+            candidates.add(new StructureChunkData(new Vec3i(0, 0, 0), 0L));
 
             byte[] result = persistentDataType.toPrimitive(candidates, mockContext);
 
@@ -92,10 +92,10 @@ public class StructureCandidatePersistentDataTypeTest {
         @Test
         @DisplayName("Should convert single candidate with positive coordinates")
         void testToPrimitiveSingleCandidatePositiveCoordinates() {
-            List<ChunkTotemCandidate> candidates = new ArrayList<>();
-            candidates.add(new ChunkTotemCandidate(new Vec3i(10, 64, 15), 12345L));
+            List<StructureChunkData> data = new ArrayList<>();
+            data.add(new StructureChunkData(new Vec3i(10, 64, 15), 12345L));
 
-            byte[] result = persistentDataType.toPrimitive(candidates, mockContext);
+            byte[] result = persistentDataType.toPrimitive(data, mockContext);
 
             assertEquals(12, result.length);
             assertEquals(10, result[0]); // x
@@ -108,10 +108,10 @@ public class StructureCandidatePersistentDataTypeTest {
         @Test
         @DisplayName("Should convert single candidate with negative coordinates")
         void testToPrimitiveSingleCandidateNegativeCoordinates() {
-            List<ChunkTotemCandidate> candidates = new ArrayList<>();
-            candidates.add(new ChunkTotemCandidate(new Vec3i(-50, -100, -75), 999L));
+            List<StructureChunkData> data = new ArrayList<>();
+            data.add(new StructureChunkData(new Vec3i(-50, -100, -75), 999L));
 
-            byte[] result = persistentDataType.toPrimitive(candidates, mockContext);
+            byte[] result = persistentDataType.toPrimitive(data, mockContext);
 
             assertEquals(12, result.length);
             assertEquals((byte) -50, result[0]); // x
@@ -121,10 +121,10 @@ public class StructureCandidatePersistentDataTypeTest {
         @Test
         @DisplayName("Should convert single candidate with large blueprint ID")
         void testToPrimitiveSingleCandidateLargeBlueprintId() {
-            List<ChunkTotemCandidate> candidates = new ArrayList<>();
-            candidates.add(new ChunkTotemCandidate(new Vec3i(0, 0, 0), Long.MAX_VALUE));
+            List<StructureChunkData> data = new ArrayList<>();
+            data.add(new StructureChunkData(new Vec3i(0, 0, 0), Long.MAX_VALUE));
 
-            byte[] result = persistentDataType.toPrimitive(candidates, mockContext);
+            byte[] result = persistentDataType.toPrimitive(data, mockContext);
 
             assertEquals(12, result.length);
             // Verify that the blueprint ID (8 bytes) is correctly stored
@@ -137,10 +137,10 @@ public class StructureCandidatePersistentDataTypeTest {
         @Test
         @DisplayName("Should convert single candidate with minimum blueprint ID")
         void testToPrimitiveSingleCandidateMinBlueprintId() {
-            List<ChunkTotemCandidate> candidates = new ArrayList<>();
-            candidates.add(new ChunkTotemCandidate(new Vec3i(5, 10, 15), Long.MIN_VALUE));
+            List<StructureChunkData> data = new ArrayList<>();
+            data.add(new StructureChunkData(new Vec3i(5, 10, 15), Long.MIN_VALUE));
 
-            byte[] result = persistentDataType.toPrimitive(candidates, mockContext);
+            byte[] result = persistentDataType.toPrimitive(data, mockContext);
 
             assertEquals(12, result.length);
             assertEquals((byte) 0x80, result[4]);
@@ -152,10 +152,10 @@ public class StructureCandidatePersistentDataTypeTest {
         @Test
         @DisplayName("Should convert single candidate with boundary coordinate values")
         void testToPrimitiveSingleCandidateBoundaryCoordinates() {
-            List<ChunkTotemCandidate> candidates = new ArrayList<>();
-            candidates.add(new ChunkTotemCandidate(new Vec3i(Byte.MAX_VALUE, Short.MAX_VALUE, Byte.MIN_VALUE), 1L));
+            List<StructureChunkData> data = new ArrayList<>();
+            data.add(new StructureChunkData(new Vec3i(Byte.MAX_VALUE, Short.MAX_VALUE, Byte.MIN_VALUE), 1L));
 
-            byte[] result = persistentDataType.toPrimitive(candidates, mockContext);
+            byte[] result = persistentDataType.toPrimitive(data, mockContext);
 
             assertEquals(12, result.length);
             assertEquals(Byte.MAX_VALUE, result[0]); // x
@@ -170,11 +170,11 @@ public class StructureCandidatePersistentDataTypeTest {
         @Test
         @DisplayName("Should convert two candidates correctly")
         void testToPrimitiveMultipleCandidates() {
-            List<ChunkTotemCandidate> candidates = new ArrayList<>();
-            candidates.add(new ChunkTotemCandidate(new Vec3i(1, 100, 2), 111L));
-            candidates.add(new ChunkTotemCandidate(new Vec3i(3, 200, 4), 222L));
+            List<StructureChunkData> data = new ArrayList<>();
+            data.add(new StructureChunkData(new Vec3i(1, 100, 2), 111L));
+            data.add(new StructureChunkData(new Vec3i(3, 200, 4), 222L));
 
-            byte[] result = persistentDataType.toPrimitive(candidates, mockContext);
+            byte[] result = persistentDataType.toPrimitive(data, mockContext);
 
             assertEquals(24, result.length);
             // First candidate at offset 0-11
@@ -188,12 +188,12 @@ public class StructureCandidatePersistentDataTypeTest {
         @Test
         @DisplayName("Should convert three candidates correctly")
         void testToPrimitiveThreeCandidates() {
-            List<ChunkTotemCandidate> candidates = new ArrayList<>();
-            candidates.add(new ChunkTotemCandidate(new Vec3i(1, 1, 1), 1L));
-            candidates.add(new ChunkTotemCandidate(new Vec3i(2, 2, 2), 2L));
-            candidates.add(new ChunkTotemCandidate(new Vec3i(3, 3, 3), 3L));
+            List<StructureChunkData> data = new ArrayList<>();
+            data.add(new StructureChunkData(new Vec3i(1, 1, 1), 1L));
+            data.add(new StructureChunkData(new Vec3i(2, 2, 2), 2L));
+            data.add(new StructureChunkData(new Vec3i(3, 3, 3), 3L));
 
-            byte[] result = persistentDataType.toPrimitive(candidates, mockContext);
+            byte[] result = persistentDataType.toPrimitive(data, mockContext);
 
             assertEquals(36, result.length);
             assertEquals(1, result[0]);
@@ -204,12 +204,12 @@ public class StructureCandidatePersistentDataTypeTest {
         @Test
         @DisplayName("Should handle large list of candidates")
         void testToPrimitiveLargeList() {
-            List<ChunkTotemCandidate> candidates = new ArrayList<>();
+            List<StructureChunkData> data = new ArrayList<>();
             for (int i = 0; i < 100; i++) {
-                candidates.add(new ChunkTotemCandidate(new Vec3i(i, i * 2, i * 3), (long) i));
+                data.add(new StructureChunkData(new Vec3i(i, i * 2, i * 3), (long) i));
             }
 
-            byte[] result = persistentDataType.toPrimitive(candidates, mockContext);
+            byte[] result = persistentDataType.toPrimitive(data, mockContext);
 
             assertEquals(1200, result.length); // 100 * 12
         }
@@ -217,12 +217,12 @@ public class StructureCandidatePersistentDataTypeTest {
         @Test
         @DisplayName("Should preserve order of candidates in byte array")
         void testToPrimitivePreservesOrder() {
-            List<ChunkTotemCandidate> candidates = new ArrayList<>();
-            candidates.add(new ChunkTotemCandidate(new Vec3i(10, 100, 110), 1000L));
-            candidates.add(new ChunkTotemCandidate(new Vec3i(20, 200, 220), 2000L));
-            candidates.add(new ChunkTotemCandidate(new Vec3i(30, 300, 330), 3000L));
+            List<StructureChunkData> data = new ArrayList<>();
+            data.add(new StructureChunkData(new Vec3i(10, 100, 110), 1000L));
+            data.add(new StructureChunkData(new Vec3i(20, 200, 220), 2000L));
+            data.add(new StructureChunkData(new Vec3i(30, 300, 330), 3000L));
 
-            byte[] result = persistentDataType.toPrimitive(candidates, mockContext);
+            byte[] result = persistentDataType.toPrimitive(data, mockContext);
 
             assertEquals(10, result[0]);
             assertEquals(20, result[12]);
@@ -237,9 +237,9 @@ public class StructureCandidatePersistentDataTypeTest {
         @Test
         @DisplayName("Should handle empty candidate list")
         void testToPrimitiveEmptyList() {
-            List<ChunkTotemCandidate> candidates = new ArrayList<>();
+            List<StructureChunkData> data = new ArrayList<>();
 
-            byte[] result = persistentDataType.toPrimitive(candidates, mockContext);
+            byte[] result = persistentDataType.toPrimitive(data, mockContext);
 
             assertEquals(0, result.length);
         }
@@ -247,9 +247,9 @@ public class StructureCandidatePersistentDataTypeTest {
         @Test
         @DisplayName("Should return non-null for empty list")
         void testToPrimitiveEmptyListNotNull() {
-            List<ChunkTotemCandidate> candidates = new ArrayList<>();
+            List<StructureChunkData> data = new ArrayList<>();
 
-            byte[] result = persistentDataType.toPrimitive(candidates, mockContext);
+            byte[] result = persistentDataType.toPrimitive(data, mockContext);
 
             assertNotNull(result);
         }
@@ -264,7 +264,7 @@ public class StructureCandidatePersistentDataTypeTest {
         void testFromPrimitiveSingleCandidateZeroCoordinates() {
             byte[] data = new byte[12];
 
-            List<ChunkTotemCandidate> result = persistentDataType.fromPrimitive(data, mockContext);
+            List<StructureChunkData> result = persistentDataType.fromPrimitive(data, mockContext);
 
             assertEquals(1, result.size());
             assertEquals(0, result.getFirst().offset().x());
@@ -282,7 +282,7 @@ public class StructureCandidatePersistentDataTypeTest {
             data[2] = 0x00; // y high byte
             data[3] = 0x40; // y low byte (64)
 
-            List<ChunkTotemCandidate> result = persistentDataType.fromPrimitive(data, mockContext);
+            List<StructureChunkData> result = persistentDataType.fromPrimitive(data, mockContext);
 
             assertEquals(1, result.size());
             assertEquals(10, result.getFirst().offset().x());
@@ -299,7 +299,7 @@ public class StructureCandidatePersistentDataTypeTest {
             data[2] = (byte) 0xFF;  // y high byte
             data[3] = (byte) 0x9C;  // y low byte (-100)
 
-            List<ChunkTotemCandidate> result = persistentDataType.fromPrimitive(data, mockContext);
+            List<StructureChunkData> result = persistentDataType.fromPrimitive(data, mockContext);
 
             assertEquals(1, result.size());
             assertEquals(-50, result.getFirst().offset().x());
@@ -315,7 +315,7 @@ public class StructureCandidatePersistentDataTypeTest {
                 data[i] = (byte) 0xFF;
             }
 
-            List<ChunkTotemCandidate> result = persistentDataType.fromPrimitive(data, mockContext);
+            List<StructureChunkData> result = persistentDataType.fromPrimitive(data, mockContext);
 
             assertEquals(1, result.size());
             assertEquals(Long.MAX_VALUE, result.get(0).blueprintId());
@@ -330,7 +330,7 @@ public class StructureCandidatePersistentDataTypeTest {
                 data[i] = 0x00;
             }
 
-            List<ChunkTotemCandidate> result = persistentDataType.fromPrimitive(data, mockContext);
+            List<StructureChunkData> result = persistentDataType.fromPrimitive(data, mockContext);
 
             assertEquals(1, result.size());
             assertEquals(Long.MIN_VALUE, result.get(0).blueprintId());
@@ -356,7 +356,7 @@ public class StructureCandidatePersistentDataTypeTest {
             data[14] = 0x00;
             data[15] = (byte) 0xC8; // 200
 
-            List<ChunkTotemCandidate> result = persistentDataType.fromPrimitive(data, mockContext);
+            List<StructureChunkData> result = persistentDataType.fromPrimitive(data, mockContext);
 
             assertEquals(2, result.size());
             assertEquals(1, result.get(0).offset().x());
@@ -374,7 +374,7 @@ public class StructureCandidatePersistentDataTypeTest {
                 data[offset] = (byte) (i + 1);
             }
 
-            List<ChunkTotemCandidate> result = persistentDataType.fromPrimitive(data, mockContext);
+            List<StructureChunkData> result = persistentDataType.fromPrimitive(data, mockContext);
 
             assertEquals(3, result.size());
             assertEquals(1, result.get(0).offset().x());
@@ -387,7 +387,7 @@ public class StructureCandidatePersistentDataTypeTest {
         void testFromPrimitiveLargeList() {
             byte[] data = new byte[1200]; // 100 candidates * 12 bytes each
 
-            List<ChunkTotemCandidate> result = persistentDataType.fromPrimitive(data, mockContext);
+            List<StructureChunkData> result = persistentDataType.fromPrimitive(data, mockContext);
 
             assertEquals(100, result.size());
         }
@@ -402,7 +402,7 @@ public class StructureCandidatePersistentDataTypeTest {
         void testFromPrimitiveEmptyArray() {
             byte[] data = new byte[0];
 
-            List<ChunkTotemCandidate> result = persistentDataType.fromPrimitive(data, mockContext);
+            List<StructureChunkData> result = persistentDataType.fromPrimitive(data, mockContext);
 
             assertNotNull(result);
             assertEquals(0, result.size());
@@ -413,7 +413,7 @@ public class StructureCandidatePersistentDataTypeTest {
         void testFromPrimitiveEmptyArrayReturnsEmptyList() {
             byte[] data = new byte[0];
 
-            List<ChunkTotemCandidate> result = persistentDataType.fromPrimitive(data, mockContext);
+            List<StructureChunkData> result = persistentDataType.fromPrimitive(data, mockContext);
 
             assertTrue(result.isEmpty());
         }
@@ -428,7 +428,7 @@ public class StructureCandidatePersistentDataTypeTest {
         void testFromPrimitivePartialCandidate() {
             byte[] data = new byte[15]; // 1 full candidate (12 bytes) + 3 partial bytes
 
-            List<ChunkTotemCandidate> result = persistentDataType.fromPrimitive(data, mockContext);
+            List<StructureChunkData> result = persistentDataType.fromPrimitive(data, mockContext);
 
             assertEquals(1, result.size());
         }
@@ -438,7 +438,7 @@ public class StructureCandidatePersistentDataTypeTest {
         void testFromPrimitiveMultipleFullPartialCandidates() {
             byte[] data = new byte[27]; // 2 full candidates (24 bytes) + 3 partial bytes
 
-            List<ChunkTotemCandidate> result = persistentDataType.fromPrimitive(data, mockContext);
+            List<StructureChunkData> result = persistentDataType.fromPrimitive(data, mockContext);
 
             assertEquals(2, result.size());
         }
@@ -451,11 +451,11 @@ public class StructureCandidatePersistentDataTypeTest {
         @Test
         @DisplayName("Should successfully convert single candidate to bytes and back")
         void testRoundTripSingleCandidate() {
-            ChunkTotemCandidate original = new ChunkTotemCandidate(new Vec3i(10, 64, 20), 12345L);
-            List<ChunkTotemCandidate> originalList = List.of(original);
+            StructureChunkData original = new StructureChunkData(new Vec3i(10, 64, 20), 12345L);
+            List<StructureChunkData> originalList = List.of(original);
 
             byte[] serialized = persistentDataType.toPrimitive(originalList, mockContext);
-            List<ChunkTotemCandidate> deserialized = persistentDataType.fromPrimitive(serialized, mockContext);
+            List<StructureChunkData> deserialized = persistentDataType.fromPrimitive(serialized, mockContext);
 
             assertEquals(1, deserialized.size());
             assertEquals(original.offset().x(), deserialized.get(0).offset().x());
@@ -467,13 +467,13 @@ public class StructureCandidatePersistentDataTypeTest {
         @Test
         @DisplayName("Should successfully round-trip multiple candidates")
         void testRoundTripMultipleCandidates() {
-            List<ChunkTotemCandidate> original = new ArrayList<>();
-            original.add(new ChunkTotemCandidate(new Vec3i(1, 100, 2), 111L));
-            original.add(new ChunkTotemCandidate(new Vec3i(3, 200, 4), 222L));
-            original.add(new ChunkTotemCandidate(new Vec3i(5, 300, 6), 333L));
+            List<StructureChunkData> original = new ArrayList<>();
+            original.add(new StructureChunkData(new Vec3i(1, 100, 2), 111L));
+            original.add(new StructureChunkData(new Vec3i(3, 200, 4), 222L));
+            original.add(new StructureChunkData(new Vec3i(5, 300, 6), 333L));
 
             byte[] serialized = persistentDataType.toPrimitive(original, mockContext);
-            List<ChunkTotemCandidate> deserialized = persistentDataType.fromPrimitive(serialized, mockContext);
+            List<StructureChunkData> deserialized = persistentDataType.fromPrimitive(serialized, mockContext);
 
             assertEquals(original.size(), deserialized.size());
             for (int i = 0; i < original.size(); i++) {
@@ -487,13 +487,13 @@ public class StructureCandidatePersistentDataTypeTest {
         @Test
         @DisplayName("Should preserve all extreme values in round-trip")
         void testRoundTripExtremeValues() {
-            List<ChunkTotemCandidate> original = new ArrayList<>();
-            original.add(new ChunkTotemCandidate(new Vec3i(Byte.MAX_VALUE, Short.MAX_VALUE, Byte.MAX_VALUE), Long.MAX_VALUE));
-            original.add(new ChunkTotemCandidate(new Vec3i(Byte.MIN_VALUE, Short.MIN_VALUE, Byte.MIN_VALUE), Long.MIN_VALUE));
-            original.add(new ChunkTotemCandidate(new Vec3i(0, 0, 0), 0L));
+            List<StructureChunkData> original = new ArrayList<>();
+            original.add(new StructureChunkData(new Vec3i(Byte.MAX_VALUE, Short.MAX_VALUE, Byte.MAX_VALUE), Long.MAX_VALUE));
+            original.add(new StructureChunkData(new Vec3i(Byte.MIN_VALUE, Short.MIN_VALUE, Byte.MIN_VALUE), Long.MIN_VALUE));
+            original.add(new StructureChunkData(new Vec3i(0, 0, 0), 0L));
 
             byte[] serialized = persistentDataType.toPrimitive(original, mockContext);
-            List<ChunkTotemCandidate> deserialized = persistentDataType.fromPrimitive(serialized, mockContext);
+            List<StructureChunkData> deserialized = persistentDataType.fromPrimitive(serialized, mockContext);
 
             assertEquals(original.size(), deserialized.size());
             for (int i = 0; i < original.size(); i++) {
@@ -507,10 +507,10 @@ public class StructureCandidatePersistentDataTypeTest {
         @Test
         @DisplayName("Should handle round-trip with empty list")
         void testRoundTripEmptyList() {
-            List<ChunkTotemCandidate> original = new ArrayList<>();
+            List<StructureChunkData> original = new ArrayList<>();
 
             byte[] serialized = persistentDataType.toPrimitive(original, mockContext);
-            List<ChunkTotemCandidate> deserialized = persistentDataType.fromPrimitive(serialized, mockContext);
+            List<StructureChunkData> deserialized = persistentDataType.fromPrimitive(serialized, mockContext);
 
             assertEquals(0, deserialized.size());
         }
@@ -518,13 +518,13 @@ public class StructureCandidatePersistentDataTypeTest {
         @Test
         @DisplayName("Should handle round-trip with large list")
         void testRoundTripLargeList() {
-            List<ChunkTotemCandidate> original = new ArrayList<>();
+            List<StructureChunkData> original = new ArrayList<>();
             for (int i = 0; i < 50; i++) {
-                original.add(new ChunkTotemCandidate(new Vec3i(i, i * 10, i * 2), (long) i * 1000));
+                original.add(new StructureChunkData(new Vec3i(i, i * 10, i * 2), (long) i * 1000));
             }
 
             byte[] serialized = persistentDataType.toPrimitive(original, mockContext);
-            List<ChunkTotemCandidate> deserialized = persistentDataType.fromPrimitive(serialized, mockContext);
+            List<StructureChunkData> deserialized = persistentDataType.fromPrimitive(serialized, mockContext);
 
             assertEquals(original.size(), deserialized.size());
             for (int i = 0; i < original.size(); i++) {
@@ -546,7 +546,7 @@ public class StructureCandidatePersistentDataTypeTest {
             byte[] data = new byte[12];
             data[0] = 42;
 
-            List<ChunkTotemCandidate> result = persistentDataType.fromPrimitive(data, mockContext);
+            List<StructureChunkData> result = persistentDataType.fromPrimitive(data, mockContext);
 
             assertEquals(42, result.get(0).offset().x());
         }
@@ -557,7 +557,7 @@ public class StructureCandidatePersistentDataTypeTest {
             byte[] data = new byte[12];
             data[1] = 55;
 
-            List<ChunkTotemCandidate> result = persistentDataType.fromPrimitive(data, mockContext);
+            List<StructureChunkData> result = persistentDataType.fromPrimitive(data, mockContext);
 
             assertEquals(55, result.get(0).offset().z());
         }
@@ -569,7 +569,7 @@ public class StructureCandidatePersistentDataTypeTest {
             data[2] = 0x00;
             data[3] = 0x50; // 80 in decimal
 
-            List<ChunkTotemCandidate> result = persistentDataType.fromPrimitive(data, mockContext);
+            List<StructureChunkData> result = persistentDataType.fromPrimitive(data, mockContext);
 
             assertEquals(80, result.get(0).offset().y());
         }
@@ -588,7 +588,7 @@ public class StructureCandidatePersistentDataTypeTest {
             data[10] = 0x04;
             data[11] = (byte) 0xD2; // 1234 in decimal
 
-            List<ChunkTotemCandidate> result = persistentDataType.fromPrimitive(data, mockContext);
+            List<StructureChunkData> result = persistentDataType.fromPrimitive(data, mockContext);
 
             assertEquals(1234L, result.get(0).blueprintId());
         }
@@ -596,8 +596,8 @@ public class StructureCandidatePersistentDataTypeTest {
         @Test
         @DisplayName("Should correctly encode all 12 bytes for single candidate")
         void testByteLayoutFullCandidate() {
-            List<ChunkTotemCandidate> candidates = List.of(
-                new ChunkTotemCandidate(new Vec3i(1, 1000, 2), 999999L)
+            List<StructureChunkData> candidates = List.of(
+                new StructureChunkData(new Vec3i(1, 1000, 2), 999999L)
             );
 
             byte[] serialized = persistentDataType.toPrimitive(candidates, mockContext);
@@ -617,8 +617,8 @@ public class StructureCandidatePersistentDataTypeTest {
         @Test
         @DisplayName("Should not corrupt data when serializing multiple times")
         void testSerializeMultipleTimes() {
-            ChunkTotemCandidate candidate = new ChunkTotemCandidate(new Vec3i(10, 20, 30), 40L);
-            List<ChunkTotemCandidate> candidates = List.of(candidate);
+            StructureChunkData candidate = new StructureChunkData(new Vec3i(10, 20, 30), 40L);
+            List<StructureChunkData> candidates = List.of(candidate);
 
             byte[] result1 = persistentDataType.toPrimitive(candidates, mockContext);
             byte[] result2 = persistentDataType.toPrimitive(candidates, mockContext);
@@ -635,8 +635,8 @@ public class StructureCandidatePersistentDataTypeTest {
             data[2] = 0x00;
             data[3] = 0x33;
 
-            List<ChunkTotemCandidate> result1 = persistentDataType.fromPrimitive(data, mockContext);
-            List<ChunkTotemCandidate> result2 = persistentDataType.fromPrimitive(data, mockContext);
+            List<StructureChunkData> result1 = persistentDataType.fromPrimitive(data, mockContext);
+            List<StructureChunkData> result2 = persistentDataType.fromPrimitive(data, mockContext);
 
             assertEquals(result1.get(0).offset().x(), result2.get(0).offset().x());
             assertEquals(result1.get(0).offset().z(), result2.get(0).offset().z());
@@ -645,16 +645,16 @@ public class StructureCandidatePersistentDataTypeTest {
         @Test
         @DisplayName("Should preserve data when candidates are added in different order")
         void testOrderPreservation() {
-            List<ChunkTotemCandidate> candidates1 = new ArrayList<>();
-            candidates1.add(new ChunkTotemCandidate(new Vec3i(1, 1, 1), 1L));
-            candidates1.add(new ChunkTotemCandidate(new Vec3i(2, 2, 2), 2L));
+            List<StructureChunkData> data1 = new ArrayList<>();
+            data1.add(new StructureChunkData(new Vec3i(1, 1, 1), 1L));
+            data1.add(new StructureChunkData(new Vec3i(2, 2, 2), 2L));
 
-            List<ChunkTotemCandidate> candidates2 = new ArrayList<>();
-            candidates2.add(new ChunkTotemCandidate(new Vec3i(2, 2, 2), 2L));
-            candidates2.add(new ChunkTotemCandidate(new Vec3i(1, 1, 1), 1L));
+            List<StructureChunkData> data2 = new ArrayList<>();
+            data2.add(new StructureChunkData(new Vec3i(2, 2, 2), 2L));
+            data2.add(new StructureChunkData(new Vec3i(1, 1, 1), 1L));
 
-            byte[] serialized1 = persistentDataType.toPrimitive(candidates1, mockContext);
-            byte[] serialized2 = persistentDataType.toPrimitive(candidates2, mockContext);
+            byte[] serialized1 = persistentDataType.toPrimitive(data1, mockContext);
+            byte[] serialized2 = persistentDataType.toPrimitive(data2, mockContext);
 
             assertNotEquals(serialized1[0], serialized2[0]);
         }
@@ -668,12 +668,12 @@ public class StructureCandidatePersistentDataTypeTest {
         @ValueSource(ints = {-128, -1, 0, 1, 127})
         @DisplayName("Should handle boundary byte values for x coordinate")
         void testBoundaryXCoordinates(int x) {
-            List<ChunkTotemCandidate> candidates = List.of(
-                new ChunkTotemCandidate(new Vec3i(x, 0, 0), 0L)
+            List<StructureChunkData> data = List.of(
+                new StructureChunkData(new Vec3i(x, 0, 0), 0L)
             );
 
-            byte[] serialized = persistentDataType.toPrimitive(candidates, mockContext);
-            List<ChunkTotemCandidate> deserialized = persistentDataType.fromPrimitive(serialized, mockContext);
+            byte[] serialized = persistentDataType.toPrimitive(data, mockContext);
+            List<StructureChunkData> deserialized = persistentDataType.fromPrimitive(serialized, mockContext);
 
             assertEquals(x, deserialized.get(0).offset().x());
         }
@@ -682,12 +682,12 @@ public class StructureCandidatePersistentDataTypeTest {
         @ValueSource(ints = {-128, -1, 0, 1, 127})
         @DisplayName("Should handle boundary byte values for z coordinate")
         void testBoundaryZCoordinates(int z) {
-            List<ChunkTotemCandidate> candidates = List.of(
-                new ChunkTotemCandidate(new Vec3i(0, 0, z), 0L)
+            List<StructureChunkData> data = List.of(
+                new StructureChunkData(new Vec3i(0, 0, z), 0L)
             );
 
-            byte[] serialized = persistentDataType.toPrimitive(candidates, mockContext);
-            List<ChunkTotemCandidate> deserialized = persistentDataType.fromPrimitive(serialized, mockContext);
+            byte[] serialized = persistentDataType.toPrimitive(data, mockContext);
+            List<StructureChunkData> deserialized = persistentDataType.fromPrimitive(serialized, mockContext);
 
             assertEquals(z, deserialized.get(0).offset().z());
         }
@@ -695,12 +695,12 @@ public class StructureCandidatePersistentDataTypeTest {
         @Test
         @DisplayName("Should handle coordinate with mixed signs")
         void testMixedSignCoordinates() {
-            List<ChunkTotemCandidate> candidates = List.of(
-                new ChunkTotemCandidate(new Vec3i(-50, 100, 50), 12345L)
+            List<StructureChunkData> data = List.of(
+                new StructureChunkData(new Vec3i(-50, 100, 50), 12345L)
             );
 
-            byte[] serialized = persistentDataType.toPrimitive(candidates, mockContext);
-            List<ChunkTotemCandidate> deserialized = persistentDataType.fromPrimitive(serialized, mockContext);
+            byte[] serialized = persistentDataType.toPrimitive(data, mockContext);
+            List<StructureChunkData> deserialized = persistentDataType.fromPrimitive(serialized, mockContext);
 
             assertEquals(-50, deserialized.get(0).offset().x());
             assertEquals(100, deserialized.get(0).offset().y());

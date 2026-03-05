@@ -8,7 +8,7 @@ import org.jspecify.annotations.NonNull;
 import java.util.ArrayList;
 import java.util.List;
 
-class StructureCandidatePersistentDataType implements PersistentDataType<byte[], List<ChunkTotemCandidate>> {
+class StructureCandidatePersistentDataType implements PersistentDataType<byte[], List<StructureChunkData>> {
 
     //FACTORY
     private static final StructureCandidatePersistentDataType INSTANCE = new StructureCandidatePersistentDataType();
@@ -23,15 +23,15 @@ class StructureCandidatePersistentDataType implements PersistentDataType<byte[],
     @Override
     public @NonNull Class<byte[]> getPrimitiveType() { return byte[].class; }
 
-    @Override @SuppressWarnings({ "unchecked", "rawtypes" })
-    public @NonNull Class<List<ChunkTotemCandidate>> getComplexType() { return (Class<List<ChunkTotemCandidate>>) (Class<?>) List.class; }
+    @Override @SuppressWarnings({ "unchecked" })
+    public @NonNull Class<List<StructureChunkData>> getComplexType() { return (Class<List<StructureChunkData>>) (Class<?>) List.class; }
 
 
     @Override
-    public byte[] toPrimitive(@NonNull List<ChunkTotemCandidate> complex, @NonNull PersistentDataAdapterContext context) {
+    public byte[] toPrimitive(@NonNull List<StructureChunkData> complex, @NonNull PersistentDataAdapterContext context) {
         byte[] out = new byte[complex.size() * 12];
         int offset = 0;
-        for (ChunkTotemCandidate candidate : complex) {
+        for (StructureChunkData candidate : complex) {
             toBytes(out, offset, candidate);
             offset += 12;
         }
@@ -39,10 +39,10 @@ class StructureCandidatePersistentDataType implements PersistentDataType<byte[],
     }
 
     @Override
-    public @NonNull List<ChunkTotemCandidate> fromPrimitive(byte[] primitive, @NonNull PersistentDataAdapterContext context) {
-        List<ChunkTotemCandidate> out = new ArrayList<>(primitive.length / 12);
+    public @NonNull List<StructureChunkData> fromPrimitive(byte[] primitive, @NonNull PersistentDataAdapterContext context) {
+        List<StructureChunkData> out = new ArrayList<>(primitive.length / 12);
         for (int i = 0; (i + 12) <= primitive.length; i += 12) {
-            ChunkTotemCandidate candidate = toCandidate(primitive, i);
+            StructureChunkData candidate = toCandidate(primitive, i);
             out.add(candidate);
         }
         return out;
@@ -50,7 +50,7 @@ class StructureCandidatePersistentDataType implements PersistentDataType<byte[],
 
 
     //HELPERS
-    private static ChunkTotemCandidate toCandidate(byte[] raw, int offset) {
+    private static StructureChunkData toCandidate(byte[] raw, int offset) {
        /* Candidates are 12 bytes
         * 1(byte)  -> x offset
         * 1(byte)  -> z offset
@@ -67,9 +67,9 @@ class StructureCandidatePersistentDataType implements PersistentDataType<byte[],
         short y = Bytes.toShort(raw,  offset + 2);
         long blueprintId = Bytes.toLong(raw,  offset + 4);
 
-        return new ChunkTotemCandidate(new Vec3i(x, y, z), blueprintId);
+        return new StructureChunkData(new Vec3i(x, y, z), blueprintId);
     }
-    private static void toBytes(byte[] target, int offset, ChunkTotemCandidate candidate) {
+    private static void toBytes(byte[] target, int offset, StructureChunkData candidate) {
 
         int len = target.length;
         if (offset + 12 > len) {
