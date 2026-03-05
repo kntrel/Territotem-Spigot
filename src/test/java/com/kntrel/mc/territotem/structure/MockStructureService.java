@@ -1,13 +1,10 @@
 package com.kntrel.mc.territotem.structure;
 
 import com.kntrel.mc.chunkPersistence.ChunkPersister;
-import com.kntrel.mc.territotem.structure.BlueprintTracker;
-import com.kntrel.mc.territotem.structure.StructureService;
 import com.kntrel.mc.territotem.structure.blueprint.Blueprint;
 import com.kntrel.mc.territotem.structure.worldTile.MockWorldTile;
 import com.kntrel.util.Vec3i;
 import org.bukkit.World;
-import org.bukkit.entity.Entity;
 import org.bukkit.plugin.Plugin;
 
 import java.util.concurrent.Callable;
@@ -36,7 +33,7 @@ public class MockStructureService extends StructureService {
     }
 
     @Override
-    protected BlueprintTracker newTracker(Blueprint blueprint, World world, Vec3i origin) {
-        return new BlueprintTracker(this, blueprint, world, origin, MockWorldTile::new);
+    protected StructureTracker newTracker(Blueprint blueprint, World world, Vec3i origin) {
+        return new StructureTracker(this, blueprint, world, origin, MockWorldTile::new);
     }
 }

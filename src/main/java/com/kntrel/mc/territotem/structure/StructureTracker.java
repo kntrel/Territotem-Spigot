@@ -13,11 +13,13 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 import java.util.function.BiFunction;
+import org.slf4j.event.Level;
 
-public class BlueprintTracker {
+public class StructureTracker {
 
     //CONSTANTS
-    private static final Logger LOGGER = LoggerFactory.getLogger(BlueprintTracker.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(StructureTracker.class);
+    public enum State { EMPTY, IN_PROGRESS, COMPLETE }
 
 
     //FIELDS
@@ -29,15 +31,15 @@ public class BlueprintTracker {
     private final BitSet3D presenceMap_, knownMap_, matchMap_;
     private final Object mutex_;
     private final BiFunction<Vec3i, World, WorldTile> worldTileGetter_;
-    private int elementCount_, knownCount_, matchCount_;
+    private int pieceCount_, knownCount_, matchCount_;
     private CompletableFuture<Void> scanTask_;
     private Vec3i parkedUnlockOffset_;
     private boolean locked_;
+    private State state_;
 
 
     //CONSTRUCTOR
-    public BlueprintTracker(StructureService service, Blueprint blueprint, World world, Vec3i origin, BiFunction<Vec3i, World, WorldTile> worldTileGetter) {
-        LOGGER.trace("Creating BlueprintTracker for blueprint {} at origin {}", blueprint, origin);
+    public StructureTracker(StructureService service, Blueprint blueprint, World world, Vec3i origin, BiFunction<Vec3i, World, WorldTile> worldTileGetter) {
         this.service_ = service;
         this.blueprint_ = blueprint;
         this.world_ = world;
@@ -56,14 +58,15 @@ public class BlueprintTracker {
         this.presenceMap_ = this.service_.getBitsetGenerator().generate(blueprint);
         this.knownMap_ = new BitSet3D(dimensions);
         this.matchMap_ = new BitSet3D(dimensions);
-        this.elementCount_ = this.blueprint_.elementCount();
+        this.pieceCount_ = this.blueprint_.elementCount();
         this.matchCount_ = 0;
         this.locked_ = false;
+        this.state_ = null;
 
-        LOGGER.trace("BlueprintTracker initialized with {} elements", this.elementCount_);
+        log(Level.TRACE, "Initialized with {} pieces", this.pieceCount_);
         this.fullScan();
     }
-    public BlueprintTracker(StructureService service, Blueprint blueprint, World world, Vec3i origin) {
+    public StructureTracker(StructureService service, Blueprint blueprint, World world, Vec3i origin) {
         this(service, blueprint, world, origin, WorldTile::of);
     }
 
@@ -79,42 +82,46 @@ public class BlueprintTracker {
     //API
     public void lock() { 
         synchronized (this.mutex_) { 
-            LOGGER.trace("Locking BlueprintTracker at origin {}", this.origin_);
+            log(Level.TRACE, "Locking");
             this.locked_ = true; 
         } 
     }
     public boolean contains(Vec3i coordinate) { return this.boundingBox_.contains(coordinate); }
-    public boolean isComplete() {
-        CompletableFuture<Void> scanTask;
-        synchronized (this.mutex_) { scanTask = this.scanTask_; }
-        if (scanTask != null) { wait(scanTask); }
-
-        synchronized (this.mutex_) {
-            return this.matchCount_ == this.elementCount_;
-        }
-    }
-    public boolean isEmpty() {
-        CompletableFuture<Void> scanTask;
-        synchronized (this.mutex_) { scanTask = this.scanTask_; }
-        if (scanTask != null) { wait(scanTask); }
-
-        synchronized (this.mutex_) {
-            return this.matchCount_ == 0 && this.knownCount_ == this.elementCount_;
-        }
-    }
     public boolean isParked() { synchronized (this.mutex_) {
         return this.parkedUnlockOffset_ != null;
     }}
     public Optional<Vec3i> parkedAt() { synchronized (this.mutex_) {
         return Optional.ofNullable(this.parkedUnlockOffset_);
     }}
+    public float completion() { synchronized (this.mutex_) {
+        if (this.pieceCount_ == 0) { return 0.0f; }
+        return (this.matchCount_ / (float) this.pieceCount_);
+    }}
+    public State getState() { synchronized (this.mutex_) {
+        CompletableFuture<Void> scanTask;
+        synchronized (this.mutex_) { scanTask = this.scanTask_; }
+        if (scanTask != null) { wait(scanTask); }
+
+        synchronized (this.mutex_) {
+            return this.state_;
+        }
+    }}
+    public boolean isComplete() {
+        return this.getState() == State.COMPLETE;
+    }
+    public boolean isInProgress() {
+        return this.getState() == State.IN_PROGRESS;
+    }
+    public boolean isEmpty() {
+        return this.getState() == State.EMPTY;
+    }
     public void update(Vec3i offset) {
 
-        LOGGER.trace("Block update at offset {}", offset);
+        log(Level.TRACE, "Block update at offset {}", offset);
         CompletableFuture<Void> pendingScan;
         synchronized (this.mutex_) {
             if (this.locked_) { 
-                LOGGER.trace("Ignoring update - tracker is locked");
+                log(Level.TRACE, "Tracker is locked. Ignoring update");
                 return; 
             }
             pendingScan = this.scanTask_;
@@ -127,19 +134,18 @@ public class BlueprintTracker {
         synchronized (this.mutex_) {
             if (this.parkedUnlockOffset_ != null) {
                 if (!this.parkedUnlockOffset_.equals(offset)) { 
-                    LOGGER.trace("Parked offset {} does not match update offset {}", this.parkedUnlockOffset_, offset);
+                    log(Level.TRACE, "Parked offset {} does not match update offset {}", this.parkedUnlockOffset_, offset);
                     return; 
                 }
                 if (!this.presenceMap_.get(offset) || this.blueprint_.matchesAt(offset, worldTile)) {
-                    this.unPark();
-                    pendingScan = this.scanTask_;
+                    pendingScan = this.fullScan();
                 } else { return; }
             }
         }
         if (pendingScan != null) { wait(pendingScan); }
 
         if (!this.presenceMap_.get(offset)) { 
-            LOGGER.trace("Offset {} not in presence map", offset);
+            log(Level.TRACE, "Offset {} not in presence map", offset);
             return; 
         }
         while (true) {
@@ -148,20 +154,31 @@ public class BlueprintTracker {
             if (scan != null) { wait(scan); continue; }
 
             boolean match = blueprint_.matchesAt(offset, worldTile);
-            LOGGER.debug("Block at offset {} {}", offset, match ? "matches" : "does not match");
+            log(Level.DEBUG, "Piece at offset {} " + (match ? "matches" : "does not match"), offset);
             synchronized (this.mutex_) {
                 if (this.scanTask_ != null) { continue; }
                 this.markMatched(offset, match);
+                if (this.matchCount_ == this.pieceCount_) {
+                    this.setComplete();
+                } else if (this.matchCount_ < 1) {
+                    this.setEmpty();
+                } else {
+                    this.setInProgress();
+                }
                 if (!match && this.shouldPark()) { this.parkAt(offset); }
                 return;
             }
         }
     }
     public CompletableFuture<Void> fullScan() {
-        LOGGER.trace("Starting full scan");
         synchronized (this.mutex_) {
+            if (this.parkedUnlockOffset_ != null) {
+                log(Level.TRACE, "Unparking from offset {}", this.parkedUnlockOffset_);
+                this.parkedUnlockOffset_ = null;
+            }
+
             if (this.scanTask_ != null) { 
-                LOGGER.trace("Full scan already in progress");
+                log(Level.TRACE, "Full scan already in progress");
                 return this.scanTask_; 
             }
             CompletableFuture<Void> scanTask = this.service_.runInMainThreadAsync(() -> { this.fullScanTask(); return null; })
@@ -172,13 +189,22 @@ public class BlueprintTracker {
             return scanTask;
         }
     }
-
+    @Override public String toString() {
+        return "[StructureTracker@"
+                + Integer.toHexString(System.identityHashCode(this))
+                + "] "
+                + this.origin_
+                + " Blueprint "
+                + this.blueprint_.id()
+                + " - "
+                + this.blueprint_.name();
+    }
 
 
     //HELPERS
     private boolean markKnown(Vec3i offset) {
         if (!this.knownMap_.get(offset) && this.presenceMap_.get(offset)) {
-            LOGGER.trace("Marking offset {} as known", offset);
+            log(Level.TRACE, "Marking offset {} as known", offset);
             this.knownMap_.set(offset);
             this.knownCount_++;
             return false;
@@ -189,31 +215,33 @@ public class BlueprintTracker {
         this.markKnown(offset);
         boolean wasMatched = this.matchMap_.get(offset);
         if (wasMatched == matched) { return; }
-        LOGGER.debug("Block at offset {} {}", offset, matched ? "matched" : "unmatched");
+        log(Level.DEBUG, "Block at offset {} " + (matched ? "matched" : "unmatched"), offset);
         if (matched) { this.matchCount_++; } else { this.matchCount_--; }
         this.matchMap_.set(offset, matched);
     }
-    private void unPark() {
-        synchronized (this.mutex_) {
-            if (this.parkedUnlockOffset_ == null) { return; }
-            LOGGER.trace("Unparking from offset {}", this.parkedUnlockOffset_);
-            this.parkedUnlockOffset_ = null;
-        }
-        this.fullScan();
-    }
     private void parkAt(Vec3i offset) {
         if (!this.presenceMap_.get(offset)) { return; }
-        LOGGER.trace("Parking at offset {}", offset);
+        log(Level.TRACE, "Parking at offset {}", offset);
+        this.state_ = State.IN_PROGRESS;
         this.parkedUnlockOffset_ = offset;
     }
+    private void setComplete() {
+        this.state_ = State.COMPLETE;
+    }
+    private void setInProgress() {
+        this.state_ = State.IN_PROGRESS;
+    }
+    private void setEmpty() {
+        this.state_ = State.EMPTY;
+    }
     private boolean shouldPark() {
-        int threshold = (this.elementCount_ + 1) / 2;
+        int threshold = (this.pieceCount_ + 1) / 2;
         if (this.knownCount_ < threshold) return false;
         int mismatched = this.knownCount_ - this.matchCount_;
         return mismatched >= threshold;
     }
     private void fullScanTask() {
-        LOGGER.trace("Starting full scan task");
+        log(Level.TRACE, "Starting full scan task");
         synchronized (this.mutex_) {
             this.matchMap_.clear();
             this.knownMap_.clear();
@@ -239,12 +267,21 @@ public class BlueprintTracker {
         }
         
         synchronized (this.mutex_) {
-            if (this.matchCount_ == this.elementCount_) {
-                LOGGER.info("Candidate complete: {} blocks matched", this.matchCount_);
+            if (this.matchCount_ == this.pieceCount_) {
+                log(Level.INFO, "Candidate complete: {} blocks matched", this.matchCount_);
+                this.setComplete();
+            } else if (this.matchCount_ < 1) {
+                log(Level.DEBUG, "Full scan complete. No matches");
+                this.setEmpty();
             } else {
-                LOGGER.trace("Full scan complete: {}/{} blocks matched", this.matchCount_, this.elementCount_);
+                log(Level.TRACE, "Full scan complete: {} / {} blocks matched", this.matchCount_, this.pieceCount_);
+                this.setInProgress();
             }
         }
+    }
+    private void log(Level level, String message, Object... args) {
+        String logMessage = this + " - " + message;
+        LOGGER.atLevel(level).log(logMessage, args);
     }
     private static void wait(Future<?> task) {
         try {
@@ -254,4 +291,5 @@ public class BlueprintTracker {
             throw new RuntimeException(e);
         }
     }
+    
 }

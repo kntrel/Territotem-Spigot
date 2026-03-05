@@ -14,7 +14,6 @@ import com.kntrel.mc.territotem.util.ChunkKey;
 import com.kntrel.util.Vec3i;
 import com.kntrel.util.tuple.Triplet;
 import org.bukkit.*;
-import org.bukkit.block.BlockState;
 import org.bukkit.entity.Entity;
 import org.bukkit.plugin.Plugin;
 import org.slf4j.Logger;
@@ -35,9 +34,9 @@ public class StructureService {
     private final Plugin plugin_;
     private final ChunkPersister chunkPersister_;
     private final Map<Long, Blueprint> blueprints_;
-    private final ChunkCache<BlueprintTracker> candidatesByChunk_;
-    private final Map<BlueprintTracker, ReentrantLock> candidateLocks_;
-    private final Map<Triplet<Vec3i, UUID, Long>, BlueprintTracker> trackersMap_;
+    private final ChunkCache<StructureTracker> candidatesByChunk_;
+    private final Map<StructureTracker, ReentrantLock> candidateLocks_;
+    private final Map<Triplet<Vec3i, UUID, Long>, StructureTracker> trackersMap_;
     private final Executor executor_;
     private final NamespacedKey candidatesNSK_;
     private final BlueprintBitsetGenerator bitsetGenerator_;
@@ -70,11 +69,11 @@ public class StructureService {
     public Server getServer() {
         return this.plugin_.getServer();
     }
-    public BlueprintTracker track(Blueprint blueprint, Vec3i origin, World world, Entity causer) {
+    public StructureTracker track(Blueprint blueprint, Vec3i origin, World world, Entity causer) {
 
         LOGGER.debug("New blueprint tracker started at {}", origin);
         Triplet<Vec3i, UUID, Long> trackKey = Triplet.of(origin, world.getUID(), blueprint.id());
-        BlueprintTracker candidate = this.trackersMap_.get(trackKey);
+        StructureTracker candidate = this.trackersMap_.get(trackKey);
         if (candidate != null) {
             LOGGER.debug("Already tracking a potential totem of blueprint {} at {}", blueprint.id(), origin);
             return candidate;
@@ -195,20 +194,20 @@ public class StructureService {
     //TASKS
     private void handleCandidatesUpdateTask(Entity who, Vec3i where, World world) {
         ChunkKey chunk = ChunkKey.ofBlock(where, world.getUID());
-        Collection<BlueprintTracker> candidates = this.getCandidatesInChunk(chunk);
+        Collection<StructureTracker> candidates = this.getCandidatesInChunk(chunk);
 
-        for (BlueprintTracker candidate : candidates) {
+        for (StructureTracker candidate : candidates) {
             this.executor_.execute(() -> updateCandidateTask(who, candidate, where));
         }
     }
-    private void updateCandidateTask(Entity who, BlueprintTracker candidate, Vec3i where) {
+    private void updateCandidateTask(Entity who, StructureTracker candidate, Vec3i where) {
         LOGGER.trace("Updating candidate {} at position {}", candidate.blueprint().id(), where);
         boolean completed = this.updateCandidate(candidate, where);
         if (completed) {
             handleCompleteCandidate(candidate, who);
         }
     }
-    private void handleCompleteCandidate(BlueprintTracker candidate, Entity who) {
+    private void handleCompleteCandidate(StructureTracker candidate, Entity who) {
         LOGGER.info("Totem candidate completed for blueprint {}", candidate.blueprint().id());
         this.dropCandidate(candidate);
 
@@ -218,7 +217,7 @@ public class StructureService {
             return null;
         });
     }
-    private void handleDestroyedCandidate(BlueprintTracker candidate, Entity who) {
+    private void handleDestroyedCandidate(StructureTracker candidate, Entity who) {
         LOGGER.info("Totem candidate destroyed for blueprint {}", candidate.blueprint().id());
         this.dropCandidate(candidate);
 
@@ -228,7 +227,7 @@ public class StructureService {
             return null;
         });
     }
-    private void dropCandidate(BlueprintTracker candidate) {
+    private void dropCandidate(StructureTracker candidate) {
         LOGGER.debug("Dropping candidate for blueprint {} at origin {}", candidate.blueprint().id(), candidate.origin());
         this.candidatesByChunk_.evict(candidate);
         this.candidateLocks_.remove(candidate);
@@ -237,12 +236,12 @@ public class StructureService {
         this.trackersMap_.remove(trackKey);
         this.persistCandidatesInChunk(ChunkKey.ofBlock(candidate.origin(), candidate.world().getUID()));
     }
-    public Collection<BlueprintTracker> getCandidatesInChunk(ChunkKey chunk) {
-        Collection<BlueprintTracker> candidates = List.copyOf(this.candidatesByChunk_.get(chunk));
+    public Collection<StructureTracker> getCandidatesInChunk(ChunkKey chunk) {
+        Collection<StructureTracker> candidates = List.copyOf(this.candidatesByChunk_.get(chunk));
         LOGGER.trace("Retrieved {} candidates from chunk {}", candidates.size(), chunk);
         return candidates;
     }
-    private boolean updateCandidate(BlueprintTracker candidate, Vec3i where) {
+    private boolean updateCandidate(StructureTracker candidate, Vec3i where) {
         if (!candidate.contains(where)) { 
             LOGGER.trace("Position {} is not within candidate bounds", where);
             return false; 
@@ -280,8 +279,8 @@ public class StructureService {
 
 
     //HELPERS
-    protected BlueprintTracker newTracker(Blueprint blueprint, World world, Vec3i origin) {
-        return new BlueprintTracker(this, blueprint, world, origin);
+    protected StructureTracker newTracker(Blueprint blueprint, World world, Vec3i origin) {
+        return new StructureTracker(this, blueprint, world, origin);
     }
     private static Vec3i offsetInChunk(Vec3i src) {
         return new Vec3i(
@@ -307,14 +306,14 @@ public class StructureService {
         }
 
         Chunk chunk = world.getChunkAt(chunkKey.x(), chunkKey.z());
-        Collection<BlueprintTracker> candidates = this.getCandidatesInChunk(chunkKey);
+        Collection<StructureTracker> candidates = this.getCandidatesInChunk(chunkKey);
         if (candidates.isEmpty()) {
             this.chunkPersister_.drop(chunk, this.candidatesNSK_);
             return;
         }
 
         List<ChunkTotemCandidate> toSerialize = new ArrayList<>(candidates.size());
-        for (BlueprintTracker candidate : candidates) {
+        for (StructureTracker candidate : candidates) {
             toSerialize.add(new ChunkTotemCandidate(offsetInChunk(candidate.origin()), candidate.blueprint().id()));
         }
         this.chunkPersister_.persist(chunk, this.candidatesNSK_, StructureCandidatePersistentDataType.instance(), toSerialize);
