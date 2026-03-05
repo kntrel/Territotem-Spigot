@@ -33,7 +33,7 @@ public class MockStructureService extends StructureService {
     }
 
     @Override
-    protected StructureTracker newTracker(Blueprint blueprint, World world, Vec3i origin) {
-        return new StructureTracker(this, blueprint, world, origin, MockWorldTile::new);
+    protected Structure newTracker(Blueprint blueprint, World world, Vec3i origin) {
+        return new Structure(this, blueprint, world, origin, MockWorldTile::new);
     }
 }

@@ -75,7 +75,7 @@ class StructureServiceTest {
 
         waitFor(() -> this.service.getCandidatesInChunk(ChunkKey.ofBlock(origin, this.world.getUID())).size() == 1);
 
-        StructureTracker tracker = this.service.getCandidatesInChunk(ChunkKey.ofBlock(origin, this.world.getUID()))
+        Structure tracker = this.service.getCandidatesInChunk(ChunkKey.ofBlock(origin, this.world.getUID()))
                 .iterator()
                 .next();
         assertEquals(origin, tracker.origin());
@@ -94,7 +94,7 @@ class StructureServiceTest {
         this.world.getBlockAt(origin.x(), origin.y(), origin.z() + 1).setType(Material.CRYING_OBSIDIAN);
 
         Player player = mock(Player.class);
-        StructureTracker tracker = this.service.track(blueprint, origin, this.world, player);
+        Structure tracker = this.service.track(blueprint, origin, this.world, player);
         assertEquals(1, this.service.getCandidatesInChunk(ChunkKey.ofBlock(origin, this.world.getUID())).size());
         assertFalse(tracker.isComplete());
         assertFalse(tracker.isParked());

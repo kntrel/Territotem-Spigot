@@ -16,7 +16,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 @DisplayName("BlueprintTracker Tests")
-class StructureTrackerTest {
+class StructureTest {
 
     //FIELDS
     private Blueprint blueprint;
@@ -45,7 +45,7 @@ class StructureTrackerTest {
         Vec3i origin = new Vec3i(10, 64, 20);
         placeStructure(origin);
 
-        StructureTracker tracker = this.newTracker(origin);
+        Structure tracker = this.newTracker(origin);
 
         assertFalse(tracker.isParked());
         assertTrue(tracker.isComplete());
@@ -57,7 +57,7 @@ class StructureTrackerTest {
         Vec3i origin = Vec3i.zeroes();
         partiallyPlaceStructure(origin);
 
-        StructureTracker tracker = this.newTracker(origin);
+        Structure tracker = this.newTracker(origin);
 
         assertTrue(tracker.isParked());
         assertFalse(tracker.isComplete());
@@ -69,7 +69,7 @@ class StructureTrackerTest {
         Vec3i origin = Vec3i.zeroes();
         partiallyPlaceStructure(origin);
 
-        StructureTracker tracker = this.newTracker(origin);
+        Structure tracker = this.newTracker(origin);
         assertTrue(tracker.isParked());
 
         tracker.update(new Vec3i(1, 0, 1));
@@ -84,7 +84,7 @@ class StructureTrackerTest {
         Vec3i origin = Vec3i.zeroes();
         partiallyPlaceStructure(origin);
 
-        StructureTracker tracker = this.newTracker(origin);
+        Structure tracker = this.newTracker(origin);
         assertTrue(tracker.isParked());
 
         setBlock(origin, Material.LIGHTNING_ROD);
@@ -110,7 +110,7 @@ class StructureTrackerTest {
         Vec3i origin = Vec3i.zeroes();
         placeStructure(origin);
 
-        StructureTracker tracker = this.newTracker(origin);
+        Structure tracker = this.newTracker(origin);
         assertTrue(tracker.isComplete());
 
         Vec3i mod = new Vec3i(1, 0, 1);
@@ -130,7 +130,7 @@ class StructureTrackerTest {
         Vec3i origin = Vec3i.zeroes();
         placeStructure(origin);
 
-        StructureTracker tracker = this.newTracker(origin);
+        Structure tracker = this.newTracker(origin);
         tracker.lock();
 
         tracker.update(new Vec3i(1, 0, 1));;
@@ -143,39 +143,39 @@ class StructureTrackerTest {
     @DisplayName("State correctly transitions")
     void testStateTransitions() {
         Vec3i origin = Vec3i.zeroes();
-        StructureTracker tracker = this.newTracker(origin);
+        Structure tracker = this.newTracker(origin);
 
-        assertEquals(StructureTracker.State.EMPTY, tracker.getState());
+        assertEquals(Structure.State.EMPTY, tracker.getState());
         assertTrue(tracker.isParked());
         tracker.fullScan();
 
         placeStructure(origin);
         tracker.fullScan();
-        assertEquals(StructureTracker.State.COMPLETE, tracker.getState());
+        assertEquals(Structure.State.COMPLETE, tracker.getState());
         assertFalse(tracker.isParked());
 
         Vec3i offset = new Vec3i(1, 0, 1);
         setBlock(offset, Material.DIRT);
 
         tracker.update(offset);
-        assertEquals(StructureTracker.State.IN_PROGRESS, tracker.getState());
+        assertEquals(Structure.State.IN_PROGRESS, tracker.getState());
 
         setBlock(origin, Material.AIR);
         setBlock(new Vec3i(1, 0, 0), Material.AIR);
         setBlock(new Vec3i(0, 0, 1), Material.AIR);
 
         tracker.update(origin);
-        assertEquals(StructureTracker.State.IN_PROGRESS, tracker.getState());
+        assertEquals(Structure.State.IN_PROGRESS, tracker.getState());
         assertTrue(tracker.isParked());
 
         tracker.fullScan();
-        assertEquals(StructureTracker.State.EMPTY, tracker.getState());
+        assertEquals(Structure.State.EMPTY, tracker.getState());
         assertTrue(tracker.isParked());
     }
 
 
     //HELPERS
-    private StructureTracker newTracker(Vec3i origin) {
+    private Structure newTracker(Vec3i origin) {
         return this.service.track(this.blueprint, origin, this.world, null);
     }
     private void placeStructure(Vec3i origin) {
