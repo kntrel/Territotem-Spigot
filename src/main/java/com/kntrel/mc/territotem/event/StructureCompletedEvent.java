@@ -6,7 +6,7 @@ import org.bukkit.event.HandlerList;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
-public class StructureCompletedEvent extends StructureEvent {
+public class StructureCompletedEvent extends StructureStateChangedEvent {
 
     //EVENT-REQUIRED ================================================
     private static final HandlerList HANDLERS = new HandlerList();
@@ -15,19 +15,8 @@ public class StructureCompletedEvent extends StructureEvent {
     //===============================================================
 
 
-    //FIELDS
-    private final Entity causer_;
-
-
     //CONSTRUCTOR
-    public StructureCompletedEvent(Structure structure, @Nullable Entity byWhom) {
-        super(structure);
-        this.causer_ = byWhom;
-    }
-
-
-    //GETTERS
-    @Nullable public Entity getCompleter() {
-        return this.causer_;
+    public StructureCompletedEvent(Structure structure, @Nullable Entity completer, Structure.State previousState) {
+        super(structure, completer, previousState, Structure.State.COMPLETE);
     }
 }

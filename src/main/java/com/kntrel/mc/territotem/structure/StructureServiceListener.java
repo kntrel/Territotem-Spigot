@@ -1,12 +1,11 @@
 package com.kntrel.mc.territotem.structure;
 
 import com.kntrel.mc.territotem.event.StructureCompletedEvent;
-import com.kntrel.mc.territotem.event.StructureDestroyedEvent;
+import com.kntrel.mc.territotem.event.StructureUncompletedEvent;
 import com.kntrel.mc.territotem.structure.blueprint.Blueprint;
 import com.kntrel.mc.territotem.structure.blueprint.BlueprintRegistration;
 import com.kntrel.mc.territotem.structure.blueprint.TrackingInfo;
 import com.kntrel.util.Vec3i;
-import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.event.*;
 import org.bukkit.event.block.BlockBreakEvent;
@@ -104,7 +103,7 @@ class StructureServiceListener implements Listener {
         }
     }
 
-    @EventHandler void onStructureDestroyed(StructureDestroyedEvent e) {
+    @EventHandler void onStructureDestroyed(StructureUncompletedEvent e) {
         long id = e.getStructure().blueprint().id();
         BlueprintRegistration registration = this.registrations_.get(id);
 

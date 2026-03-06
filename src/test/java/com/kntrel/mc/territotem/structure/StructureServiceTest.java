@@ -69,13 +69,13 @@ class StructureServiceTest {
                 .track(e -> new TrackingInfo(e.origin(), e.world(), e.player()));
 
         this.server.getPluginManager().callEvent(new TestTrackingEvent(origin, this.world, player, false));
-        assertTrue(this.service.getCandidatesInChunk(ChunkKey.ofBlock(origin, this.world.getUID())).isEmpty());
+        assertTrue(this.service.getStructuresInChunk(ChunkKey.ofBlock(origin, this.world.getUID())).isEmpty());
 
         this.server.getPluginManager().callEvent(new TestTrackingEvent(origin, this.world, player, true));
 
-        waitFor(() -> this.service.getCandidatesInChunk(ChunkKey.ofBlock(origin, this.world.getUID())).size() == 1);
+        waitFor(() -> this.service.getStructuresInChunk(ChunkKey.ofBlock(origin, this.world.getUID())).size() == 1);
 
-        Structure tracker = this.service.getCandidatesInChunk(ChunkKey.ofBlock(origin, this.world.getUID()))
+        Structure tracker = this.service.getStructuresInChunk(ChunkKey.ofBlock(origin, this.world.getUID()))
                 .iterator()
                 .next();
         assertEquals(origin, tracker.origin());
@@ -95,7 +95,7 @@ class StructureServiceTest {
 
         Player player = mock(Player.class);
         Structure tracker = this.service.track(blueprint, origin, this.world, player);
-        assertEquals(1, this.service.getCandidatesInChunk(ChunkKey.ofBlock(origin, this.world.getUID())).size());
+        assertEquals(1, this.service.getStructuresInChunk(ChunkKey.ofBlock(origin, this.world.getUID())).size());
         assertFalse(tracker.isComplete());
         assertFalse(tracker.isParked());
 
@@ -154,7 +154,7 @@ class StructureServiceTest {
 
         assertEquals(player, completedEventRef.get().getCompleter());
         assertEquals(blueprint.id(), completedEventRef.get().getStructure().blueprint().id());
-        assertTrue(this.service.getCandidatesInChunk(ChunkKey.ofBlock(origin, this.world.getUID())).isEmpty());
+        assertTrue(this.service.getStructuresInChunk(ChunkKey.ofBlock(origin, this.world.getUID())).isEmpty());
     }
 
     private static void waitFor(BooleanSupplier condition) {
