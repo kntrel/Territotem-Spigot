@@ -152,7 +152,7 @@ class StructureServiceTest {
 
         waitFor(() -> completionCalls.get() == 1 && completedEventRef.get() != null);
 
-        assertEquals(player, completedEventRef.get().getCompleter());
+        assertEquals(player, completedEventRef.get().getCauser());
         assertEquals(blueprint.id(), completedEventRef.get().getStructure().blueprint().id());
         assertTrue(this.service.getStructuresInChunk(ChunkKey.ofBlock(origin, this.world.getUID())).isEmpty());
     }
