@@ -12,7 +12,7 @@ public class TotemTile<P extends TotemPiece> extends Tile {
         super(x, y, z, piece);
     }
 
-    @SuppressWarnings("unchecked") public P getPiece() {
-        return (P) this.piece();
+    @Override @SuppressWarnings("unchecked") public P piece() {
+        return (P) super.piece();
     }
 }

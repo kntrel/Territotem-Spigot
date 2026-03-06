@@ -16,10 +16,9 @@ public class Tile implements Piece, Comparable<Tile> {
         this.offset_ = offset;
         this.piece_ = (piece instanceof Tile tile) ? tile.piece_ : piece;
     }
-    public Tile(int x, int y, int z, Piece element) {
-        this(new Vec3i(x, y ,z), element);
+    public Tile(int x, int y, int z, Piece piece) {
+        this(new Vec3i(x, y ,z), piece);
     }
-
 
 
     //GETTERS
@@ -28,6 +27,7 @@ public class Tile implements Piece, Comparable<Tile> {
     public int z() { return this.offset_.z(); }
     public Vec3i offset() { return this.offset_; }
     public Tile withOffset(Vec3i offset) { return new Tile(offset, this.piece_); }
+    public Piece piece() { return this.piece_; }
 
 
     //IMPLEMENTATION

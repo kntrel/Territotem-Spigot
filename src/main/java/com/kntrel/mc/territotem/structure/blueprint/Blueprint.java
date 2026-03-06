@@ -1,14 +1,10 @@
 package com.kntrel.mc.territotem.structure.blueprint;
 
-import com.kntrel.mc.regionLib.region.hierarchy.Hierarchy;
-import com.kntrel.mc.territotem.structure.InvalidBlueprintException;
 import com.kntrel.mc.territotem.structure.piece.Tile;
 import com.kntrel.mc.territotem.structure.piece.Piece;
 import com.kntrel.mc.territotem.structure.worldTile.WorldTile;
 import com.kntrel.util.Vec3i;
-import org.bukkit.util.BoundingBox;
 import org.jspecify.annotations.Nullable;
-
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -20,26 +16,16 @@ public class Blueprint {
     private final String name_;
     private final Map<Vec3i, Tile> pieceMap_;
     private final Vec3i dimensions_;
-    private final Hierarchy hierarchy_;
-    private final BoundingBox initialRegionBounds_;
 
 
     //CONSTRUCTORS
-    public Blueprint(
-            long id,
-            String name,
-            Iterable<Tile> elements,
-            BoundingBox initialRegionBounds,
-            Hierarchy hierarchy
-    ) {
+    public Blueprint(long id, String name, Iterable<Tile> pieces) {
         this.id_ = id;
         this.name_ = name;
-        this.hierarchy_ = hierarchy;
 
-        Processed processed = process(elements, initialRegionBounds);
+        Processed processed = process(pieces);
         this.dimensions_ = processed.dimensions();
         this.pieceMap_ = processed.elementMap();
-        this.initialRegionBounds_ = processed.initialBounds();
     }
 
 
@@ -57,12 +43,6 @@ public class Blueprint {
     }
     public Vec3i dimensions() {
         return this.dimensions_;
-    }
-    public Hierarchy hierarchy() {
-        return this.hierarchy_;
-    }
-    public BoundingBox initialRegionBounds() {
-        return this.initialRegionBounds_.clone();
     }
     public int elementCount() {
         return this.pieceMap_.size();
@@ -104,7 +84,7 @@ public class Blueprint {
             throw new IndexOutOfBoundsException("Offset " + offset + " is out of bounds for blueprint dimensions " + this.dimensions_);
         }
     }
-    private static Processed process(Iterable<Tile> tiles, BoundingBox regionBounds) {
+    private static Processed process(Iterable<Tile> tiles) {
         Iterator<Tile> i = tiles.iterator();
         if (!i.hasNext()) {
             throw new InvalidBlueprintException("Blueprint must contain at least one piece");
@@ -132,7 +112,6 @@ public class Blueprint {
 
 
         Vec3i correction = new Vec3i(minX, minY, minZ);
-        BoundingBox correctedBox = regionBounds;
         if (!correction.equals(Vec3i.zeroes())) {
             trimmed = trimmed.stream()
                     .map(e ->
@@ -140,7 +119,6 @@ public class Blueprint {
                     )
                     .toList();
             maxX -= correction.x(); maxY -= correction.y(); maxZ -= correction.z();
-            correctedBox = correctedBox.shift(-correction.x(), -correction.y(), -correction.z());
         }
 
         Map<Vec3i, Tile> elementMap = trimmed.stream().collect(Collectors.toMap(
@@ -150,9 +128,9 @@ public class Blueprint {
 
         Vec3i dimensions = new Vec3i(maxX + 1, maxY + 1, maxZ + 1);
 
-        return new Processed(dimensions, elementMap, correctedBox);
+        return new Processed(dimensions, elementMap);
     }
 
     //SUBTYPES
-    private record Processed(Vec3i dimensions, Map<Vec3i, Tile> elementMap, BoundingBox initialBounds) {}
+    private record Processed(Vec3i dimensions, Map<Vec3i, Tile> elementMap) {}
 }

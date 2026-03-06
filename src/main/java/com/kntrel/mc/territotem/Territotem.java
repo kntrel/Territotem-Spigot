@@ -10,7 +10,7 @@ import com.kntrel.mc.territotem.structure.blueprint.Blueprint;
 import com.kntrel.mc.territotem.structure.blueprint.TrackingInfo;
 import com.kntrel.mc.territotem.structure.piece.Piece;
 import com.kntrel.mc.territotem.structure.piece.Tile;
-import com.kntrel.mc.territotem.totem.TotemCorePiece;
+import com.kntrel.mc.territotem.totem.piece.TotemPieces;
 import com.kntrel.mc.territotem.totem.TotemService;
 import com.kntrel.util.Vec3i;
 import org.bukkit.Material;
@@ -77,7 +77,7 @@ public final class Territotem extends JavaPlugin {
 
     private static Blueprint createTotemBlueprint(TotemService service, Hierarchy hierarchy) {
         List<Tile> tile = List.of(
-                new Tile(0, 2, 0, TotemCorePiece.ofService(service)),
+                new Tile(0, 2, 0, TotemPieces.ofService(service)),
                 new Tile(0, 1, 0, Piece.block(Material.OBSIDIAN)),
                 new Tile(0, 0, 0, Piece.block(Material.OBSIDIAN))
 

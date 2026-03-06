@@ -97,7 +97,7 @@ class StructureServiceListener implements Listener {
         }
         
         try {
-            registration.onCompletion(e.getStructure(), e.getCompleter());
+            registration.onCompletion(e.getStructure(), e.getCauser());
         } catch (Exception ex) {
             LOGGER.error("Listener for blueprint ID {} threw an error on structure completed event at onCompletion()", id, ex);
         }
@@ -113,7 +113,7 @@ class StructureServiceListener implements Listener {
         }
         
         try {
-            registration.onDestruction(e.getStructure(), e.getDestructor());
+            registration.onDestruction(e.getStructure(), e.getCauser());
         } catch (Exception ex) {
             LOGGER.error("Listener for blueprint ID {} threw an error on structure destroyed event at onDestruction()", id, ex);
         }
