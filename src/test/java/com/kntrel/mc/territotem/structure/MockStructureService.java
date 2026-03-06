@@ -6,7 +6,7 @@ import com.kntrel.mc.territotem.structure.worldTile.MockWorldTile;
 import com.kntrel.util.Vec3i;
 import org.bukkit.World;
 import org.bukkit.plugin.Plugin;
-
+import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 
@@ -33,7 +33,7 @@ public class MockStructureService extends StructureService {
     }
 
     @Override
-    protected Structure newStructure(Blueprint blueprint, World world, Vec3i origin) {
-        return new Structure(this, blueprint, world, origin, MockWorldTile::new);
+    protected Structure newStructure(Blueprint blueprint, World world, Vec3i origin, UUID structureId) {
+        return new Structure(structureId, this, blueprint, world, origin, MockWorldTile::new);
     }
 }

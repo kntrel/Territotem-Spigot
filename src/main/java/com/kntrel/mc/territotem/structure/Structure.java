@@ -9,11 +9,12 @@ import com.kntrel.util.Vec3i;
 import org.bukkit.World;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 import java.util.function.BiFunction;
-import org.slf4j.event.Level;
 
 public class Structure {
 
@@ -23,6 +24,7 @@ public class Structure {
 
 
     //FIELDS
+    private final UUID id_;
     private final StructureService service_;
     private final Blueprint blueprint_;
     private final World world_;
@@ -42,7 +44,8 @@ public class Structure {
 
 
     //CONSTRUCTOR
-    public Structure(StructureService service, Blueprint blueprint, World world, Vec3i origin, BiFunction<Vec3i, World, WorldTile> worldTileGetter) {
+    public Structure(UUID id, StructureService service, Blueprint blueprint, World world, Vec3i origin, BiFunction<Vec3i, World, WorldTile> worldTileGetter) {
+        this.id_ = id;
         this.service_ = service;
         this.blueprint_ = blueprint;
         this.world_ = world;
@@ -69,12 +72,13 @@ public class Structure {
         log(Level.TRACE, "Initialized with {} pieces", this.pieceCount_);
         this.fullScan();
     }
-    public Structure(StructureService service, Blueprint blueprint, World world, Vec3i origin) {
-        this(service, blueprint, world, origin, WorldTile::of);
+    public Structure(UUID id, StructureService service, Blueprint blueprint, World world, Vec3i origin) {
+        this(id, service, blueprint, world, origin, WorldTile::of);
     }
 
 
     //GETTERS
+    public UUID id() { return this.id_; }
     public Blueprint blueprint() { return this.blueprint_; }
     public World world() { return this.world_; }
     public Vec3i origin() { return this.origin_; }
@@ -84,7 +88,7 @@ public class Structure {
 
     //API
     public void drop() {
-        synchronized (this.mutex_) { 
+        synchronized (this.mutex_) {
             log(Level.TRACE, "Dropping");
             this.dropped_ = true;
             this.service_.dropStructure(this);
@@ -126,7 +130,7 @@ public class Structure {
         synchronized (this.mutex_) {
             if (this.dropped_) {
                 log(Level.TRACE, "Dropped. Ignoring update");
-                return; 
+                return;
             }
             pendingScan = this.scanTask_;
         }
@@ -137,9 +141,9 @@ public class Structure {
         pendingScan = null;
         synchronized (this.mutex_) {
             if (this.parkedUnlockOffset_ != null) {
-                if (!this.parkedUnlockOffset_.equals(offset)) { 
+                if (!this.parkedUnlockOffset_.equals(offset)) {
                     log(Level.TRACE, "Parked offset {} does not match update offset {}", this.parkedUnlockOffset_, offset);
-                    return; 
+                    return;
                 }
                 if (!this.presenceMap_.get(offset) || this.blueprint_.matchesAt(offset, worldTile)) {
                     pendingScan = this.fullScan();
@@ -148,9 +152,9 @@ public class Structure {
         }
         if (pendingScan != null) { wait(pendingScan); }
 
-        if (!this.presenceMap_.get(offset)) { 
+        if (!this.presenceMap_.get(offset)) {
             log(Level.TRACE, "Offset {} not in presence map", offset);
-            return; 
+            return;
         }
         while (true) {
             CompletableFuture<Void> scan;
@@ -181,9 +185,9 @@ public class Structure {
                 this.parkedUnlockOffset_ = null;
             }
 
-            if (this.scanTask_ != null) { 
+            if (this.scanTask_ != null) {
                 log(Level.TRACE, "Full scan already in progress");
-                return this.scanTask_; 
+                return this.scanTask_;
             }
             CompletableFuture<Void> scanTask = this.service_.runInMainThreadAsync(() -> { this.fullScanTask(); return null; })
                     .thenAccept(v -> { synchronized (this.mutex_) { this.scanTask_ = null; } });
@@ -197,6 +201,8 @@ public class Structure {
         return "[StructureTracker@"
                 + Integer.toHexString(System.identityHashCode(this))
                 + "] "
+                + this.id_
+                + " "
                 + this.origin_
                 + " Blueprint "
                 + this.blueprint_.id()
@@ -269,7 +275,7 @@ public class Structure {
                 }
             }
         }
-        
+
         synchronized (this.mutex_) {
             if (this.matchCount_ == this.pieceCount_) {
                 log(Level.INFO, "Candidate complete: {} blocks matched", this.matchCount_);
@@ -295,5 +301,5 @@ public class Structure {
             throw new RuntimeException(e);
         }
     }
-    
+
 }

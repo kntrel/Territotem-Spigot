@@ -2,12 +2,12 @@ package com.kntrel.mc.territotem.structure;
 
 import com.kntrel.mc.chunkPersistence.ChunkPersister;
 import com.kntrel.mc.regionLib.Constants;
-import com.kntrel.mc.territotem.structure.event.StructureCompletedEvent;
-import com.kntrel.mc.territotem.structure.event.StructureLoadedEvent;
-import com.kntrel.mc.territotem.structure.event.StructureUncompletedEvent;
 import com.kntrel.mc.territotem.structure.blueprint.Blueprint;
 import com.kntrel.mc.territotem.structure.blueprint.BlueprintRegistration;
 import com.kntrel.mc.territotem.structure.blueprint.BlueprintRegistrationBuilder;
+import com.kntrel.mc.territotem.structure.event.StructureCompletedEvent;
+import com.kntrel.mc.territotem.structure.event.StructureLoadedEvent;
+import com.kntrel.mc.territotem.structure.event.StructureUncompletedEvent;
 import com.kntrel.mc.territotem.structure.event.StructureUnloadedEvent;
 import com.kntrel.mc.territotem.structure.piece.Tile;
 import com.kntrel.mc.territotem.structure.worldTile.WorldTileWriter;
@@ -15,13 +15,28 @@ import com.kntrel.mc.territotem.util.ChunkCache;
 import com.kntrel.mc.territotem.util.ChunkKey;
 import com.kntrel.util.Vec3i;
 import com.kntrel.util.tuple.Triplet;
-import org.bukkit.*;
+import org.bukkit.Bukkit;
+import org.bukkit.Chunk;
+import org.bukkit.NamespacedKey;
+import org.bukkit.Server;
+import org.bukkit.World;
 import org.bukkit.entity.Entity;
 import org.bukkit.plugin.Plugin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import java.util.*;
-import java.util.concurrent.*;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
+import java.util.concurrent.FutureTask;
 import java.util.concurrent.locks.ReentrantLock;
 
 
@@ -46,7 +61,6 @@ public class StructureService {
     private final Object lock_;
 
 
-
     //CONSTRUCTOR
     public StructureService(Plugin plugin, ChunkPersister chunkPersister) {
         this.plugin_ = plugin;
@@ -54,7 +68,7 @@ public class StructureService {
         this.blueprints_ = new ConcurrentHashMap<>();
         this.structuresByChunk_ = new ChunkCache<>(c -> ChunkKey.ofBlock(c.origin(), c.world().getUID()));
         this.structureLocks_ = new ConcurrentHashMap<>();
-        this.trackersMap_ = new  ConcurrentHashMap<>();
+        this.trackersMap_ = new ConcurrentHashMap<>();
         this.executor_ = Executors.newVirtualThreadPerTaskExecutor();
         this.structuresNSK_ = new NamespacedKey(this.plugin_, STRUCTURES_KEY);
         this.bitsetGenerator_ = new BlueprintBitsetGenerator();
@@ -74,31 +88,7 @@ public class StructureService {
         return this.plugin_.getServer();
     }
     public Structure track(Blueprint blueprint, Vec3i origin, World world, Entity causer) {
-
-        LOGGER.debug("New structure started at {}", origin);
-        Triplet<Vec3i, UUID, Long> trackKey = Triplet.of(origin, world.getUID(), blueprint.id());
-        Structure structure = this.trackersMap_.get(trackKey);
-
-        synchronized (this.lock_) {
-            if (structure != null) {
-                LOGGER.debug("Already tracking a structure of 'blueprint' {} at {}", blueprint.id(), origin);
-                return structure;
-            }
-            structure = this.runInMainThread(() -> this.newStructure(blueprint, world, origin));
-            this.trackersMap_.put(trackKey, structure);
-            this.structuresByChunk_.put(structure);
-            this.structureLocks_.put(structure, new ReentrantLock());
-        }
-
-        if (structure.isComplete()) {
-            LOGGER.debug("Structure at {} was complete right away.", origin);
-            this.handleComplete(structure, causer, new StateChange(Structure.State.EMPTY, Structure.State.COMPLETE));
-            return structure;
-        }
-
-        this.persistStructuresInChunk(ChunkKey.ofBlock(structure.origin(), structure.world().getUID()));
-
-        return structure;
+        return this.track(blueprint, origin, world, causer, UUID.randomUUID());
     }
     public void registerBlueprint(BlueprintRegistration registration) {
         this.registerBlueprintInner(registration.blueprint());
@@ -119,7 +109,7 @@ public class StructureService {
             Vec3i loc = location.add(piece.offset());
             piece.place(WorldTileWriter.of(loc, world));
         }
-        return new Structure(this, blueprint, world, location);
+        return this.newStructure(blueprint, world, location, UUID.randomUUID());
     }
     public void updateAt(Entity who, Vec3i where, World world) {
         // Execute structure update task asynchronously
@@ -191,7 +181,7 @@ public class StructureService {
         LOGGER.info("Found {} totem data in chunk [{}, {}]", data.size(), chunk.getX(), chunk.getZ());
         for (StructureChunkData structure : data) {
             Blueprint blueprint = this.blueprints_.get(structure.blueprintId());
-            if (blueprint == null) { 
+            if (blueprint == null) {
                 LOGGER.warn("Blueprint with ID {} not found in registry", structure.blueprintId());
                 continue;
             }
@@ -200,9 +190,10 @@ public class StructureService {
                     .shiftLeft(Constants.CHUNK_SHIFT)
                     .add(structure.offset());
 
+            UUID structureId = normalizeStructureId(structure.structureId());
             LOGGER.debug("Restoring totem structure for blueprint {} at origin {}", blueprint.id(), origin);
             this.executor_.execute(() -> {
-                Structure s = this.track(blueprint, origin, chunk.getWorld(), null);
+                Structure s = this.track(blueprint, origin, chunk.getWorld(), null, structureId);
                 this.runInMainThread(() -> {
                     this.getServer().getPluginManager().callEvent(new StructureLoadedEvent(s));
                     return null;
@@ -263,7 +254,7 @@ public class StructureService {
         }
 
         ReentrantLock lock = this.structureLocks_.get(structure);
-        if (lock == null) { 
+        if (lock == null) {
             LOGGER.warn("No lock found for structure at {}", structure.origin());
             return null;
         }
@@ -271,7 +262,7 @@ public class StructureService {
         Vec3i offset = where.subtract(structure.origin());
 
         lock.lock();
-        Structure.State prev = structure.getState(), curr = null;
+        Structure.State prev = structure.getState(), curr;
         try {
             LOGGER.debug("Updating structure of {} at offset {}", structure.blueprint().name(), offset);
             structure.update(offset);
@@ -285,6 +276,34 @@ public class StructureService {
 
 
     //HELPERS
+    private Structure track(Blueprint blueprint, Vec3i origin, World world, Entity causer, UUID structureId) {
+        LOGGER.debug("New structure started at {}", origin);
+        Triplet<Vec3i, UUID, Long> trackKey = Triplet.of(origin, world.getUID(), blueprint.id());
+
+        Structure structure;
+        synchronized (this.lock_) {
+            structure = this.trackersMap_.get(trackKey);
+            if (structure != null) {
+                LOGGER.debug("Already tracking a structure of 'blueprint' {} at {}", blueprint.id(), origin);
+                return structure;
+            }
+
+            UUID assignedStructureId = normalizeStructureId(structureId);
+            structure = this.runInMainThread(() -> this.newStructure(blueprint, world, origin, assignedStructureId));
+            this.trackersMap_.put(trackKey, structure);
+            this.structuresByChunk_.put(structure);
+            this.structureLocks_.put(structure, new ReentrantLock());
+        }
+
+        if (structure.isComplete()) {
+            LOGGER.debug("Structure at {} was complete right away.", origin);
+            this.handleComplete(structure, causer, new StateChange(Structure.State.EMPTY, Structure.State.COMPLETE));
+            return structure;
+        }
+
+        this.persistStructuresInChunk(ChunkKey.ofBlock(structure.origin(), structure.world().getUID()));
+        return structure;
+    }
     private void unloadStructure(Structure structure) {
         LOGGER.trace("Unloading structure for blueprint {} at origin {}", structure.blueprint().id(), structure.origin());
         this.structuresByChunk_.evict(structure);
@@ -293,8 +312,8 @@ public class StructureService {
         Triplet<Vec3i, UUID, Long> trackKey = Triplet.of(structure.origin(), structure.world().getUID(), structure.blueprint().id());
         this.trackersMap_.remove(trackKey);
     }
-    protected Structure newStructure(Blueprint blueprint, World world, Vec3i origin) {
-        return new Structure(this, blueprint, world, origin);
+    protected Structure newStructure(Blueprint blueprint, World world, Vec3i origin, UUID structureId) {
+        return new Structure(structureId, this, blueprint, world, origin);
     }
     private static Vec3i offsetInChunk(Vec3i src) {
         return new Vec3i(
@@ -302,6 +321,12 @@ public class StructureService {
                 src.y(),
                 Math.floorMod(src.z(), Constants.CHUNK_SIZE)
         );
+    }
+    private static UUID normalizeStructureId(UUID structureId) {
+        if (structureId == null || StructureChunkData.UNASSIGNED_ID.equals(structureId)) {
+            return UUID.randomUUID();
+        }
+        return structureId;
     }
     public void registerBlueprintInner(Blueprint blueprint) {
         long id = blueprint.id();
@@ -328,7 +353,7 @@ public class StructureService {
 
         List<StructureChunkData> toSerialize = new ArrayList<>(structures.size());
         for (Structure structure : structures) {
-            toSerialize.add(new StructureChunkData(offsetInChunk(structure.origin()), structure.blueprint().id()));
+            toSerialize.add(new StructureChunkData(offsetInChunk(structure.origin()), structure.blueprint().id(), structure.id()));
         }
         this.chunkPersister_.persist(chunk, this.structuresNSK_, StructurePersistentDataType.instance(), toSerialize);
     }
@@ -345,7 +370,7 @@ public class StructureService {
         }
         boolean wasCompleted() {
             if (noChanges()) { return false; }
-            return     this.previousState != Structure.State.COMPLETE
+            return this.previousState != Structure.State.COMPLETE
                     && this.newState == Structure.State.COMPLETE;
         }
         boolean wasUncompleted() {

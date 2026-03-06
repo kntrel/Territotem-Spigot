@@ -5,10 +5,16 @@ import com.kntrel.util.Vec3i;
 import org.bukkit.persistence.PersistentDataAdapterContext;
 import org.bukkit.persistence.PersistentDataType;
 import org.jspecify.annotations.NonNull;
+
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 class StructurePersistentDataType implements PersistentDataType<byte[], List<StructureChunkData>> {
+
+    //CONSTANTS
+    private static final int CANDIDATE_BYTES = 28;
+
 
     //FACTORY
     private static final StructurePersistentDataType INSTANCE = new StructurePersistentDataType();
@@ -29,21 +35,20 @@ class StructurePersistentDataType implements PersistentDataType<byte[], List<Str
 
     @Override
     public byte[] toPrimitive(@NonNull List<StructureChunkData> complex, @NonNull PersistentDataAdapterContext context) {
-        byte[] out = new byte[complex.size() * 12];
+        byte[] out = new byte[complex.size() * CANDIDATE_BYTES];
         int offset = 0;
         for (StructureChunkData candidate : complex) {
             toBytes(out, offset, candidate);
-            offset += 12;
+            offset += CANDIDATE_BYTES;
         }
         return out;
     }
 
     @Override
     public @NonNull List<StructureChunkData> fromPrimitive(byte[] primitive, @NonNull PersistentDataAdapterContext context) {
-        List<StructureChunkData> out = new ArrayList<>(primitive.length / 12);
-        for (int i = 0; (i + 12) <= primitive.length; i += 12) {
-            StructureChunkData candidate = toCandidate(primitive, i);
-            out.add(candidate);
+        List<StructureChunkData> out = new ArrayList<>(primitive.length / CANDIDATE_BYTES);
+        for (int i = 0; (i + CANDIDATE_BYTES) <= primitive.length; i += CANDIDATE_BYTES) {
+            out.add(toCandidate(primitive, i));
         }
         return out;
     }
@@ -51,39 +56,37 @@ class StructurePersistentDataType implements PersistentDataType<byte[], List<Str
 
     //HELPERS
     private static StructureChunkData toCandidate(byte[] raw, int offset) {
-       /* Candidates are 12 bytes
-        * 1(byte)  -> x offset
-        * 1(byte)  -> z offset
-        * 2(short) -> y offset
-        * 8(long)  -> blueprint id
-        */
-
         int len = raw.length;
-        if (offset + 12 > len) {
-            throw new IllegalArgumentException("12 bytes are required to deserialize a totem candidate. Size " + len + " with offset " + offset);
+        if (offset + CANDIDATE_BYTES > len) {
+            throw new IllegalArgumentException("28 bytes are required to deserialize a structure candidate. Size " + len + " with offset " + offset);
         }
 
         byte x = raw[offset], z = raw[offset + 1];
-        short y = Bytes.toShort(raw,  offset + 2);
-        long blueprintId = Bytes.toLong(raw,  offset + 4);
+        short y = Bytes.toShort(raw, offset + 2);
+        long blueprintId = Bytes.toLong(raw, offset + 4);
+        long mostSigBits = Bytes.toLong(raw, offset + 12);
+        long leastSigBits = Bytes.toLong(raw, offset + 20);
 
-        return new StructureChunkData(new Vec3i(x, y, z), blueprintId);
+        return new StructureChunkData(new Vec3i(x, y, z), blueprintId, new UUID(mostSigBits, leastSigBits));
     }
-    private static void toBytes(byte[] target, int offset, StructureChunkData candidate) {
 
+    private static void toBytes(byte[] target, int offset, StructureChunkData candidate) {
         int len = target.length;
-        if (offset + 12 > len) {
-            throw new IllegalArgumentException("12 bytes are required to serialize a totem candidate. Size " + len + " with offset " + offset);
+        if (offset + CANDIDATE_BYTES > len) {
+            throw new IllegalArgumentException("28 bytes are required to serialize a structure candidate. Size " + len + " with offset " + offset);
         }
 
         Vec3i pos = candidate.offset();
         byte x = (byte) pos.x(), z = (byte) pos.z();
         short y = (short) pos.y();
         long blueprintId = candidate.blueprintId();
+        UUID structureId = candidate.structureId();
 
         target[offset] = x;
         target[offset + 1] = z;
         Bytes.fromShort(y, target, offset + 2);
         Bytes.fromLong(blueprintId, target, offset + 4);
+        Bytes.fromLong(structureId.getMostSignificantBits(), target, offset + 12);
+        Bytes.fromLong(structureId.getLeastSignificantBits(), target, offset + 20);
     }
 }

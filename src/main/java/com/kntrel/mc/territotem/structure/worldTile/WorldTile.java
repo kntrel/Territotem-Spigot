@@ -6,7 +6,6 @@ import com.kntrel.mc.state.StateMap;
 import com.kntrel.util.Vec3i;
 import org.bukkit.Material;
 import org.bukkit.World;
-
 import java.util.List;
 
 public interface WorldTile {
