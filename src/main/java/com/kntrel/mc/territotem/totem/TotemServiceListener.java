@@ -3,8 +3,8 @@ package com.kntrel.mc.territotem.totem;
 import com.kntrel.mc.regionLib.event.BlockRightClickedEvent;
 import com.kntrel.mc.regionLib.region.Region;
 import com.kntrel.mc.territotem.structure.event.StructureCompletedEvent;
-import com.kntrel.mc.territotem.event.TotemCoreCreatedEvent;
-import com.kntrel.mc.territotem.structure.blueprint.Blueprint;
+import com.kntrel.mc.territotem.totem.event.TotemCoreCompletedEvent;
+import com.kntrel.mc.territotem.totem.event.TotemCoreCreatedEvent;
 import com.kntrel.mc.territotem.structure.piece.Tile;
 import com.kntrel.mc.territotem.structure.worldTile.WorldTileWriter;
 import com.kntrel.util.Vec3i;
@@ -44,6 +44,7 @@ class TotemServiceListener implements Listener {
             return;
         }
 
+        Player player = e.getPlayer();
         TotemCore core = this.service_.getCore(clicked);
         if (core != null) {
             TotemCore.State previous = core.getState();
@@ -57,14 +58,17 @@ class TotemServiceListener implements Listener {
                 if (previous == TotemCore.State.EMPTY) {
                     core.setState(TotemCore.State.AMETHIST);
                 } else if (previous == TotemCore.State.END_EYE) {
-                    core.setState(TotemCore.State.FULL);
+                    TotemCoreCompletedEvent coreCompletedEvent = new TotemCoreCompletedEvent(core, player);
+                    this.service_.getServer().getPluginManager().callEvent(coreCompletedEvent);
+                    if (!coreCompletedEvent.isCancelled()) {
+                        core.setState(TotemCore.State.FULL);
+                    }
                 }
             }
 
             if (core.getState() != previous) {
                 consumeOneItem(e, itemStack);
                 this.service_.persistCore(core);
-                this.service_.getStructureService().updateAt(e.getPlayer(), core.getCoordinates(), core.getWorld());
                 e.setCancelled(true);
             }
             return;
@@ -84,7 +88,7 @@ class TotemServiceListener implements Listener {
         if (initialState == null) { return; }
 
         core = this.service_.createCore(Vec3i.ofBlock(clicked), clicked.getWorld(), initialState, TotemCore.Direction.ALL);
-        TotemCoreCreatedEvent event = new TotemCoreCreatedEvent(core, e.getPlayer());
+        TotemCoreCreatedEvent event = new TotemCoreCreatedEvent(core, player);
         this.service_.getServer().getPluginManager().callEvent(event);
         if (event.isCancelled()) {
             this.service_.destroyCore(core);
@@ -180,7 +184,8 @@ class TotemServiceListener implements Listener {
 
     @EventHandler
     void onTotemCompletedEvent(StructureCompletedEvent e) {
-        Blueprint blueprint = e.getStructure().blueprint();
+        if (!(e.getStructure().blueprint() instanceof TotemBlueprint blueprint)) { return; }
+
         if (blueprint.id() != 25) { return; }
         Vec3i coreOffset = new Vec3i(0, 2, 0);
         Tile piece = blueprint.pieceAt(coreOffset);
@@ -189,13 +194,13 @@ class TotemServiceListener implements Listener {
 
         Vector shift = e.getStructure().origin().toDouble();
         Region region = this.service_.getRegionContext().create(
-                e.getCompleter(),
+                e.getCauser(),
                 blueprint.initialRegionBounds().shift(shift),
                 e.getStructure().world(),
                 "totem_region",
                 blueprint.hierarchy()
         );
-        if (e.getCompleter() instanceof Player p) {
+        if (e.getCauser() instanceof Player p) {
             region.display(p);
             p.sendMessage("regionCreated");
         }

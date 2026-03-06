@@ -19,6 +19,8 @@ public class TotemBlueprint extends Blueprint {
     private final TotemTile<TotemCorePiece> core_;
     private final Set<TotemTile<TotemLecternPiece>> lecterns_;
     private final Set<TotemTile<TotemNameSignPiece>> nameSigns_;
+    private final BoundingBox initialRegionBounds_;
+    private final Hierarchy hierarchy_;
 
 
     //CONSTRUCTOR
@@ -28,6 +30,8 @@ public class TotemBlueprint extends Blueprint {
         this.core_ = processed.core;
         this.lecterns_ = processed.lecterns;
         this.nameSigns_ = processed.nameSigns;
+        this.initialRegionBounds_ = initialRegionBounds;
+        this.hierarchy_ = hierarchy;
     }
 
 
@@ -40,6 +44,12 @@ public class TotemBlueprint extends Blueprint {
     }
     public Set<TotemTile<TotemNameSignPiece>> nameSings() {
         return this.nameSigns_;
+    }
+    public BoundingBox initialRegionBounds() {
+        return this.initialRegionBounds_.clone();
+    }
+    public Hierarchy hierarchy() {
+        return this.hierarchy_;
     }
 
 

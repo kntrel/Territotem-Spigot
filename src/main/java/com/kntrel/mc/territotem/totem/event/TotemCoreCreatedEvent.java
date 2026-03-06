@@ -1,4 +1,4 @@
-package com.kntrel.mc.territotem.event;
+package com.kntrel.mc.territotem.totem.event;
 
 import com.kntrel.mc.territotem.totem.TotemCore;
 import org.bukkit.entity.Entity;

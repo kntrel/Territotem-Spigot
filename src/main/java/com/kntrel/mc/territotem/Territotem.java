@@ -4,12 +4,12 @@ import com.kntrel.mc.chunkPersistence.ChunkPersister;
 import com.kntrel.mc.regionLib.RegionLib;
 import com.kntrel.mc.regionLib.region.context.RegionContext;
 import com.kntrel.mc.regionLib.region.hierarchy.Hierarchy;
-import com.kntrel.mc.territotem.event.TotemCoreCreatedEvent;
+import com.kntrel.mc.territotem.totem.event.TotemCoreCompletedEvent;
 import com.kntrel.mc.territotem.structure.StructureService;
-import com.kntrel.mc.territotem.structure.blueprint.Blueprint;
 import com.kntrel.mc.territotem.structure.blueprint.TrackingInfo;
 import com.kntrel.mc.territotem.structure.piece.Piece;
 import com.kntrel.mc.territotem.structure.piece.Tile;
+import com.kntrel.mc.territotem.totem.TotemBlueprint;
 import com.kntrel.mc.territotem.totem.piece.TotemPieces;
 import com.kntrel.mc.territotem.totem.TotemService;
 import com.kntrel.util.Vec3i;
@@ -45,10 +45,10 @@ public final class Territotem extends JavaPlugin {
         StructureService structureService = new StructureService(this, this.chunkPersister_);
         TotemService totemService = new TotemService(regionContext, structureService, this.chunkPersister_);
         structureService.registerBlueprint(createTotemBlueprint(totemService, hierarchy))
-                    .on(TotemCoreCreatedEvent.class)
+                    .on(TotemCoreCompletedEvent.class)
                     .track(e -> {
                         Vec3i origin = e.getCore().getCoordinates().subtract(new Vec3i(0, 2, 0));
-                        return new TrackingInfo(origin, e.getCore().getWorld(), e.getCreator());
+                        return new TrackingInfo(origin, e.getCore().getWorld(), e.getCompleter());
                     });
 
 
@@ -75,14 +75,14 @@ public final class Territotem extends JavaPlugin {
         pkgLogger.setLevel(Level.ALL);
     }
 
-    private static Blueprint createTotemBlueprint(TotemService service, Hierarchy hierarchy) {
+    private static TotemBlueprint createTotemBlueprint(TotemService service, Hierarchy hierarchy) {
         List<Tile> tile = List.of(
-                new Tile(0, 2, 0, TotemPieces.ofService(service)),
+                new Tile(0, 2, 0, TotemPieces.core(service)),
                 new Tile(0, 1, 0, Piece.block(Material.OBSIDIAN)),
                 new Tile(0, 0, 0, Piece.block(Material.OBSIDIAN))
 
         );
         BoundingBox bb = new BoundingBox(-8, -2, -8, 8, 12, 8);
-        return new Blueprint(25, "totem", tile, bb, hierarchy);
+        return new TotemBlueprint(25, "totem", tile, bb, hierarchy);
     }
 }

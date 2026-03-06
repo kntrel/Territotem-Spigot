@@ -25,9 +25,7 @@ public final class MockBlueprints {
         return new Blueprint(
                 99,
                 "test_square4",
-                elements,
-                new BoundingBox(0, 0, 0, 2, 1, 2),
-                new Hierarchy(1L, "test_hierarchy")
+                elements
         );
     }
 }
