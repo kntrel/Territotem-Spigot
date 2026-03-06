@@ -2,7 +2,7 @@ package com.kntrel.mc.territotem.totem;
 
 import com.kntrel.mc.regionLib.event.BlockRightClickedEvent;
 import com.kntrel.mc.regionLib.region.Region;
-import com.kntrel.mc.territotem.event.StructureCompletedEvent;
+import com.kntrel.mc.territotem.structure.event.StructureCompletedEvent;
 import com.kntrel.mc.territotem.event.TotemCoreCreatedEvent;
 import com.kntrel.mc.territotem.structure.blueprint.Blueprint;
 import com.kntrel.mc.territotem.structure.piece.Tile;

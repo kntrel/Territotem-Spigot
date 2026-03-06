@@ -8,15 +8,15 @@ import org.jspecify.annotations.NonNull;
 import java.util.ArrayList;
 import java.util.List;
 
-class StructureCandidatePersistentDataType implements PersistentDataType<byte[], List<StructureChunkData>> {
+class StructurePersistentDataType implements PersistentDataType<byte[], List<StructureChunkData>> {
 
     //FACTORY
-    private static final StructureCandidatePersistentDataType INSTANCE = new StructureCandidatePersistentDataType();
-    public static StructureCandidatePersistentDataType instance() { return INSTANCE; }
+    private static final StructurePersistentDataType INSTANCE = new StructurePersistentDataType();
+    public static StructurePersistentDataType instance() { return INSTANCE; }
 
 
     //CONSTRUCTOR
-    private StructureCandidatePersistentDataType() {}
+    private StructurePersistentDataType() {}
 
 
     //IMPLEMENTATION

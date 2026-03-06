@@ -31,10 +31,13 @@ public class Structure {
     private final BitSet3D presenceMap_, knownMap_, matchMap_;
     private final Object mutex_;
     private final BiFunction<Vec3i, World, WorldTile> worldTileGetter_;
+
+
+    //MUTABLE STATE
     private int pieceCount_, knownCount_, matchCount_;
     private CompletableFuture<Void> scanTask_;
     private Vec3i parkedUnlockOffset_;
-    private boolean locked_;
+    private boolean dropped_;
     private State state_;
 
 
@@ -60,7 +63,7 @@ public class Structure {
         this.matchMap_ = new BitSet3D(dimensions);
         this.pieceCount_ = this.blueprint_.elementCount();
         this.matchCount_ = 0;
-        this.locked_ = false;
+        this.dropped_ = false;
         this.state_ = null;
 
         log(Level.TRACE, "Initialized with {} pieces", this.pieceCount_);
@@ -76,15 +79,16 @@ public class Structure {
     public World world() { return this.world_; }
     public Vec3i origin() { return this.origin_; }
     public IntBoundingBox boundingBox() { return this.boundingBox_; }
-    public boolean isLocked() { synchronized (this.mutex_) { return this.locked_; } }
+    public boolean isLocked() { synchronized (this.mutex_) { return this.dropped_; } }
 
 
     //API
-    public void lock() { 
+    public void drop() {
         synchronized (this.mutex_) { 
-            log(Level.TRACE, "Locking");
-            this.locked_ = true; 
-        } 
+            log(Level.TRACE, "Dropping");
+            this.dropped_ = true;
+            this.service_.dropStructure(this);
+        }
     }
     public boolean contains(Vec3i coordinate) { return this.boundingBox_.contains(coordinate); }
     public boolean isParked() { synchronized (this.mutex_) {
@@ -120,8 +124,8 @@ public class Structure {
         log(Level.TRACE, "Block update at offset {}", offset);
         CompletableFuture<Void> pendingScan;
         synchronized (this.mutex_) {
-            if (this.locked_) { 
-                log(Level.TRACE, "Tracker is locked. Ignoring update");
+            if (this.dropped_) {
+                log(Level.TRACE, "Dropped. Ignoring update");
                 return; 
             }
             pendingScan = this.scanTask_;

@@ -1,4 +1,4 @@
-package com.kntrel.mc.territotem.event;
+package com.kntrel.mc.territotem.structure.event;
 
 import com.kntrel.mc.territotem.structure.Structure;
 import org.bukkit.entity.Entity;

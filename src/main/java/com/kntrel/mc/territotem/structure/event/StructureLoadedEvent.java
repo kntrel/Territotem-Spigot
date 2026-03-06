@@ -1,12 +1,10 @@
-package com.kntrel.mc.territotem.event;
+package com.kntrel.mc.territotem.structure.event;
 
 import com.kntrel.mc.territotem.structure.Structure;
-import org.bukkit.entity.Entity;
 import org.bukkit.event.HandlerList;
 import org.jspecify.annotations.NonNull;
-import org.jspecify.annotations.Nullable;
 
-public class StructureUncompletedEvent extends StructureStateChangedEvent {
+public class StructureLoadedEvent extends StructureEvent {
 
     //EVENT-REQUIRED ================================================
     private static final HandlerList HANDLERS = new HandlerList();
@@ -17,7 +15,7 @@ public class StructureUncompletedEvent extends StructureStateChangedEvent {
 
 
     //CONSTRUCTOR
-    public StructureUncompletedEvent(Structure structure, @Nullable Entity uncompleter, Structure.State currentState) {
-        super(structure, uncompleter, Structure.State.COMPLETE, currentState);
+    public StructureLoadedEvent(Structure structure) {
+        super(structure);
     }
 }

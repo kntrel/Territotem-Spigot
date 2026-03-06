@@ -2,11 +2,13 @@ package com.kntrel.mc.territotem.structure;
 
 import com.kntrel.mc.chunkPersistence.ChunkPersister;
 import com.kntrel.mc.regionLib.Constants;
-import com.kntrel.mc.territotem.event.StructureCompletedEvent;
-import com.kntrel.mc.territotem.event.StructureUncompletedEvent;
+import com.kntrel.mc.territotem.structure.event.StructureCompletedEvent;
+import com.kntrel.mc.territotem.structure.event.StructureLoadedEvent;
+import com.kntrel.mc.territotem.structure.event.StructureUncompletedEvent;
 import com.kntrel.mc.territotem.structure.blueprint.Blueprint;
 import com.kntrel.mc.territotem.structure.blueprint.BlueprintRegistration;
 import com.kntrel.mc.territotem.structure.blueprint.BlueprintRegistrationBuilder;
+import com.kntrel.mc.territotem.structure.event.StructureUnloadedEvent;
 import com.kntrel.mc.territotem.structure.piece.Tile;
 import com.kntrel.mc.territotem.structure.worldTile.WorldTileWriter;
 import com.kntrel.mc.territotem.util.ChunkCache;
@@ -34,13 +36,14 @@ public class StructureService {
     private final Plugin plugin_;
     private final ChunkPersister chunkPersister_;
     private final Map<Long, Blueprint> blueprints_;
-    private final ChunkCache<Structure> candidatesByChunk_;
-    private final Map<Structure, ReentrantLock> candidateLocks_;
+    private final ChunkCache<Structure> structuresByChunk_;
+    private final Map<Structure, ReentrantLock> structureLocks_;
     private final Map<Triplet<Vec3i, UUID, Long>, Structure> trackersMap_;
     private final Executor executor_;
-    private final NamespacedKey candidatesNSK_;
+    private final NamespacedKey structuresNSK_;
     private final BlueprintBitsetGenerator bitsetGenerator_;
     private final StructureServiceListener listener_;
+    private final Object lock_;
 
 
 
@@ -49,16 +52,17 @@ public class StructureService {
         this.plugin_ = plugin;
         this.chunkPersister_ = chunkPersister;
         this.blueprints_ = new ConcurrentHashMap<>();
-        this.candidatesByChunk_ = new ChunkCache<>(c -> ChunkKey.ofBlock(c.origin(), c.world().getUID()));
-        this.candidateLocks_ = new ConcurrentHashMap<>();
+        this.structuresByChunk_ = new ChunkCache<>(c -> ChunkKey.ofBlock(c.origin(), c.world().getUID()));
+        this.structureLocks_ = new ConcurrentHashMap<>();
         this.trackersMap_ = new  ConcurrentHashMap<>();
         this.executor_ = Executors.newVirtualThreadPerTaskExecutor();
-        this.candidatesNSK_ = new NamespacedKey(this.plugin_, STRUCTURES_KEY);
+        this.structuresNSK_ = new NamespacedKey(this.plugin_, STRUCTURES_KEY);
         this.bitsetGenerator_ = new BlueprintBitsetGenerator();
         this.listener_ = new StructureServiceListener(this);
+        this.lock_ = new Object();
 
         this.getServer().getPluginManager().registerEvents(this.listener_, this.plugin_);
-        LOGGER.info("Tracking totem candidates");
+        LOGGER.info("Tracking totem structures");
     }
 
 
@@ -74,21 +78,24 @@ public class StructureService {
         LOGGER.debug("New structure started at {}", origin);
         Triplet<Vec3i, UUID, Long> trackKey = Triplet.of(origin, world.getUID(), blueprint.id());
         Structure structure = this.trackersMap_.get(trackKey);
-        if (structure != null) {
-            LOGGER.debug("Already tracking a structure of 'blueprint' {} at {}", blueprint.id(), origin);
-            return structure;
+
+        synchronized (this.lock_) {
+            if (structure != null) {
+                LOGGER.debug("Already tracking a structure of 'blueprint' {} at {}", blueprint.id(), origin);
+                return structure;
+            }
+            structure = this.runInMainThread(() -> this.newStructure(blueprint, world, origin));
+            this.trackersMap_.put(trackKey, structure);
+            this.structuresByChunk_.put(structure);
+            this.structureLocks_.put(structure, new ReentrantLock());
         }
 
-        structure = this.runInMainThread(() -> this.newTracker(blueprint, world, origin));
         if (structure.isComplete()) {
             LOGGER.debug("Structure at {} was complete right away.", origin);
             this.handleComplete(structure, causer, new StateChange(Structure.State.EMPTY, Structure.State.COMPLETE));
             return structure;
         }
 
-        this.trackersMap_.put(trackKey, structure);
-        this.candidatesByChunk_.put(structure);
-        this.candidateLocks_.put(structure, new ReentrantLock());
         this.persistStructuresInChunk(ChunkKey.ofBlock(structure.origin(), structure.world().getUID()));
 
         return structure;
@@ -115,8 +122,18 @@ public class StructureService {
         return new Structure(this, blueprint, world, location);
     }
     public void updateAt(Entity who, Vec3i where, World world) {
-        // Execute candidate update task asynchronously
+        // Execute structure update task asynchronously
         this.executor_.execute(() -> handleStructuresUpdateTask(who, where, world));
+    }
+    public void dropStructure(Structure structure) {
+        this.unloadStructure(structure);
+        this.persistStructuresInChunk(ChunkKey.ofBlock(structure.origin(), structure.world().getUID()));
+        LOGGER.debug("Dropped structure for blueprint {} at origin {}", structure.blueprint().id(), structure.origin());
+    }
+    public Collection<Structure> getStructuresInChunk(ChunkKey chunk) {
+        Collection<Structure> structures = List.copyOf(this.structuresByChunk_.get(chunk));
+        LOGGER.trace("Retrieved {} structures from chunk {}", structures.size(), chunk);
+        return structures;
     }
 
 
@@ -161,44 +178,43 @@ public class StructureService {
             throw new RuntimeException(e);
         }
     }
-    public void dropStructure(Structure candidate) {
-        LOGGER.debug("Dropping candidate for blueprint {} at origin {}", candidate.blueprint().id(), candidate.origin());
-        this.candidatesByChunk_.evict(candidate);
-        this.candidateLocks_.remove(candidate);
-
-        Triplet<Vec3i, UUID, Long> trackKey = Triplet.of(candidate.origin(), candidate.world().getUID(), candidate.blueprint().id());
-        this.trackersMap_.remove(trackKey);
-        this.persistStructuresInChunk(ChunkKey.ofBlock(candidate.origin(), candidate.world().getUID()));
-    }
-    public Collection<Structure> getStructuresInChunk(ChunkKey chunk) {
-        Collection<Structure> candidates = List.copyOf(this.candidatesByChunk_.get(chunk));
-        LOGGER.trace("Retrieved {} candidates from chunk {}", candidates.size(), chunk);
-        return candidates;
-    }
 
 
     //LISTENERS
     void handleChunkLoad(Chunk chunk) {
-        List<StructureChunkData> data = this.chunkPersister_.retrieve(chunk, this.candidatesNSK_, StructureCandidatePersistentDataType.instance());
+        List<StructureChunkData> data = this.chunkPersister_.retrieve(chunk, this.structuresNSK_, StructurePersistentDataType.instance());
         if (data == null || data.isEmpty()) {
             LOGGER.trace("No totem data found in chunk [{}, {}]", chunk.getX(), chunk.getZ());
             return;
         }
 
         LOGGER.info("Found {} totem data in chunk [{}, {}]", data.size(), chunk.getX(), chunk.getZ());
-        for (StructureChunkData candidate : data) {
-            Blueprint blueprint = blueprints_.get(candidate.blueprintId());
+        for (StructureChunkData structure : data) {
+            Blueprint blueprint = this.blueprints_.get(structure.blueprintId());
             if (blueprint == null) { 
-                LOGGER.warn("Blueprint with ID {} not found in registry", candidate.blueprintId());
+                LOGGER.warn("Blueprint with ID {} not found in registry", structure.blueprintId());
                 continue;
             }
 
             Vec3i origin = new Vec3i(chunk.getX(), 0, chunk.getZ())
                     .shiftLeft(Constants.CHUNK_SHIFT)
-                    .add(candidate.offset());
+                    .add(structure.offset());
 
-            LOGGER.debug("Restoring totem candidate for blueprint {} at origin {}", blueprint.id(), origin);
-            this.executor_.execute(() -> this.track(blueprint, origin, chunk.getWorld(), null));
+            LOGGER.debug("Restoring totem structure for blueprint {} at origin {}", blueprint.id(), origin);
+            this.executor_.execute(() -> {
+                Structure s = this.track(blueprint, origin, chunk.getWorld(), null);
+                this.runInMainThread(() -> {
+                    this.getServer().getPluginManager().callEvent(new StructureLoadedEvent(s));
+                    return null;
+                });
+            });
+        }
+    }
+    void handleChunkUnload(Chunk chunk) {
+        ChunkKey ck = new ChunkKey(chunk.getX(), chunk.getZ(), chunk.getWorld());
+        for (Structure structure : this.getStructuresInChunk(ck)) {
+            this.unloadStructure(structure);
+            this.getServer().getPluginManager().callEvent(new StructureUnloadedEvent(structure));
         }
     }
 
@@ -206,10 +222,10 @@ public class StructureService {
     //TASKS
     private void handleStructuresUpdateTask(Entity who, Vec3i where, World world) {
         ChunkKey chunk = ChunkKey.ofBlock(where, world.getUID());
-        Collection<Structure> candidates = this.getStructuresInChunk(chunk);
+        Collection<Structure> structures = this.getStructuresInChunk(chunk);
 
-        for (Structure candidate : candidates) {
-            this.executor_.execute(() -> updateStructureTask(who, candidate, where));
+        for (Structure structure : structures) {
+            this.executor_.execute(() -> updateStructureTask(who, structure, where));
         }
     }
     private void updateStructureTask(Entity who, Structure structure, Vec3i where) {
@@ -223,20 +239,18 @@ public class StructureService {
             this.handleUncompleted(structure, who, change);
         }
     }
-    private void handleComplete(Structure candidate, Entity who, StateChange change) {
-        LOGGER.info("Structure completed for blueprint {}", candidate.blueprint().id());
-        this.dropStructure(candidate);
+    private void handleComplete(Structure structure, Entity who, StateChange change) {
+        LOGGER.info("Structure completed for blueprint {}", structure.blueprint().id());
+        this.dropStructure(structure);
 
-        Structure structure = new Structure(this, candidate.blueprint(), candidate.world(), candidate.origin());
         this.runInMainThreadAsync(() -> {
             this.getServer().getPluginManager().callEvent(new StructureCompletedEvent(structure, who, change.previousState()));
             return null;
         });
     }
-    private void handleUncompleted(Structure candidate, Entity who, StateChange change) {
-        LOGGER.info("Structure destroyed for blueprint {}", candidate.blueprint().id());
+    private void handleUncompleted(Structure structure, Entity who, StateChange change) {
+        LOGGER.info("Structure destroyed for blueprint {}", structure.blueprint().id());
 
-        Structure structure = new Structure(this, candidate.blueprint(), candidate.world(), candidate.origin());
         this.runInMainThreadAsync(() -> {
             this.getServer().getPluginManager().callEvent(new StructureUncompletedEvent(structure, who, change.newState()));
             return null;
@@ -248,7 +262,7 @@ public class StructureService {
             return null;
         }
 
-        ReentrantLock lock = this.candidateLocks_.get(structure);
+        ReentrantLock lock = this.structureLocks_.get(structure);
         if (lock == null) { 
             LOGGER.warn("No lock found for structure at {}", structure.origin());
             return null;
@@ -271,7 +285,15 @@ public class StructureService {
 
 
     //HELPERS
-    protected Structure newTracker(Blueprint blueprint, World world, Vec3i origin) {
+    private void unloadStructure(Structure structure) {
+        LOGGER.trace("Unloading structure for blueprint {} at origin {}", structure.blueprint().id(), structure.origin());
+        this.structuresByChunk_.evict(structure);
+        this.structureLocks_.remove(structure);
+
+        Triplet<Vec3i, UUID, Long> trackKey = Triplet.of(structure.origin(), structure.world().getUID(), structure.blueprint().id());
+        this.trackersMap_.remove(trackKey);
+    }
+    protected Structure newStructure(Blueprint blueprint, World world, Vec3i origin) {
         return new Structure(this, blueprint, world, origin);
     }
     private static Vec3i offsetInChunk(Vec3i src) {
@@ -298,17 +320,17 @@ public class StructureService {
         }
 
         Chunk chunk = world.getChunkAt(chunkKey.x(), chunkKey.z());
-        Collection<Structure> candidates = this.getStructuresInChunk(chunkKey);
-        if (candidates.isEmpty()) {
-            this.chunkPersister_.drop(chunk, this.candidatesNSK_);
+        Collection<Structure> structures = this.getStructuresInChunk(chunkKey);
+        if (structures.isEmpty()) {
+            this.chunkPersister_.drop(chunk, this.structuresNSK_);
             return;
         }
 
-        List<StructureChunkData> toSerialize = new ArrayList<>(candidates.size());
-        for (Structure candidate : candidates) {
-            toSerialize.add(new StructureChunkData(offsetInChunk(candidate.origin()), candidate.blueprint().id()));
+        List<StructureChunkData> toSerialize = new ArrayList<>(structures.size());
+        for (Structure structure : structures) {
+            toSerialize.add(new StructureChunkData(offsetInChunk(structure.origin()), structure.blueprint().id()));
         }
-        this.chunkPersister_.persist(chunk, this.candidatesNSK_, StructureCandidatePersistentDataType.instance(), toSerialize);
+        this.chunkPersister_.persist(chunk, this.structuresNSK_, StructurePersistentDataType.instance(), toSerialize);
     }
 
 

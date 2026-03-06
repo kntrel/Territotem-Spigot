@@ -1,6 +1,6 @@
 package com.kntrel.mc.territotem.structure;
 
-import com.kntrel.mc.territotem.event.StructureCompletedEvent;
+import com.kntrel.mc.territotem.structure.event.StructureCompletedEvent;
 import com.kntrel.mc.territotem.structure.blueprint.TrackingInfo;
 import com.kntrel.mc.territotem.test.mock.MockBlueprints;
 import com.kntrel.mc.territotem.test.mock.MockPlugin;

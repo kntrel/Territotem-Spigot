@@ -1,38 +1,42 @@
 package com.kntrel.mc.territotem.totem;
 
 import com.kntrel.mc.regionLib.region.Region;
-import com.kntrel.mc.territotem.structure.blueprint.Blueprint;
+import com.kntrel.mc.territotem.structure.Structure;
+import com.kntrel.mc.territotem.structure.blueprint.InvalidBlueprintException;
 import com.kntrel.util.Vec3i;
 import org.bukkit.World;
 
 public class Totem {
 
     //FIELDS
-    private final Blueprint blueprint_;
-    private final Vec3i origin_;
+    private final Structure structure_;
     private final Region region_;
 
 
     //CONSTRUCTORS
-    Totem(Blueprint blueprint, Vec3i origin, Region region) {
-        this.blueprint_ = blueprint;
-        this.origin_ = origin;
+    Totem(Structure structure, Region region) {
+        if (!(structure.blueprint() instanceof TotemBlueprint)) {
+            throw new InvalidBlueprintException(
+                "A totem must be backed by a totem blueprint. Passed structure's blueprint member is not an instance of TotemBlueprint"
+            );
+        }
+        this.structure_ = structure;
         this.region_ = region;
     }
 
 
     //API
-    public Blueprint blueprint() {
-        return this.blueprint_;
-    }
     public Vec3i origin() {
-        return this.origin_;
+        return this.structure_.origin();
+    }
+    public TotemBlueprint blueprint() {
+        return (TotemBlueprint) this.structure_.blueprint();
     }
     public Region region() {
         return this.region_;
     }
     public World world() {
-        return this.region_.getWorld();
+        return this.structure_.world();
     }
     public boolean isEnabled() {
         return this.region_.isEnabled();

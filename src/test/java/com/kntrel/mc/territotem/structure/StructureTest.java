@@ -125,13 +125,13 @@ class StructureTest {
     }
 
     @Test
-    @DisplayName("Locked tracker ignores updates")
+    @DisplayName("Dropped tracker ignores updates")
     void lockedTrackerIgnoresUpdates() {
         Vec3i origin = Vec3i.zeroes();
         placeStructure(origin);
 
         Structure tracker = this.newTracker(origin);
-        tracker.lock();
+        tracker.drop();
 
         tracker.update(new Vec3i(1, 0, 1));;
 

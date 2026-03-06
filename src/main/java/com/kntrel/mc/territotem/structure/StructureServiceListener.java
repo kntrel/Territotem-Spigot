@@ -1,7 +1,7 @@
 package com.kntrel.mc.territotem.structure;
 
-import com.kntrel.mc.territotem.event.StructureCompletedEvent;
-import com.kntrel.mc.territotem.event.StructureUncompletedEvent;
+import com.kntrel.mc.territotem.structure.event.StructureCompletedEvent;
+import com.kntrel.mc.territotem.structure.event.StructureUncompletedEvent;
 import com.kntrel.mc.territotem.structure.blueprint.Blueprint;
 import com.kntrel.mc.territotem.structure.blueprint.BlueprintRegistration;
 import com.kntrel.mc.territotem.structure.blueprint.TrackingInfo;
@@ -11,6 +11,7 @@ import org.bukkit.event.*;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.world.ChunkLoadEvent;
+import org.bukkit.event.world.ChunkUnloadEvent;
 import org.bukkit.plugin.EventExecutor;
 import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
@@ -84,6 +85,9 @@ class StructureServiceListener implements Listener {
 
     @EventHandler void onChunkLoad(ChunkLoadEvent e) {
         this.service_.handleChunkLoad(e.getChunk());
+    }
+    @EventHandler void onChunkUnload(ChunkUnloadEvent e){
+        this.service_.handleChunkUnload(e.getChunk());
     }
 
 

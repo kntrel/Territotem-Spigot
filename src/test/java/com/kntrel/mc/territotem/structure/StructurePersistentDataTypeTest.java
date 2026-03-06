@@ -14,14 +14,14 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
 @DisplayName("TotemCandidatePersistentDataType Tests")
-public class StructureCandidatePersistentDataTypeTest {
+public class StructurePersistentDataTypeTest {
 
-    private StructureCandidatePersistentDataType persistentDataType;
+    private StructurePersistentDataType persistentDataType;
     private PersistentDataAdapterContext mockContext;
 
     @BeforeEach
     void setUp() {
-        persistentDataType = StructureCandidatePersistentDataType.instance();
+        persistentDataType = StructurePersistentDataType.instance();
         mockContext = () -> null;
     }
 
@@ -32,15 +32,15 @@ public class StructureCandidatePersistentDataTypeTest {
         @Test
         @DisplayName("Should return same instance on multiple calls")
         void testSingletonInstance() {
-            StructureCandidatePersistentDataType instance1 = StructureCandidatePersistentDataType.instance();
-            StructureCandidatePersistentDataType instance2 = StructureCandidatePersistentDataType.instance();
+            StructurePersistentDataType instance1 = StructurePersistentDataType.instance();
+            StructurePersistentDataType instance2 = StructurePersistentDataType.instance();
             assertSame(instance1, instance2);
         }
 
         @Test
         @DisplayName("Should return non-null instance")
         void testInstanceNotNull() {
-            assertNotNull(StructureCandidatePersistentDataType.instance());
+            assertNotNull(StructurePersistentDataType.instance());
         }
     }
 
