@@ -156,7 +156,17 @@ class StructureServiceTest {
         assertEquals(blueprint.id(), completedEventRef.get().getStructure().blueprint().id());
         assertTrue(this.service.getStructuresInChunk(ChunkKey.ofBlock(origin, this.world.getUID())).isEmpty());
     }
+    @Test
+    @DisplayName("get(UUID) returns tracked structure")
+    void getByIdReturnsTrackedStructure() {
+        var blueprint = MockBlueprints.square4();
+        this.service.registerBlueprint(blueprint).doNotTrack();
 
+        Vec3i origin = new Vec3i(8, 70, 8);
+        Structure tracked = this.service.track(blueprint, origin, this.world, null);
+
+        assertSame(tracked, this.service.get(tracked.id()));
+    }
     private static void waitFor(BooleanSupplier condition) {
         Instant deadline = Instant.now().plus(Duration.ofSeconds(2));
         while (Instant.now().isBefore(deadline)) {
@@ -174,3 +184,4 @@ class StructureServiceTest {
         fail("Timed out waiting for condition.");
     }
 }
+

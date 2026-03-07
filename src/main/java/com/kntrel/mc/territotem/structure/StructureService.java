@@ -52,6 +52,7 @@ public class StructureService {
     private final ChunkPersister chunkPersister_;
     private final Map<Long, Blueprint> blueprints_;
     private final ChunkCache<Structure> structuresByChunk_;
+    private final Map<UUID, Structure> structuresById_;
     private final Map<Structure, ReentrantLock> structureLocks_;
     private final Map<Triplet<Vec3i, UUID, Long>, Structure> trackersMap_;
     private final Executor executor_;
@@ -67,6 +68,7 @@ public class StructureService {
         this.chunkPersister_ = chunkPersister;
         this.blueprints_ = new ConcurrentHashMap<>();
         this.structuresByChunk_ = new ChunkCache<>(c -> ChunkKey.ofBlock(c.origin(), c.world().getUID()));
+        this.structuresById_ = new ConcurrentHashMap<>();
         this.structureLocks_ = new ConcurrentHashMap<>();
         this.trackersMap_ = new ConcurrentHashMap<>();
         this.executor_ = Executors.newVirtualThreadPerTaskExecutor();
@@ -124,6 +126,9 @@ public class StructureService {
         Collection<Structure> structures = List.copyOf(this.structuresByChunk_.get(chunk));
         LOGGER.trace("Retrieved {} structures from chunk {}", structures.size(), chunk);
         return structures;
+    }
+    public Structure get(UUID structureId) {
+        return this.structuresById_.get(structureId);
     }
 
 
@@ -292,6 +297,7 @@ public class StructureService {
             structure = this.runInMainThread(() -> this.newStructure(blueprint, world, origin, assignedStructureId));
             this.trackersMap_.put(trackKey, structure);
             this.structuresByChunk_.put(structure);
+            this.structuresById_.put(structure.id(), structure);
             this.structureLocks_.put(structure, new ReentrantLock());
         }
 
@@ -379,3 +385,4 @@ public class StructureService {
         }
     }
 }
+

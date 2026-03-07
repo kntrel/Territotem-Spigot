@@ -26,6 +26,7 @@ public class Totem {
 
 
     //API
+    public Structure structure() { return this.structure_; }
     public Vec3i origin() {
         return this.structure_.origin();
     }

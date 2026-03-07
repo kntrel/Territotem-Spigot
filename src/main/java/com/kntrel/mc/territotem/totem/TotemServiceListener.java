@@ -1,7 +1,10 @@
 package com.kntrel.mc.territotem.totem;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.kntrel.mc.regionLib.event.BlockRightClickedEvent;
 import com.kntrel.mc.regionLib.region.Region;
+import com.kntrel.mc.regionLib.region.dataContainer.RegionData;
 import com.kntrel.mc.territotem.structure.event.StructureCompletedEvent;
 import com.kntrel.mc.territotem.totem.event.TotemCoreCompletedEvent;
 import com.kntrel.mc.territotem.totem.event.TotemCoreCreatedEvent;
@@ -29,6 +32,11 @@ import java.util.List;
 class TotemServiceListener implements Listener {
 
     private static final List<TotemCore.Direction> DIRECTIONS = Arrays.stream(TotemCore.Direction.values()).toList();
+    private static final String TOTEM_DATA_KEY = "totemData";
+    private static final Gson CLAIM_GSON = new GsonBuilder()
+            .registerTypeAdapter(TotemClaim.class, TotemClaim.serializer())
+            .registerTypeAdapter(TotemClaim.class, TotemClaim.deserializer())
+            .create();
 
     private final TotemService service_;
 
@@ -200,6 +208,16 @@ class TotemServiceListener implements Listener {
                 "totem_region",
                 blueprint.hierarchy()
         );
+        Totem totem = new Totem(e.getStructure(), region);
+        TotemClaim claim = TotemClaim.of(totem);
+        var dataContainer = region.getDataContainer();
+        if (dataContainer != null) {
+            dataContainer.remove(TOTEM_DATA_KEY);
+            dataContainer.add(new RegionData(TOTEM_DATA_KEY, CLAIM_GSON.toJsonTree(claim)));
+            region.save();
+        }
+
+
         if (e.getCauser() instanceof Player p) {
             region.display(p);
             p.sendMessage("regionCreated");
@@ -222,3 +240,5 @@ class TotemServiceListener implements Listener {
         return (dx + dy + dz) == 1;
     }
 }
+
+

@@ -9,6 +9,7 @@ import com.kntrel.mc.territotem.structure.StructureService;
 import com.kntrel.mc.territotem.structure.blueprint.TrackingInfo;
 import com.kntrel.mc.territotem.structure.piece.Piece;
 import com.kntrel.mc.territotem.structure.piece.Tile;
+import com.kntrel.mc.territotem.totem.TotemizedRegionService;
 import com.kntrel.mc.territotem.totem.TotemBlueprint;
 import com.kntrel.mc.territotem.totem.piece.TotemPieces;
 import com.kntrel.mc.territotem.totem.TotemService;
@@ -21,7 +22,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.util.List;
 import java.util.logging.Level;
-
 
 public final class Territotem extends JavaPlugin {
 
@@ -44,6 +44,7 @@ public final class Territotem extends JavaPlugin {
         this.chunkPersister_ = new ChunkPersister(this);
         StructureService structureService = new StructureService(this, this.chunkPersister_);
         TotemService totemService = new TotemService(regionContext, structureService, this.chunkPersister_);
+        new TotemizedRegionService(this);
         structureService.registerBlueprint(createTotemBlueprint(totemService, hierarchy))
                     .on(TotemCoreCompletedEvent.class)
                     .track(e -> {
@@ -86,3 +87,4 @@ public final class Territotem extends JavaPlugin {
         return new TotemBlueprint(25, "totem", tile, bb, hierarchy);
     }
 }
+
