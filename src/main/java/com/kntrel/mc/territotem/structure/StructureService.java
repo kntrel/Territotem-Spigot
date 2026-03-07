@@ -24,7 +24,6 @@ import org.bukkit.entity.Entity;
 import org.bukkit.plugin.Plugin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -237,7 +236,6 @@ public class StructureService {
     }
     private void handleComplete(Structure structure, Entity who, StateChange change) {
         LOGGER.info("Structure completed for blueprint {}", structure.blueprint().id());
-        this.dropStructure(structure);
 
         this.runInMainThreadAsync(() -> {
             this.getServer().getPluginManager().callEvent(new StructureCompletedEvent(structure, who, change.previousState()));
@@ -302,9 +300,7 @@ public class StructureService {
         }
 
         if (structure.isComplete()) {
-            LOGGER.debug("Structure at {} was complete right away.", origin);
             this.handleComplete(structure, causer, new StateChange(Structure.State.EMPTY, Structure.State.COMPLETE));
-            return structure;
         }
 
         this.persistStructuresInChunk(ChunkKey.ofBlock(structure.origin(), structure.world().getUID()));

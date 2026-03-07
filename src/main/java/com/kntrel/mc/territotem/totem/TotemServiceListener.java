@@ -60,17 +60,13 @@ class TotemServiceListener implements Listener {
                 if (previous == TotemCore.State.EMPTY) {
                     core.setState(TotemCore.State.END_EYE);
                 } else if (previous == TotemCore.State.AMETHIST) {
-                    core.setState(TotemCore.State.FULL);
+                    this.completeCore(core, player);
                 }
             } else if (itemStack.getType() == Material.AMETHYST_SHARD) {
                 if (previous == TotemCore.State.EMPTY) {
                     core.setState(TotemCore.State.AMETHIST);
                 } else if (previous == TotemCore.State.END_EYE) {
-                    TotemCoreCompletedEvent coreCompletedEvent = new TotemCoreCompletedEvent(core, player);
-                    this.service_.getServer().getPluginManager().callEvent(coreCompletedEvent);
-                    if (!coreCompletedEvent.isCancelled()) {
-                        core.setState(TotemCore.State.FULL);
-                    }
+                    this.completeCore(core, player);
                 }
             }
 
@@ -194,12 +190,6 @@ class TotemServiceListener implements Listener {
     void onTotemCompletedEvent(StructureCompletedEvent e) {
         if (!(e.getStructure().blueprint() instanceof TotemBlueprint blueprint)) { return; }
 
-        if (blueprint.id() != 25) { return; }
-        Vec3i coreOffset = new Vec3i(0, 2, 0);
-        Tile piece = blueprint.pieceAt(coreOffset);
-        if (piece == null) {return; }
-        piece.place(WorldTileWriter.of(e.getStructure().origin().add(piece.offset()), e.getStructure().world()));
-
         Vector shift = e.getStructure().origin().toDouble();
         Region region = this.service_.getRegionContext().create(
                 e.getCauser(),
@@ -217,10 +207,17 @@ class TotemServiceListener implements Listener {
             region.save();
         }
 
-
         if (e.getCauser() instanceof Player p) {
             region.display(p);
-            p.sendMessage("regionCreated");
+            p.sendMessage("region created");
+        }
+    }
+
+    private void completeCore(TotemCore core, Player player) {
+        TotemCoreCompletedEvent coreCompletedEvent = new TotemCoreCompletedEvent(core, player);
+        this.service_.getServer().getPluginManager().callEvent(coreCompletedEvent);
+        if (!coreCompletedEvent.isCancelled()) {
+            core.setState(TotemCore.State.FULL);
         }
     }
 
@@ -239,6 +236,7 @@ class TotemServiceListener implements Listener {
         int dz = Math.abs(a.z() - b.z());
         return (dx + dy + dz) == 1;
     }
+
 }
 
 

@@ -4,6 +4,7 @@ import com.kntrel.mc.chunkPersistence.ChunkPersister;
 import com.kntrel.mc.regionLib.RegionLib;
 import com.kntrel.mc.regionLib.region.context.RegionContext;
 import com.kntrel.mc.regionLib.region.hierarchy.Hierarchy;
+import com.kntrel.mc.territotem.totem.TotemCore;
 import com.kntrel.mc.territotem.totem.event.TotemCoreCompletedEvent;
 import com.kntrel.mc.territotem.structure.StructureService;
 import com.kntrel.mc.territotem.structure.blueprint.TrackingInfo;
@@ -46,11 +47,16 @@ public final class Territotem extends JavaPlugin {
         TotemService totemService = new TotemService(regionContext, structureService, this.chunkPersister_);
         new TotemizedRegionService(this);
         structureService.registerBlueprint(createTotemBlueprint(totemService, hierarchy))
-                    .on(TotemCoreCompletedEvent.class)
-                    .track(e -> {
-                        Vec3i origin = e.getCore().getCoordinates().subtract(new Vec3i(0, 2, 0));
-                        return new TrackingInfo(origin, e.getCore().getWorld(), e.getCompleter());
-                    });
+                .on(TotemCoreCompletedEvent.class)
+                .when(e -> {
+                    e.getCore().setState(TotemCore.State.ACTIVE);
+                    e.setCancelled(true);
+                    return true;
+                })
+                .track(e -> {
+                    Vec3i origin = e.getCore().getCoordinates().subtract(new Vec3i(0, 2, 0));
+                    return new TrackingInfo(origin, e.getCore().getWorld(), e.getCompleter());
+                });
 
 
         LOGGER.info("Territotem is up and running");

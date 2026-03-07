@@ -154,7 +154,7 @@ class StructureServiceTest {
 
         assertEquals(player, completedEventRef.get().getCauser());
         assertEquals(blueprint.id(), completedEventRef.get().getStructure().blueprint().id());
-        assertTrue(this.service.getStructuresInChunk(ChunkKey.ofBlock(origin, this.world.getUID())).isEmpty());
+        assertEquals(1, this.service.getStructuresInChunk(ChunkKey.ofBlock(origin, this.world.getUID())).size());
     }
     @Test
     @DisplayName("get(UUID) returns tracked structure")
