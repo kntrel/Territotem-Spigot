@@ -18,6 +18,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.material.MaterialData;
 import org.bukkit.metadata.MetadataValue;
 import org.bukkit.persistence.PersistentDataContainer;
+import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.util.*;
 import org.bukkit.util.Vector;
@@ -27,18 +28,23 @@ import java.util.function.Consumer;
 import java.util.function.Predicate;
 
 import static com.kntrel.mc.territotem.test.mock.Mock.*;
+import static org.mockito.Mockito.*;
 
 public class MockWorld implements World {
 
     //FIELDS
     private final String name_;
     private final Map<Vec3i, Block> blockMap_;
+    private final Map<Long, Chunk> chunkMap_;
+    private final PersistentDataContainer persistentDataContainer_;
 
 
     //CONSTRUCTOR
     public MockWorld(String name) {
         this.name_ = name;
         this.blockMap_ = new HashMap<>();
+        this.chunkMap_ = new HashMap<>();
+        this.persistentDataContainer_ = mockPersistentDataContainer();
     }
 
 
@@ -80,87 +86,103 @@ public class MockWorld implements World {
 
     @Override
     public Chunk getChunkAt(int x, int z) {
-        unimplemented();
-        return null;
+        long key = chunkKey(x, z);
+        return this.chunkMap_.computeIfAbsent(key, ignored -> {
+            PersistentDataContainer pdc = mockPersistentDataContainer();
+            return mockChunk(this, x, z, pdc);
+        });
     }
 
     @Override
     public Chunk getChunkAt(int x, int z, boolean generate) {
-        unimplemented();
-        return null;
+        if (!generate) {
+            return this.chunkMap_.get(chunkKey(x, z));
+        }
+        return this.getChunkAt(x, z);
     }
 
     @Override
     public Chunk getChunkAt(Location location) {
-        unimplemented();
-        return null;
+        return this.getChunkAt(location.getBlockX() >> 4, location.getBlockZ() >> 4);
     }
 
     @Override
     public Chunk getChunkAt(Block block) {
-        unimplemented();
-        return null;
+        return this.getChunkAt(block.getX() >> 4, block.getZ() >> 4);
     }
 
     @Override
     public boolean isChunkLoaded(Chunk chunk) {
-        unimplemented();
-        return false;
+        if (chunk == null) {
+            return false;
+        }
+        long key = chunkKey(chunk.getX(), chunk.getZ());
+        return this.chunkMap_.containsKey(key) && this.chunkMap_.get(key) == chunk;
     }
 
     @Override
     public Chunk[] getLoadedChunks() {
-        return new Chunk[0];
+        return this.chunkMap_.values().toArray(Chunk[]::new);
     }
 
     @Override
     public void loadChunk(Chunk chunk) {
-
+        if (chunk == null) {
+            return;
+        }
+        this.chunkMap_.put(chunkKey(chunk.getX(), chunk.getZ()), chunk);
     }
 
     @Override
     public boolean isChunkLoaded(int x, int z) {
-        return false;
+        return this.chunkMap_.containsKey(chunkKey(x, z));
     }
 
     @Override
     public boolean isChunkGenerated(int x, int z) {
-        return false;
+        return this.isChunkLoaded(x, z);
     }
 
     @Override
     public boolean isChunkInUse(int x, int z) {
-        return false;
+        return this.isChunkLoaded(x, z);
     }
 
     @Override
     public void loadChunk(int x, int z) {
-
+        this.getChunkAt(x, z);
     }
 
     @Override
     public boolean loadChunk(int x, int z, boolean generate) {
-        return false;
+        if (!generate && !this.isChunkLoaded(x, z)) {
+            return false;
+        }
+        this.getChunkAt(x, z);
+        return true;
     }
 
     @Override
     public boolean unloadChunk(Chunk chunk) {
-        return false;
+        if (chunk == null) {
+            return false;
+        }
+        return this.unloadChunk(chunk.getX(), chunk.getZ());
     }
 
     @Override
     public boolean unloadChunk(int x, int z) {
-        return false;
+        return this.chunkMap_.remove(chunkKey(x, z)) != null;
     }
 
     @Override
     public boolean unloadChunk(int x, int z, boolean save) {
-        return false;
+        return this.unloadChunk(x, z);
     }
 
     @Override
     public boolean unloadChunkRequest(int x, int z) {
-        return false;
+        return this.unloadChunk(x, z);
     }
 
     @Override
@@ -1295,6 +1317,70 @@ public class MockWorld implements World {
         return Collections.emptyList();
     }
 
+    public static Chunk mockChunk(UUID worldId, int x, int z, PersistentDataContainer pdc) {
+        World world = mock(World.class);
+        when(world.getUID()).thenReturn(worldId);
+        return mockChunk(world, x, z, pdc);
+    }
+
+    public static Chunk mockChunk(World world, int x, int z, PersistentDataContainer pdc) {
+        Chunk chunk = mock(Chunk.class);
+        when(chunk.getWorld()).thenReturn(world);
+        when(chunk.getX()).thenReturn(x);
+        when(chunk.getZ()).thenReturn(z);
+        when(chunk.getPersistentDataContainer()).thenReturn(pdc);
+        return chunk;
+    }
+
+    @SuppressWarnings("unchecked")
+    public static PersistentDataContainer mockPersistentDataContainer() {
+        record StoredEntry(PersistentDataType<?, ?> type, Object value) {}
+        Map<NamespacedKey, StoredEntry> values = new HashMap<>();
+
+        PersistentDataContainer pdc = mock(PersistentDataContainer.class);
+
+        doAnswer(invocation -> {
+            NamespacedKey key = invocation.getArgument(0);
+            PersistentDataType<?, ?> type = invocation.getArgument(1);
+            Object value = invocation.getArgument(2);
+            values.put(key, new StoredEntry(type, value));
+            return null;
+        }).when(pdc).set(any(NamespacedKey.class), any(PersistentDataType.class), any());
+
+        when(pdc.get(any(NamespacedKey.class), any(PersistentDataType.class))).thenAnswer(invocation -> {
+            NamespacedKey key = invocation.getArgument(0);
+            PersistentDataType<?, ?> expectedType = invocation.getArgument(1);
+            StoredEntry entry = values.get(key);
+            if (entry == null || !entry.type.equals(expectedType)) {
+                return null;
+            }
+            return entry.value;
+        });
+
+        doAnswer(invocation -> {
+            NamespacedKey key = invocation.getArgument(0);
+            values.remove(key);
+            return null;
+        }).when(pdc).remove(any(NamespacedKey.class));
+
+        when(pdc.has(any(NamespacedKey.class))).thenAnswer(invocation -> values.containsKey(invocation.getArgument(0)));
+
+        when(pdc.has(any(NamespacedKey.class), any(PersistentDataType.class))).thenAnswer(invocation -> {
+            NamespacedKey key = invocation.getArgument(0);
+            PersistentDataType<?, ?> type = invocation.getArgument(1);
+            StoredEntry entry = values.get(key);
+            return entry != null && entry.type.equals(type);
+        });
+
+        when(pdc.isEmpty()).thenAnswer(invocation -> values.isEmpty());
+        when(pdc.getKeys()).thenAnswer(invocation -> new HashSet<>(values.keySet()));
+
+        return pdc;
+    }
+
+    private static long chunkKey(int x, int z) {
+        return ((long) x << 32) ^ (z & 0xFFFFFFFFL);
+    }
     @Override
     public NamespacedKey getKey() {
         return NamespacedKey.minecraft(this.name_);
@@ -1352,8 +1438,7 @@ public class MockWorld implements World {
 
     @Override
     public PersistentDataContainer getPersistentDataContainer() {
-        unimplemented();
-        return null;
+        return this.persistentDataContainer_;
     }
 
     @Override

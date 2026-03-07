@@ -6,6 +6,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
@@ -17,7 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @DisplayName("StructurePersistentDataType Tests")
 class StructurePersistentDataTypeTest {
 
-    private static final int CANDIDATE_BYTES = 28;
+    private static final int CANDIDATE_BYTES = 29;
 
     private StructurePersistentDataType persistentDataType;
     private PersistentDataAdapterContext mockContext;
@@ -42,11 +43,11 @@ class StructurePersistentDataTypeTest {
     }
 
     @Test
-    @DisplayName("Serialize single candidate into 28-byte record")
-    void serializeSingleCandidateInto28Bytes() {
+    @DisplayName("Serialize single candidate into 29-byte record")
+    void serializeSingleCandidateInto29Bytes() {
         UUID id = UUID.fromString("123e4567-e89b-12d3-a456-426614174000");
         List<StructureChunkData> data = List.of(
-                new StructureChunkData(new Vec3i(10, 64, 20), 12345L, id)
+                new StructureChunkData(new Vec3i(10, 64, 20), 12345L, id, Structure.State.COMPLETE)
         );
 
         byte[] serialized = this.persistentDataType.toPrimitive(data, this.mockContext);
@@ -54,14 +55,15 @@ class StructurePersistentDataTypeTest {
         assertEquals(CANDIDATE_BYTES, serialized.length);
         assertEquals((byte) 10, serialized[0]);
         assertEquals((byte) 20, serialized[1]);
+        assertEquals((byte) Structure.State.COMPLETE.ordinal(), serialized[28]);
     }
 
     @Test
-    @DisplayName("Serialize multiple candidates with fixed 28-byte stride")
+    @DisplayName("Serialize multiple candidates with fixed 29-byte stride")
     void serializeMultipleCandidatesWithFixedStride() {
         List<StructureChunkData> data = List.of(
-                new StructureChunkData(new Vec3i(1, 100, 2), 11L, UUID.randomUUID()),
-                new StructureChunkData(new Vec3i(3, 200, 4), 22L, UUID.randomUUID())
+                new StructureChunkData(new Vec3i(1, 100, 2), 11L, UUID.randomUUID(), Structure.State.EMPTY),
+                new StructureChunkData(new Vec3i(3, 200, 4), 22L, UUID.randomUUID(), Structure.State.IN_PROGRESS)
         );
 
         byte[] serialized = this.persistentDataType.toPrimitive(data, this.mockContext);
@@ -69,13 +71,15 @@ class StructurePersistentDataTypeTest {
         assertEquals(CANDIDATE_BYTES * 2, serialized.length);
         assertEquals((byte) 1, serialized[0]);
         assertEquals((byte) 3, serialized[CANDIDATE_BYTES]);
+        assertEquals((byte) Structure.State.EMPTY.ordinal(), serialized[28]);
+        assertEquals((byte) Structure.State.IN_PROGRESS.ordinal(), serialized[CANDIDATE_BYTES + 28]);
     }
 
     @Test
-    @DisplayName("Deserialize single 28-byte candidate")
+    @DisplayName("Deserialize single 29-byte candidate")
     void deserializeSingleCandidate() {
         UUID id = UUID.fromString("123e4567-e89b-12d3-a456-426614174000");
-        StructureChunkData original = new StructureChunkData(new Vec3i(-7, 255, 9), Long.MAX_VALUE, id);
+        StructureChunkData original = new StructureChunkData(new Vec3i(-7, 255, 9), Long.MAX_VALUE, id, Structure.State.IN_PROGRESS);
 
         byte[] serialized = this.persistentDataType.toPrimitive(List.of(original), this.mockContext);
         List<StructureChunkData> restored = this.persistentDataType.fromPrimitive(serialized, this.mockContext);
@@ -86,6 +90,24 @@ class StructurePersistentDataTypeTest {
         assertEquals(original.offset().z(), restored.get(0).offset().z());
         assertEquals(original.blueprintId(), restored.get(0).blueprintId());
         assertEquals(original.structureId(), restored.get(0).structureId());
+        assertEquals(original.state(), restored.get(0).state());
+    }
+
+    @Test
+    @DisplayName("Deserialize legacy 28-byte candidate defaults state to EMPTY")
+    void deserializeLegacyCandidateDefaultsToEmptyState() {
+        UUID id = UUID.fromString("123e4567-e89b-12d3-a456-426614174001");
+        StructureChunkData original = new StructureChunkData(new Vec3i(5, 40, 6), 77L, id, Structure.State.COMPLETE);
+
+        byte[] serialized = this.persistentDataType.toPrimitive(List.of(original), this.mockContext);
+        byte[] legacy = Arrays.copyOf(serialized, 28);
+        List<StructureChunkData> restored = this.persistentDataType.fromPrimitive(legacy, this.mockContext);
+
+        assertEquals(1, restored.size());
+        assertEquals(original.offset(), restored.get(0).offset());
+        assertEquals(original.blueprintId(), restored.get(0).blueprintId());
+        assertEquals(original.structureId(), restored.get(0).structureId());
+        assertEquals(Structure.State.EMPTY, restored.get(0).state());
     }
 
     @Test
@@ -98,6 +120,7 @@ class StructurePersistentDataTypeTest {
 
         assertEquals(1, restored.size());
         assertEquals(StructureChunkData.UNASSIGNED_ID, restored.get(0).structureId());
+        assertEquals(Structure.State.EMPTY, restored.get(0).state());
     }
 
     @Test

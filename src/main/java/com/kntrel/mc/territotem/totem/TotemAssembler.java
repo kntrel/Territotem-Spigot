@@ -90,7 +90,7 @@ class TotemAssembler {
     public void audit(Chunk chunk) {
         ChunkKey chunkKey = new ChunkKey(chunk);
 
-        Set<PendingAudit> pending = this.pendingAuditsByChunk_.remove(chunkKey);
+        Set<PendingAudit> pending = this.pendingAuditsByChunk_.get(chunkKey);
         if (pending == null || pending.isEmpty()) {
             LOGGER.trace("Loaded chunk ({}, {}) has no orphan claimed totems", chunkKey.x(), chunkKey.z());
             return;

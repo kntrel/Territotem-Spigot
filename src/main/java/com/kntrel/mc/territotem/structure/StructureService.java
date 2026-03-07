@@ -89,7 +89,7 @@ public class StructureService {
         return this.plugin_.getServer();
     }
     public Structure track(Blueprint blueprint, Vec3i origin, World world, Entity causer) {
-        return this.track(blueprint, origin, world, causer, UUID.randomUUID());
+        return this.track(blueprint, origin, world, causer, UUID.randomUUID(), null);
     }
     public void registerBlueprint(BlueprintRegistration registration) {
         this.registerBlueprintInner(registration.blueprint());
@@ -183,21 +183,21 @@ public class StructureService {
         }
 
         LOGGER.info("Found {} totem data in chunk [{}, {}]", data.size(), chunk.getX(), chunk.getZ());
-        for (StructureChunkData structure : data) {
-            Blueprint blueprint = this.blueprints_.get(structure.blueprintId());
+        for (StructureChunkData structureData : data) {
+            Blueprint blueprint = this.blueprints_.get(structureData.blueprintId());
             if (blueprint == null) {
-                LOGGER.warn("Blueprint with ID {} not found in registry", structure.blueprintId());
+                LOGGER.warn("Blueprint with ID {} not found in registry", structureData.blueprintId());
                 continue;
             }
 
             Vec3i origin = new Vec3i(chunk.getX(), 0, chunk.getZ())
                     .shiftLeft(Constants.CHUNK_SHIFT)
-                    .add(structure.offset());
+                    .add(structureData.offset());
 
-            UUID structureId = normalizeStructureId(structure.structureId());
+            UUID structureId = normalizeStructureId(structureData.structureId());
             LOGGER.debug("Restoring totem structure for blueprint {} at origin {}", blueprint.id(), origin);
             this.executor_.execute(() -> {
-                Structure s = this.track(blueprint, origin, chunk.getWorld(), null, structureId);
+                Structure s = this.track(blueprint, origin, chunk.getWorld(), null, structureId, structureData.state());
                 this.runInMainThread(() -> {
                     this.getServer().getPluginManager().callEvent(new StructureLoadedEvent(s));
                     return null;
@@ -227,6 +227,7 @@ public class StructureService {
         LOGGER.trace("Updating structure {} at position {}", structure.blueprint().id(), where);
         StateChange change = this.updateStructure(structure, where);
         if (change == null || change.noChanges()) { return; }
+        this.persistStructuresInChunk(ChunkKey.ofBlock(structure.origin(), structure.world().getUID()));
         if (change.wasCompleted()) {
             this.handleComplete(structure, who, change);
         }
@@ -279,7 +280,7 @@ public class StructureService {
 
 
     //HELPERS
-    private Structure track(Blueprint blueprint, Vec3i origin, World world, Entity causer, UUID structureId) {
+    private Structure track(Blueprint blueprint, Vec3i origin, World world, Entity causer, UUID structureId, Structure.State persistedState) {
         LOGGER.debug("New structure started at {}", origin);
         Triplet<Vec3i, UUID, Long> trackKey = Triplet.of(origin, world.getUID(), blueprint.id());
 
@@ -299,8 +300,15 @@ public class StructureService {
             this.structureLocks_.put(structure, new ReentrantLock());
         }
 
-        if (structure.isComplete()) {
-            this.handleComplete(structure, causer, new StateChange(Structure.State.EMPTY, Structure.State.COMPLETE));
+        Structure.State previousState = (persistedState == null)
+                ? Structure.State.EMPTY
+                : persistedState;
+        StateChange stateChange = new StateChange(previousState, structure.getState());
+        if (stateChange.wasCompleted()) {
+            this.handleComplete(structure, causer, stateChange);
+        }
+        if (stateChange.wasUncompleted()) {
+            this.handleUncompleted(structure, causer, stateChange);
         }
 
         this.persistStructuresInChunk(ChunkKey.ofBlock(structure.origin(), structure.world().getUID()));
@@ -355,7 +363,7 @@ public class StructureService {
 
         List<StructureChunkData> toSerialize = new ArrayList<>(structures.size());
         for (Structure structure : structures) {
-            toSerialize.add(new StructureChunkData(offsetInChunk(structure.origin()), structure.blueprint().id(), structure.id()));
+            toSerialize.add(new StructureChunkData(offsetInChunk(structure.origin()), structure.blueprint().id(), structure.id(), structure.getState()));
         }
         this.chunkPersister_.persist(chunk, this.structuresNSK_, StructurePersistentDataType.instance(), toSerialize);
     }
@@ -381,4 +389,3 @@ public class StructureService {
         }
     }
 }
-

@@ -1,9 +1,9 @@
 package com.kntrel.mc.chunkPersistence;
 
+import com.kntrel.mc.territotem.test.mock.MockWorld;
 import org.bukkit.Chunk;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Server;
-import org.bukkit.World;
 import org.bukkit.event.Listener;
 import org.bukkit.event.world.ChunkUnloadEvent;
 import org.bukkit.persistence.PersistentDataContainer;
@@ -14,26 +14,26 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.UUID;
-
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class ChunkPersisterTest {
 
     private Plugin plugin;
     private ChunkPersister persister;
-    private UUID worldId;
+    private MockWorld world;
 
     @BeforeEach
     void setUp() {
         this.plugin = mockPlugin();
         this.persister = new ChunkPersister(this.plugin);
-        this.worldId = UUID.randomUUID();
+        this.world = new MockWorld("chunk_persister_test_world");
     }
 
     @Test
@@ -126,8 +126,8 @@ class ChunkPersisterTest {
     }
 
     private TestChunk createTestChunk(int x, int z) {
-        PersistentDataContainer pdc = mockPersistentDataContainer();
-        Chunk chunk = mockChunk(this.worldId, x, z, pdc);
+        Chunk chunk = this.world.getChunkAt(x, z);
+        PersistentDataContainer pdc = chunk.getPersistentDataContainer();
         return new TestChunk(chunk, pdc);
     }
 
@@ -144,64 +144,6 @@ class ChunkPersisterTest {
         }).when(pluginManager).registerEvents(any(Listener.class), eq(plugin));
 
         return plugin;
-    }
-
-    private static Chunk mockChunk(UUID worldId, int x, int z, PersistentDataContainer pdc) {
-        World world = mock(World.class);
-        when(world.getUID()).thenReturn(worldId);
-
-        Chunk chunk = mock(Chunk.class);
-        when(chunk.getWorld()).thenReturn(world);
-        when(chunk.getX()).thenReturn(x);
-        when(chunk.getZ()).thenReturn(z);
-        when(chunk.getPersistentDataContainer()).thenReturn(pdc);
-        return chunk;
-    }
-
-    @SuppressWarnings("unchecked")
-    private static PersistentDataContainer mockPersistentDataContainer() {
-        record StoredEntry(PersistentDataType<?, ?> type, Object value) {}
-        Map<NamespacedKey, StoredEntry> values = new HashMap<>();
-
-        PersistentDataContainer pdc = mock(PersistentDataContainer.class);
-
-        doAnswer(invocation -> {
-            NamespacedKey key = invocation.getArgument(0);
-            PersistentDataType<?, ?> type = invocation.getArgument(1);
-            Object value = invocation.getArgument(2);
-            values.put(key, new StoredEntry(type, value));
-            return null;
-        }).when(pdc).set(any(NamespacedKey.class), any(PersistentDataType.class), any());
-
-        when(pdc.get(any(NamespacedKey.class), any(PersistentDataType.class))).thenAnswer(invocation -> {
-            NamespacedKey key = invocation.getArgument(0);
-            PersistentDataType<?, ?> expectedType = invocation.getArgument(1);
-            StoredEntry entry = values.get(key);
-            if (entry == null || !entry.type.equals(expectedType)) {
-                return null;
-            }
-            return entry.value;
-        });
-
-        doAnswer(invocation -> {
-            NamespacedKey key = invocation.getArgument(0);
-            values.remove(key);
-            return null;
-        }).when(pdc).remove(any(NamespacedKey.class));
-
-        when(pdc.has(any(NamespacedKey.class))).thenAnswer(invocation -> values.containsKey(invocation.getArgument(0)));
-
-        when(pdc.has(any(NamespacedKey.class), any(PersistentDataType.class))).thenAnswer(invocation -> {
-            NamespacedKey key = invocation.getArgument(0);
-            PersistentDataType<?, ?> type = invocation.getArgument(1);
-            StoredEntry entry = values.get(key);
-            return entry != null && entry.type.equals(type);
-        });
-
-        when(pdc.isEmpty()).thenAnswer(invocation -> values.isEmpty());
-        when(pdc.getKeys()).thenAnswer(invocation -> new HashSet<>(values.keySet()));
-
-        return pdc;
     }
 
     private record TestChunk(Chunk chunk, PersistentDataContainer pdc) {}
