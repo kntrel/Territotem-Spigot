@@ -36,7 +36,6 @@ public final class Territotem extends JavaPlugin {
     //IMPLEMENTATION
     @Override
     public void onEnable() {
-        wireSlf4jToPluginLogger("com.kntrel", this);
 
         RegionLib.enable(this);
         RegionContext regionContext = RegionLib.createDefaultContext(this);
@@ -68,18 +67,6 @@ public final class Territotem extends JavaPlugin {
         } else {
             this.chunkPersister_.flushAll();
         }
-    }
-
-
-    private static void wireSlf4jToPluginLogger(String rootPackage, Plugin plugin) {
-        var pluginLogger = plugin.getLogger();
-        var pkgLogger = java.util.logging.Logger.getLogger(rootPackage);
-
-        pkgLogger.setParent(pluginLogger);
-        pkgLogger.setUseParentHandlers(true);
-
-        pluginLogger.setLevel(Level.ALL);
-        pkgLogger.setLevel(Level.ALL);
     }
 
     private static TotemBlueprint createTotemBlueprint(TotemService service, Hierarchy hierarchy) {
