@@ -2,8 +2,6 @@ package com.kntrel.mc.territotem.totem.core;
 
 import com.kntrel.mc.chunkPersistence.ChunkPersister;
 import com.kntrel.mc.regionLib.Constants;
-import com.kntrel.mc.regionLib.region.context.RegionContext;
-import com.kntrel.mc.territotem.structure.StructureService;
 import com.kntrel.mc.territotem.structure.worldTile.WorldView;
 import com.kntrel.util.Vec3i;
 import org.bukkit.Chunk;
@@ -28,8 +26,7 @@ public class TotemCoreTracker {
 
 
     //FIELDS
-    private final RegionContext regionContext_;
-    private final StructureService structureService_;
+    private final Plugin plugin_;
     private final ChunkPersister chunkPersister_;
     private final NamespacedKey coresNSK_;
     private final TotemCoreListener listener_;
@@ -38,31 +35,24 @@ public class TotemCoreTracker {
 
 
     //CONSTRUCTORS
-    public TotemCoreTracker(RegionContext regionContext, StructureService structureService, ChunkPersister chunkPersister) {
-        this.regionContext_ = regionContext;
-        this.structureService_ = structureService;
+    public TotemCoreTracker(Plugin plugin, ChunkPersister chunkPersister) {
+        this.plugin_ = plugin;
         this.chunkPersister_ = chunkPersister;
-        this.coresNSK_ = new NamespacedKey(regionContext.getPlugin(), CORES_KEY);
+        this.coresNSK_ = new NamespacedKey(this.plugin_, CORES_KEY);
         this.coresByWorld_ = new ConcurrentHashMap<>();
         this.listener_ = new TotemCoreListener(this);
         this.executor_ = Executors.newVirtualThreadPerTaskExecutor();
 
-        this.regionContext_.getServer().getPluginManager().registerEvents(this.listener_, this.getPlugin());
+        this.plugin_.getServer().getPluginManager().registerEvents(this.listener_, this.plugin_);
     }
 
 
     //GETTERS
-    public RegionContext getRegionContext() {
-        return this.regionContext_;
-    }
     public Plugin getPlugin() {
-        return this.regionContext_.getPlugin();
+        return this.plugin_;
     }
     public Server getServer() {
-        return this.regionContext_.getServer();
-    }
-    public StructureService getStructureService() {
-        return this.structureService_;
+        return this.plugin_.getServer();
     }
 
 

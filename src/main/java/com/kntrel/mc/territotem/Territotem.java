@@ -41,7 +41,7 @@ public final class Territotem extends JavaPlugin {
 
         this.chunkPersister_ = new ChunkPersister(this);
         StructureService structureService = new StructureService(this, this.chunkPersister_);
-        TotemCoreTracker totemCoreTracker = new TotemCoreTracker(regionContext, structureService, this.chunkPersister_);
+        TotemCoreTracker totemCoreTracker = new TotemCoreTracker(this, this.chunkPersister_);
         new TotemService(regionContext);
         structureService.registerBlueprint(createTotemBlueprint(totemCoreTracker, hierarchy))
                 .on(TotemCoreCompletedEvent.class)
