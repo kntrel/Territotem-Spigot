@@ -1,6 +1,6 @@
 package com.kntrel.mc.territotem.totem.event;
 
-import com.kntrel.mc.territotem.totem.TotemCore;
+import com.kntrel.mc.territotem.totem.core.TotemCore;
 import org.bukkit.entity.Entity;
 import org.bukkit.event.Cancellable;
 import org.bukkit.event.Event;

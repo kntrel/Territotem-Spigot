@@ -1,15 +1,11 @@
-package com.kntrel.mc.territotem.totem;
+package com.kntrel.mc.territotem.totem.core;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.kntrel.mc.regionLib.event.BlockRightClickedEvent;
-import com.kntrel.mc.regionLib.region.Region;
-import com.kntrel.mc.regionLib.region.dataContainer.RegionData;
-import com.kntrel.mc.territotem.structure.event.StructureCompletedEvent;
+import com.kntrel.mc.territotem.totem.TotemClaim;
 import com.kntrel.mc.territotem.totem.event.TotemCoreCompletedEvent;
 import com.kntrel.mc.territotem.totem.event.TotemCoreCreatedEvent;
-import com.kntrel.mc.territotem.structure.piece.Tile;
-import com.kntrel.mc.territotem.structure.worldTile.WorldTileWriter;
 import com.kntrel.util.Vec3i;
 import org.bukkit.Chunk;
 import org.bukkit.Material;
@@ -25,11 +21,10 @@ import org.bukkit.event.player.PlayerInteractAtEntityEvent;
 import org.bukkit.event.world.ChunkLoadEvent;
 import org.bukkit.event.world.ChunkUnloadEvent;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.util.Vector;
 import java.util.Arrays;
 import java.util.List;
 
-class TotemServiceListener implements Listener {
+class TotemCoreListener implements Listener {
 
     private static final List<TotemCore.Direction> DIRECTIONS = Arrays.stream(TotemCore.Direction.values()).toList();
     private static final String TOTEM_DATA_KEY = "totemData";
@@ -38,9 +33,9 @@ class TotemServiceListener implements Listener {
             .registerTypeAdapter(TotemClaim.class, TotemClaim.deserializer())
             .create();
 
-    private final TotemService service_;
+    private final TotemCoreTracker service_;
 
-    TotemServiceListener(TotemService service) {
+    TotemCoreListener(TotemCoreTracker service) {
         this.service_ = service;
     }
 
@@ -186,33 +181,6 @@ class TotemServiceListener implements Listener {
         this.service_.unloadChunk(e.getWorld(), c.getX(), c.getZ());
     }
 
-    @EventHandler
-    void onTotemCompletedEvent(StructureCompletedEvent e) {
-        if (!(e.getStructure().blueprint() instanceof TotemBlueprint blueprint)) { return; }
-
-        Vector shift = e.getStructure().origin().toDouble();
-        Region region = this.service_.getRegionContext().create(
-                e.getCauser(),
-                blueprint.initialRegionBounds().shift(shift),
-                e.getStructure().world(),
-                "totem_region",
-                blueprint.hierarchy()
-        );
-        Totem totem = new Totem(e.getStructure(), region);
-        TotemClaim claim = TotemClaim.of(totem);
-        var dataContainer = region.getDataContainer();
-        if (dataContainer != null) {
-            dataContainer.remove(TOTEM_DATA_KEY);
-            dataContainer.add(new RegionData(TOTEM_DATA_KEY, CLAIM_GSON.toJsonTree(claim)));
-            region.save();
-        }
-
-        if (e.getCauser() instanceof Player p) {
-            region.display(p);
-            p.sendMessage("region created");
-        }
-    }
-
     private void completeCore(TotemCore core, Player player) {
         TotemCoreCompletedEvent coreCompletedEvent = new TotemCoreCompletedEvent(core, player);
         this.service_.getServer().getPluginManager().callEvent(coreCompletedEvent);
@@ -238,5 +206,3 @@ class TotemServiceListener implements Listener {
     }
 
 }
-
-

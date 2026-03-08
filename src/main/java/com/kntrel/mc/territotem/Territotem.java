@@ -4,25 +4,23 @@ import com.kntrel.mc.chunkPersistence.ChunkPersister;
 import com.kntrel.mc.regionLib.RegionLib;
 import com.kntrel.mc.regionLib.region.context.RegionContext;
 import com.kntrel.mc.regionLib.region.hierarchy.Hierarchy;
-import com.kntrel.mc.territotem.totem.TotemCore;
+import com.kntrel.mc.territotem.totem.core.TotemCore;
 import com.kntrel.mc.territotem.totem.event.TotemCoreCompletedEvent;
 import com.kntrel.mc.territotem.structure.StructureService;
 import com.kntrel.mc.territotem.structure.blueprint.TrackingInfo;
 import com.kntrel.mc.territotem.structure.piece.Piece;
 import com.kntrel.mc.territotem.structure.piece.Tile;
-import com.kntrel.mc.territotem.totem.TotemizedRegionService;
+import com.kntrel.mc.territotem.totem.TotemService;
 import com.kntrel.mc.territotem.totem.TotemBlueprint;
 import com.kntrel.mc.territotem.totem.piece.TotemPieces;
-import com.kntrel.mc.territotem.totem.TotemService;
+import com.kntrel.mc.territotem.totem.core.TotemCoreTracker;
 import com.kntrel.util.Vec3i;
 import org.bukkit.Material;
-import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.util.BoundingBox;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.util.List;
-import java.util.logging.Level;
 
 public final class Territotem extends JavaPlugin {
 
@@ -43,9 +41,9 @@ public final class Territotem extends JavaPlugin {
 
         this.chunkPersister_ = new ChunkPersister(this);
         StructureService structureService = new StructureService(this, this.chunkPersister_);
-        TotemService totemService = new TotemService(regionContext, structureService, this.chunkPersister_);
-        new TotemizedRegionService(this);
-        structureService.registerBlueprint(createTotemBlueprint(totemService, hierarchy))
+        TotemCoreTracker totemCoreTracker = new TotemCoreTracker(regionContext, structureService, this.chunkPersister_);
+        new TotemService(this);
+        structureService.registerBlueprint(createTotemBlueprint(totemCoreTracker, hierarchy))
                 .on(TotemCoreCompletedEvent.class)
                 .when(e -> {
                     e.getCore().setState(TotemCore.State.ACTIVE);
@@ -69,7 +67,7 @@ public final class Territotem extends JavaPlugin {
         }
     }
 
-    private static TotemBlueprint createTotemBlueprint(TotemService service, Hierarchy hierarchy) {
+    private static TotemBlueprint createTotemBlueprint(TotemCoreTracker service, Hierarchy hierarchy) {
         List<Tile> tile = List.of(
                 new Tile(0, 2, 0, TotemPieces.core(service)),
                 new Tile(0, 1, 0, Piece.block(Material.OBSIDIAN)),

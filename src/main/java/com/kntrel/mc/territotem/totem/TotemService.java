@@ -1,238 +1,208 @@
 package com.kntrel.mc.territotem.totem;
 
-import com.kntrel.mc.chunkPersistence.ChunkPersister;
-import com.kntrel.mc.regionLib.Constants;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonElement;
+import com.kntrel.mc.regionLib.event.RegionLoadEvent;
+import com.kntrel.mc.regionLib.region.Region;
 import com.kntrel.mc.regionLib.region.context.RegionContext;
-import com.kntrel.mc.territotem.structure.StructureService;
-import com.kntrel.mc.territotem.structure.worldTile.WorldView;
-import com.kntrel.util.Vec3i;
+import com.kntrel.mc.regionLib.region.dataContainer.RegionData;
+import com.kntrel.mc.regionLib.region.dataContainer.RegionDataContainer;
+import com.kntrel.mc.territotem.structure.Structure;
+import com.kntrel.mc.territotem.structure.event.StructureCompletedEvent;
+import com.kntrel.mc.territotem.structure.event.StructureLoadedEvent;
+import com.kntrel.mc.territotem.util.ChunkKey;
 import org.bukkit.Chunk;
-import org.bukkit.NamespacedKey;
-import org.bukkit.Server;
 import org.bukkit.World;
-import org.bukkit.block.Block;
+import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.world.ChunkLoadEvent;
 import org.bukkit.plugin.Plugin;
+import org.bukkit.util.Vector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import java.util.*;
-import java.util.concurrent.CompletableFuture;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
 
-public class TotemService {
+public class TotemService implements Listener {
 
     //CONSTANTS
     private static final Logger LOGGER = LoggerFactory.getLogger(TotemService.class);
-    private static final String CORES_KEY = "totem_cores";
+    private static final String TOTEM_DATA_KEY = "totemData";
+    private static final Gson GSON = new GsonBuilder()
+            .registerTypeAdapter(TotemClaim.class, TotemClaim.serializer())
+            .registerTypeAdapter(TotemClaim.class, TotemClaim.deserializer())
+            .create();
 
 
     //FIELDS
     private final RegionContext regionContext_;
-    private final StructureService structureService_;
-    private final ChunkPersister chunkPersister_;
-    private final NamespacedKey coresNSK_;
-    private final TotemServiceListener listener_;
-    private final Map<UUID, Map<Vec3i, TotemCore>> coresByWorld_;
-    private final Executor executor_;
+    private final Plugin plugin_;
+    private final TotemAssembler assembler_;
+    private final Map<UUID, Totem> totemsByStructure_;
+    private final Map<ChunkKey, Map<UUID, PendingExpectation>> pendingExpectationsByChunk_;
+    private final Map<ChunkKey, Map<UUID, Structure>> pendingIngestionsByChunk_;
+    private final Set<ChunkKey> scheduledAudits_;
 
 
-    //CONSTRUCTORS
-    public TotemService(RegionContext regionContext, StructureService structureService, ChunkPersister chunkPersister) {
+    //CONSTRUCTOR
+    public TotemService(RegionContext regionContext) {
         this.regionContext_ = regionContext;
-        this.structureService_ = structureService;
-        this.chunkPersister_ = chunkPersister;
-        this.coresNSK_ = new NamespacedKey(regionContext.getPlugin(), CORES_KEY);
-        this.coresByWorld_ = new ConcurrentHashMap<>();
-        this.listener_ = new TotemServiceListener(this);
-        this.executor_ = Executors.newVirtualThreadPerTaskExecutor();
+        this.plugin_ = this.regionContext_.getPlugin();
+        this.assembler_ = new TotemAssembler();
+        this.totemsByStructure_ = new ConcurrentHashMap<>();
+        this.pendingExpectationsByChunk_ = new ConcurrentHashMap<>();
+        this.pendingIngestionsByChunk_ = new ConcurrentHashMap<>();
+        this.scheduledAudits_ = ConcurrentHashMap.newKeySet();
 
-        this.regionContext_.getServer().getPluginManager().registerEvents(this.listener_, this.getPlugin());
+        this.assembler_.consume(totem -> this.totemsByStructure_.put(totem.structure().id(), totem));
+        this.plugin_.getServer().getPluginManager().registerEvents(this, this.plugin_);
     }
 
 
-    //GETTERS
-    public RegionContext getRegionContext() {
-        return this.regionContext_;
-    }
-    public Plugin getPlugin() {
-        return this.regionContext_.getPlugin();
-    }
-    public Server getServer() {
-        return this.regionContext_.getServer();
-    }
-    public StructureService getStructureService() {
-        return this.structureService_;
+    //API
+    public Map<UUID, Totem> totemsByStructure() {
+        return Collections.unmodifiableMap(this.totemsByStructure_);
     }
 
 
-    //SERVICES
-    public TotemCore createCore(Vec3i coordinates, World world, TotemCore.State state, TotemCore.Direction direction) {
-        Map<Vec3i, TotemCore> worldCores = this.coresByWorld_.computeIfAbsent(world.getUID(), ignored -> new ConcurrentHashMap<>());
-        TotemCore existing = worldCores.get(coordinates);
-        if (existing != null) {
-            existing.kill();
-            existing.setState(state);
-            existing.setDirection(direction);
-            this.persistCore(existing);
-            return existing;
+    //LISTENERS
+    @EventHandler void onRegionLoad(RegionLoadEvent e) {
+        Region region = e.getRegion();
+        TotemClaim claim = readClaim(region);
+        if (claim == null) { return; }
+
+        ChunkKey chunkKey = new ChunkKey(claim.chunkX(), claim.chunkZ(), region.getWorld());
+        this.enqueueExpectation(chunkKey, claim, region);
+        this.scheduleAudit(chunkKey);
+    }
+
+    @EventHandler void onStructureLoad(StructureLoadedEvent e) {
+        Structure structure = e.getStructure();
+        if (!(structure.blueprint() instanceof TotemBlueprint)) { return; }
+
+        ChunkKey chunkKey = ChunkKey.ofBlock(structure.origin(), structure.world().getUID());
+        this.enqueueIngestion(chunkKey, structure);
+        this.scheduleAudit(chunkKey);
+    }
+
+    @EventHandler void onChunkLoad(ChunkLoadEvent e) {
+        this.scheduleAudit(new ChunkKey(e.getChunk()));
+    }
+    @EventHandler void onTotemCompletedEvent(StructureCompletedEvent e) {
+        if (!(e.getStructure().blueprint() instanceof TotemBlueprint blueprint)) { return; }
+
+        Vector shift = e.getStructure().origin().toDouble();
+        Region region = this.regionContext_.create(
+                e.getCauser(),
+                blueprint.initialRegionBounds().shift(shift),
+                e.getStructure().world(),
+                "totem_region",
+                blueprint.hierarchy()
+        );
+        Totem totem = new Totem(e.getStructure(), region);
+        TotemClaim claim = TotemClaim.of(totem);
+        var dataContainer = region.getDataContainer();
+        if (dataContainer != null) {
+            dataContainer.remove(TOTEM_DATA_KEY);
+            dataContainer.add(new RegionData(TOTEM_DATA_KEY, GSON.toJsonTree(claim)));
+            region.save();
         }
 
-        TotemCore core = new TotemCore(coordinates, world, state, direction);
-        worldCores.put(coordinates, core);
-        this.persistCore(core);
-        return core;
-    }
-
-    public void breakCore(TotemCore core) {
-        core.breakDown();
-        this.destroyCore(core);
-    }
-
-    public boolean breakCore(Block block) {
-        TotemCore core = this.getCore(block);
-        if (core == null) {
-            return false;
+        if (e.getCauser() instanceof Player p) {
+            region.display(p);
+            p.sendMessage("region created");
         }
-
-        core.breakDown();
-        this.destroyCore(core);
-        return true;
-    }
-
-    public Collection<TotemCore> getLoadedCores() {
-        List<TotemCore> out = new ArrayList<>();
-        for (Map<Vec3i, TotemCore> worldCores : this.coresByWorld_.values()) {
-            out.addAll(worldCores.values());
-        }
-        return Collections.unmodifiableList(out);
-    }
-
-    public boolean isCoreAt(World world, Vec3i coordinates) {
-        return this.getCoreAt(world.getUID(), coordinates) != null;
-    }
-
-    public boolean isCore(Block block) {
-        return this.isCoreAt(block.getWorld(), Vec3i.ofBlock(block));
-    }
-
-    public CompletableFuture<List<TotemCore>> getNearByCores(World world, Vec3i coordinates) {
-
-        Map<Vec3i, TotemCore> worldTotems = this.coresByWorld_.get(world.getUID());
-        if (worldTotems == null) { return CompletableFuture.completedFuture(Collections.emptyList()); }
-
-        int     chunkX = coordinates.x() >> Constants.CHUNK_SHIFT,
-                chunkZ = coordinates.z() >> Constants.CHUNK_SHIFT,
-                minX = (chunkX - 1) << Constants.CHUNK_SHIFT,
-                minZ = (chunkZ - 1) << Constants.CHUNK_SHIFT,
-                maxX = ((chunkX + 2) << Constants.CHUNK_SHIFT) - 1,
-                maxZ = ((chunkZ + 2) << Constants.CHUNK_SHIFT) - 1;
-
-        return this.coresIn(minX, minZ, maxX, maxZ, world.getUID());
-
-    }
-
-    public CompletableFuture<List<TotemCore>> getNearByCores(Block block) {
-        return this.getNearByCores(block.getWorld(), Vec3i.ofBlock(block));
-    }
-
-    public void destroyCore(TotemCore core) {
-        this.unloadCore(core);
-        this.persistChunk(core.getWorld(), core.getCoordinates().x() >> Constants.CHUNK_SHIFT, core.getCoordinates().z() >> Constants.CHUNK_SHIFT);
-    }
-
-    public void persistCore(TotemCore core) {
-        this.persistChunk(core.getWorld(), core.getCoordinates().x() >> Constants.CHUNK_SHIFT, core.getCoordinates().z() >> Constants.CHUNK_SHIFT);
-    }
-
-    public TotemCore getCoreAt(UUID worldUUID, Vec3i coordinates) {
-        Map<Vec3i, TotemCore> worldCores = this.coresByWorld_.get(worldUUID);
-        if (worldCores == null) {
-            return null;
-        }
-        return worldCores.get(coordinates);
-    }
-
-    public TotemCore getCoreAt(WorldView world, Vec3i coordinates) {
-        Map<Vec3i, TotemCore> worldCores = this.coresByWorld_.get(world.id());
-        if (worldCores == null) {
-            return null;
-        }
-        return worldCores.get(coordinates);
-    }
-
-    public TotemCore getCore(Block block) {
-        return this.getCoreAt(block.getWorld().getUID(), Vec3i.ofBlock(block));
-    }
-
-    void handleChunkLoad(Chunk chunk) {
-        List<TotemCoreChunkData> cores = this.chunkPersister_.retrieve(chunk, this.coresNSK_, TotemCorePersistentDataType.instance());
-        if (cores == null || cores.isEmpty()) {
-            return;
-        }
-
-        int baseX = chunk.getX() * Constants.CHUNK_SIZE;
-        int baseZ = chunk.getZ() * Constants.CHUNK_SIZE;
-
-        for (TotemCoreChunkData data : cores) {
-            Vec3i absolute = data.offset().add(new Vec3i(baseX, 0, baseZ));
-            this.createCore(absolute, chunk.getWorld(), data.state(), data.direction());
-        }
-
-        LOGGER.debug("Deserialized {} totem cores in chunk [{}, {}]", cores.size(), chunk.getX(), chunk.getZ());
     }
 
 
     //HELPERS
-    void unloadCore(TotemCore core) {
-        core.kill();;
-        Map<Vec3i, TotemCore> worldCores = this.coresByWorld_.get(core.getWorld().getUID());
-        if (worldCores == null) { return; }
+    private void scheduleAudit(ChunkKey chunkKey) {
+        if (!this.scheduledAudits_.add(chunkKey)) { return; }
 
-        worldCores.remove(core.getCoordinates());
-        if (worldCores.isEmpty()) {
-            this.coresByWorld_.remove(core.getWorld().getUID());
+        // Delay one tick so RegionLoadEvent/StructureLoadedEvent can be captured first.
+        // RegionLoadEvent is deferred by RegionLib one tick after ChunkLoadEvent, so the delay is 2
+        this.plugin_.getServer().getScheduler().runTaskLater(this.plugin_, () -> this.processChunk(chunkKey), 8);
+    }
+
+    private void processChunk(ChunkKey chunkKey) {
+        this.scheduledAudits_.remove(chunkKey);
+
+        World world = this.plugin_.getServer().getWorld(chunkKey.world());
+        if (world == null || !world.isChunkLoaded(chunkKey.x(), chunkKey.z())) { return; }
+
+        Chunk chunk = world.getChunkAt(chunkKey.x(), chunkKey.z());
+
+        Map<UUID, PendingExpectation> expectations = this.pendingExpectationsByChunk_.remove(chunkKey);
+        if (expectations != null) {
+            for (PendingExpectation expectation : expectations.values()) {
+                this.assembler_.expect(expectation.claim(), expectation.region());
+            }
         }
+
+        Map<UUID, Structure> ingestions = this.pendingIngestionsByChunk_.remove(chunkKey);
+        if (ingestions != null) {
+            for (Structure structure : ingestions.values()) {
+                this.assembler_.ingest(structure);
+            }
+        }
+
+        this.assembler_.audit(chunk);
     }
 
-    void unloadChunk(World world, int chunkX, int chunkZ) {
-        int baseX = chunkX << Constants.CHUNK_SHIFT;
-        int baseZ = chunkZ << Constants.CHUNK_SHIFT;
-
-        this.coresIn(baseX, baseZ, baseX + Constants.CHUNK_SIZE, baseZ + Constants.CHUNK_SIZE, world.getUID())
-                .thenAccept(l -> this.getServer().getScheduler().runTask(this.getPlugin(), () -> l.forEach(this::unloadCore)));
+    private void enqueueExpectation(ChunkKey chunkKey, TotemClaim claim, Region region) {
+        this.pendingExpectationsByChunk_.compute(chunkKey, (ign, pending) -> {
+            Map<UUID, PendingExpectation> out = (pending == null) ? new LinkedHashMap<>() : pending;
+            out.put(claim.structureId(), new PendingExpectation(claim, region));
+            return out;
+        });
     }
 
-    private void persistChunk(World world, int chunkX, int chunkZ) {
-        if (!world.isChunkLoaded(chunkX, chunkZ)) { return; }
-
-        int baseX = chunkX << Constants.CHUNK_SHIFT;
-        int baseZ = chunkZ << Constants.CHUNK_SHIFT;
-        Chunk chunk = world.getChunkAt(chunkX, chunkZ);
-
-        this.coresIn(baseX, baseZ, baseX + Constants.CHUNK_SIZE, baseZ + Constants.CHUNK_SIZE, world.getUID())
-            .thenAccept(l -> {
-                List<TotemCoreChunkData> serialized = new ArrayList<>();
-                for (TotemCore core : l) {
-                    Vec3i pos = core.getCoordinates();
-                    Vec3i rel = new Vec3i(pos.x() - baseX, pos.y(), pos.z() - baseZ);
-                    serialized.add(new TotemCoreChunkData(rel, core.getState(), core.getDirection()));
-                }
-                this.chunkPersister_.persist(chunk, this.coresNSK_, TotemCorePersistentDataType.instance(), serialized);
-            });
+    private void enqueueIngestion(ChunkKey chunkKey, Structure structure) {
+        this.pendingIngestionsByChunk_.compute(chunkKey, (ignored, pending) -> {
+            Map<UUID, Structure> out = (pending == null) ? new LinkedHashMap<>() : pending;
+            out.put(structure.id(), structure);
+            return out;
+        });
     }
 
-    private CompletableFuture<List<TotemCore>> coresIn(int minX, int minZ, int maxX, int maxZ, UUID world) {
-        return CompletableFuture.supplyAsync(() -> {
-            Map<Vec3i, TotemCore> worldCores = this.coresByWorld_.get(world);
-            if (worldCores == null) { return Collections.emptyList(); }
-            return worldCores.values().stream()
-                .filter(c -> {
-                    Vec3i v = c.getCoordinates();
-                    return v.x() >= minX && v.x() <= maxX && v.z() >= minZ && v.z() <= maxZ;
-                })
-                .toList();
-        }, this.executor_);
+    private static TotemClaim readClaim(Region region) {
+        RegionDataContainer dataContainer = region.getDataContainer();
+        if (dataContainer == null || !dataContainer.has(TOTEM_DATA_KEY)) {
+            return null;
+        }
+
+        RegionData raw = dataContainer.get(TOTEM_DATA_KEY);
+        if (raw == null) {
+            return null;
+        }
+
+        JsonElement value = raw.getValue();
+        if (value == null || value.isJsonNull()) {
+            return null;
+        }
+
+        try {
+            TotemClaim claim = GSON.fromJson(value, TotemClaim.class);
+            if (claim != null) { return claim; }
+        } catch (Exception ignored) {}
+
+        LOGGER.warn(
+                "Region {} is totemized, but its totemData entry is corrupted or invalid. Destroying\nEntry: '{}'",
+                region.getId(),
+                value
+        );
+        region.destroy();
+        return null;
     }
+
+
+    //SUBTYPES
+    private record PendingExpectation(TotemClaim claim, Region region) {}
 }
 

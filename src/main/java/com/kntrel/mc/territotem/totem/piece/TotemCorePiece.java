@@ -1,19 +1,18 @@
 package com.kntrel.mc.territotem.totem.piece;
 
-import com.kntrel.mc.territotem.structure.piece.Piece;
 import com.kntrel.mc.territotem.structure.worldTile.WorldTile;
 import com.kntrel.mc.territotem.structure.worldTile.WorldTileWriter;
-import com.kntrel.mc.territotem.totem.TotemCore;
-import com.kntrel.mc.territotem.totem.TotemService;
+import com.kntrel.mc.territotem.totem.core.TotemCore;
+import com.kntrel.mc.territotem.totem.core.TotemCoreTracker;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-public record TotemCorePiece(TotemService service) implements TotemPiece {
+public record TotemCorePiece(TotemCoreTracker service) implements TotemPiece {
 
     //SINGLETON
-    private static final Map<TotemService, TotemCorePiece> PIECE_MAP = new ConcurrentHashMap<>();
-    public static TotemCorePiece ofService(TotemService totemService) {
-        return PIECE_MAP.computeIfAbsent(totemService, TotemCorePiece::new);
+    private static final Map<TotemCoreTracker, TotemCorePiece> PIECE_MAP = new ConcurrentHashMap<>();
+    public static TotemCorePiece ofTracker(TotemCoreTracker totemCoreTracker) {
+        return PIECE_MAP.computeIfAbsent(totemCoreTracker, TotemCorePiece::new);
     }
 
 

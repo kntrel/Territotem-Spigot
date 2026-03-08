@@ -1,4 +1,4 @@
-package com.kntrel.mc.territotem.totem;
+package com.kntrel.mc.territotem.totem.core;
 
 import com.kntrel.util.Vec3i;
 
