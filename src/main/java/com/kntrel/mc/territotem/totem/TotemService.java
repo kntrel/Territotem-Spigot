@@ -22,11 +22,7 @@ import org.bukkit.plugin.Plugin;
 import org.bukkit.util.Vector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class TotemService implements Listener {
@@ -44,10 +40,10 @@ public class TotemService implements Listener {
     private final RegionContext regionContext_;
     private final Plugin plugin_;
     private final TotemAssembler assembler_;
-    private final Map<UUID, Totem> totemsByStructure_;
     private final Map<ChunkKey, Map<UUID, PendingExpectation>> pendingExpectationsByChunk_;
     private final Map<ChunkKey, Map<UUID, Structure>> pendingIngestionsByChunk_;
     private final Set<ChunkKey> scheduledAudits_;
+    private final TotemStore totemStore_;
 
 
     //CONSTRUCTOR
@@ -55,19 +51,22 @@ public class TotemService implements Listener {
         this.regionContext_ = regionContext;
         this.plugin_ = this.regionContext_.getPlugin();
         this.assembler_ = new TotemAssembler();
-        this.totemsByStructure_ = new ConcurrentHashMap<>();
         this.pendingExpectationsByChunk_ = new ConcurrentHashMap<>();
         this.pendingIngestionsByChunk_ = new ConcurrentHashMap<>();
         this.scheduledAudits_ = ConcurrentHashMap.newKeySet();
+        this.totemStore_ = new TotemStore();
 
-        this.assembler_.consume(totem -> this.totemsByStructure_.put(totem.structure().id(), totem));
+        this.assembler_.consume(this::loadTotem);
         this.plugin_.getServer().getPluginManager().registerEvents(this, this.plugin_);
     }
 
 
     //API
-    public Map<UUID, Totem> totemsByStructure() {
-        return Collections.unmodifiableMap(this.totemsByStructure_);
+    public List<Totem> totemsAtChunk(int x, int z, World world) {
+        return this.totemStore_.getAtChunk(x, z, world);
+    }
+    public Optional<Totem> totemOfRegion(Region region) {
+        return this.totemStore_.getFromRegion(region);
     }
 
 
@@ -94,18 +93,29 @@ public class TotemService implements Listener {
     @EventHandler void onChunkLoad(ChunkLoadEvent e) {
         this.scheduleAudit(new ChunkKey(e.getChunk()));
     }
-    @EventHandler void onTotemCompletedEvent(StructureCompletedEvent e) {
-        if (!(e.getStructure().blueprint() instanceof TotemBlueprint blueprint)) { return; }
+    @EventHandler void onTotemCompleted(StructureCompletedEvent e) {
+        Structure structure = e.getStructure();
+        if (!(structure.blueprint() instanceof TotemBlueprint blueprint)) { return; }
 
-        Vector shift = e.getStructure().origin().toDouble();
+        Totem totem = this.totemStore_.get(structure.id()).orElse(null);
+        if (totem != null) {
+            totem.setEnabled(true);
+            return;
+        }
+
+        Vector shift = structure.origin().toDouble();
+        String name = (e.getCauser() == null || !(e.getCauser() instanceof Player p))
+                ? "Unnamed region"
+                : p.getName() + "'s region";
+
         Region region = this.regionContext_.create(
                 e.getCauser(),
                 blueprint.initialRegionBounds().shift(shift),
                 e.getStructure().world(),
-                "totem_region",
+                name,
                 blueprint.hierarchy()
         );
-        Totem totem = new Totem(e.getStructure(), region);
+        totem = new Totem(e.getStructure(), region);
         TotemClaim claim = TotemClaim.of(totem);
         var dataContainer = region.getDataContainer();
         if (dataContainer != null) {
@@ -116,12 +126,17 @@ public class TotemService implements Listener {
 
         if (e.getCauser() instanceof Player p) {
             region.display(p);
-            p.sendMessage("region created");
+            p.sendMessage("Created " + name);
         }
+
+        this.loadTotem(totem);
     }
 
 
     //HELPERS
+    private void loadTotem(Totem totem) {
+        this.totemStore_.add(totem);
+    }
     private void scheduleAudit(ChunkKey chunkKey) {
         if (!this.scheduledAudits_.add(chunkKey)) { return; }
 

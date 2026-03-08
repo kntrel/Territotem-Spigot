@@ -6,6 +6,8 @@ import com.kntrel.mc.territotem.structure.blueprint.InvalidBlueprintException;
 import com.kntrel.util.Vec3i;
 import org.bukkit.World;
 
+import java.util.UUID;
+
 public class Totem {
 
     //FIELDS
@@ -26,7 +28,12 @@ public class Totem {
 
 
     //API
-    public Structure structure() { return this.structure_; }
+    public Structure structure() {
+        return this.structure_;
+    }
+    public UUID id() {
+        return this.structure_.id();
+    }
     public Vec3i origin() {
         return this.structure_.origin();
     }
