@@ -7,7 +7,7 @@ import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 import org.jspecify.annotations.NonNull;
 
-public class TotemCoreCreatedEvent extends Event implements Cancellable {
+public class TotemCoreCreatedEvent extends TotemCoreEvent implements Cancellable {
 
     //EVENT-REQUIRED ================================================
     private static final HandlerList HANDLERS = new HandlerList();
@@ -18,23 +18,19 @@ public class TotemCoreCreatedEvent extends Event implements Cancellable {
 
 
     //FIELDS
-    private final TotemCore core_;
     private final Entity creator_;
     private boolean cancelled_;
 
 
     //CONSTRUCTOR
     public TotemCoreCreatedEvent(TotemCore core, Entity by) {
-        this.core_ = core;
+        super(core);
         this.creator_ = by;
         this.cancelled_ = false;
     }
 
 
     //GETTERS
-    public TotemCore getCore() {
-        return core_;
-    }
     public Entity getCreator() {
         return creator_;
     }

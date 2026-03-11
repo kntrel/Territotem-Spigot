@@ -7,6 +7,8 @@ import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.entity.*;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.metadata.FixedMetadataValue;
+import org.bukkit.plugin.Plugin;
 import org.bukkit.util.Transformation;
 import org.bukkit.util.Vector;
 import org.joml.AxisAngle4f;
@@ -15,7 +17,7 @@ import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 import java.util.Map;
 import java.util.Objects;
-
+import java.util.UUID;
 
 public class TotemCore {
 
@@ -33,6 +35,7 @@ public class TotemCore {
             Direction.NORTH, new Vector3f(.4f, .8f, -.1f),
             Direction.SOUTH, new Vector3f(.4f, .8f, .9f)
     );
+    static final String METADATA_KEY = "totem_core";
 
 
     //ENUMS
@@ -47,6 +50,8 @@ public class TotemCore {
 
 
     //FIELDS
+    private final UUID id_;
+    private final Plugin plugin_;
     private final Vec3i coordinates_;
     private final World world_;
     private BlockDisplay amethist_, directional_;
@@ -56,7 +61,9 @@ public class TotemCore {
     private Direction direction_;
 
 
-    TotemCore(Vec3i coordinates, World world, State state, Direction direction) {
+    TotemCore(Plugin plugin, Vec3i coordinates, World world, State state, Direction direction) {
+        this.id_ = UUID.randomUUID();
+        this.plugin_ = plugin;
         this.coordinates_ = coordinates;
         this.world_ = world;
         this.amethist_ = null;
@@ -69,12 +76,15 @@ public class TotemCore {
         this.setState(state);
         this.setDirection(direction);
     }
-    TotemCore(Vec3i coordinates, World world, State state) {
-        this(coordinates, world,  state, Direction.ALL);
+    TotemCore(Plugin plugin, Vec3i coordinates, World world, State state) {
+        this(plugin, coordinates, world,  state, Direction.ALL);
     }
 
 
     //GETTERS
+    public UUID getRuntimeId() {
+        return this.id_;
+    }
     public Vec3i getCoordinates() {
         return this.coordinates_;
     }
@@ -98,6 +108,9 @@ public class TotemCore {
     }
     public Direction getDirection() {
         return this.direction_;
+    }
+    public Location getCenter() {
+        return this.location(CENTER);
     }
 
 
@@ -235,8 +248,9 @@ public class TotemCore {
     private void refinishHitBox() {
         if (this.hitBox_ == null) { return; }
 
-        this.hitBox_.setInteractionHeight(1);
-        this.hitBox_.setInteractionWidth(1);
+        this.hitBox_.setMetadata(METADATA_KEY, new FixedMetadataValue(this.plugin_, this.id_.toString()));
+        this.hitBox_.setInteractionHeight(1.4f);
+        this.hitBox_.setInteractionWidth(1.3f);
         this.hitBox_.teleport(this.location(CENTER_BOTTOM));
     }
     public void refinishDirectional() {

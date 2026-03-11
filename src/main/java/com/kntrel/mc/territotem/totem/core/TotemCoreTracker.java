@@ -10,6 +10,7 @@ import org.bukkit.Server;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.plugin.Plugin;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.util.*;
@@ -31,6 +32,7 @@ public class TotemCoreTracker {
     private final NamespacedKey coresNSK_;
     private final TotemCoreListener listener_;
     private final Map<UUID, Map<Vec3i, TotemCore>> coresByWorld_;
+    private final Map<UUID, TotemCore> coresById_;
     private final Executor executor_;
 
 
@@ -41,6 +43,7 @@ public class TotemCoreTracker {
         this.coresNSK_ = new NamespacedKey(this.plugin_, CORES_KEY);
         this.coresByWorld_ = new ConcurrentHashMap<>();
         this.listener_ = new TotemCoreListener(this);
+        this.coresById_ = new ConcurrentHashMap<>();
         this.executor_ = Executors.newVirtualThreadPerTaskExecutor();
 
         this.plugin_.getServer().getPluginManager().registerEvents(this.listener_, this.plugin_);
@@ -68,8 +71,9 @@ public class TotemCoreTracker {
             return existing;
         }
 
-        TotemCore core = new TotemCore(coordinates, world, state, direction);
+        TotemCore core = new TotemCore(this.plugin_, coordinates, world, state, direction);
         worldCores.put(coordinates, core);
+        this.coresById_.put(core.getRuntimeId(), core);
         this.persistCore(core);
         return core;
     }
@@ -85,8 +89,7 @@ public class TotemCoreTracker {
             return false;
         }
 
-        core.breakDown();
-        this.destroyCore(core);
+        this.breakCore(core);
         return true;
     }
 
@@ -135,7 +138,7 @@ public class TotemCoreTracker {
         this.persistChunk(core.getWorld(), core.getCoordinates().x() >> Constants.CHUNK_SHIFT, core.getCoordinates().z() >> Constants.CHUNK_SHIFT);
     }
 
-    public TotemCore getCoreAt(UUID worldUUID, Vec3i coordinates) {
+    public @Nullable TotemCore getCoreAt(UUID worldUUID, Vec3i coordinates) {
         Map<Vec3i, TotemCore> worldCores = this.coresByWorld_.get(worldUUID);
         if (worldCores == null) {
             return null;
@@ -143,16 +146,16 @@ public class TotemCoreTracker {
         return worldCores.get(coordinates);
     }
 
-    public TotemCore getCoreAt(WorldView world, Vec3i coordinates) {
-        Map<Vec3i, TotemCore> worldCores = this.coresByWorld_.get(world.id());
-        if (worldCores == null) {
-            return null;
-        }
-        return worldCores.get(coordinates);
+    public @Nullable TotemCore getCoreAt(WorldView world, Vec3i coordinates) {
+        return this.getCoreAt(world.id(), coordinates);
     }
 
-    public TotemCore getCore(Block block) {
+    public @Nullable TotemCore getCore(Block block) {
         return this.getCoreAt(block.getWorld().getUID(), Vec3i.ofBlock(block));
+    }
+
+    public @Nullable TotemCore getCore(UUID id) {
+        return this.coresById_.get(id);
     }
 
     void handleChunkLoad(Chunk chunk) {
@@ -183,6 +186,7 @@ public class TotemCoreTracker {
         if (worldCores.isEmpty()) {
             this.coresByWorld_.remove(core.getWorld().getUID());
         }
+        this.coresById_.remove(core.getRuntimeId());
     }
 
     void unloadChunk(World world, int chunkX, int chunkZ) {
