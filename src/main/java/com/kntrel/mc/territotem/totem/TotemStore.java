@@ -16,6 +16,7 @@ class TotemStore {
     private final Map<Long, Totem> byRegion_;
     private final SetMap<ChunkKey, Totem> byChunk_;
     private final SetMap<Long, Totem> byBlueprint_;
+    private final Map<UUID, Map<Vec3i, Totem>> byCore_;
     private final Object mutex_;
 
 
@@ -25,6 +26,7 @@ class TotemStore {
         this.byRegion_ = new HashMap<>();
         this.byChunk_ = new SetMap<>();
         this.byBlueprint_ = new SetMap<>();
+        this.byCore_ = new HashMap<>();
         this.mutex_ = new Object();
     }
 
@@ -59,6 +61,20 @@ class TotemStore {
     }
     public boolean isTotemAt(int x, int y, int z, World world) {
         return isTotemAt(new Vec3i(x, y, z), world);
+    }
+
+    //API - BY CORE
+    public Optional<Totem> getByCore(World world, Vec3i coreCoordinates) {
+        synchronized (this.mutex_) {
+            Map<Vec3i, Totem> cordsMap = this.byCore_.get(world.getUID());
+            if (cordsMap == null) {
+                return Optional.empty();
+            }
+            return Optional.ofNullable(cordsMap.get(coreCoordinates));
+        }
+    }
+    public Optional<Totem> getByCore(World world, int x, int y, int z) {
+        return this.getByCore(world, new Vec3i(x, y, z));
     }
 
     //API - BY ID
@@ -116,6 +132,9 @@ class TotemStore {
 
             long blueprintId = totem.blueprint().id();
             this.byBlueprint_.putInto(blueprintId, totem);
+
+            Vec3i coreCords = totem.blueprint().core().offset().add(totem.origin());
+            this.byCore_.computeIfAbsent(totem.world().getUID(), ign -> new HashMap<>()).put(coreCords, totem);
         }
     }
 
@@ -143,6 +162,15 @@ class TotemStore {
                 if (set.isEmpty()) {
                     this.byBlueprint_.remove(blueprintId);
                 }
+            }
+
+            UUID worldUUID = totem.world().getUID();
+            Map<Vec3i, Totem> cordsMap = this.byCore_.get(worldUUID);
+            if (cordsMap == null) { return totem; }
+            Vec3i coreCords = totem.blueprint().core().offset().add(totem.origin());
+            cordsMap.remove(coreCords);
+            if (cordsMap.isEmpty()) {
+                this.byCore_.remove(worldUUID);
             }
 
             return totem;

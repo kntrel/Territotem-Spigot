@@ -16,6 +16,7 @@ import com.kntrel.mc.territotem.structure.piece.Piece;
 import com.kntrel.mc.territotem.structure.piece.Tile;
 import com.kntrel.mc.territotem.structure.worldTile.WorldTile;
 import com.kntrel.mc.territotem.totem.core.TotemCore;
+import com.kntrel.mc.territotem.totem.event.TotemCoreBreakEvent;
 import com.kntrel.mc.territotem.totem.piece.TotemCorePiece;
 import com.kntrel.mc.territotem.util.ChunkKey;
 import com.kntrel.util.Vec3i;
@@ -142,6 +143,17 @@ public class TotemService implements Listener {
     }
 
     @EventHandler
+    void onCoreDestroyed(TotemCoreBreakEvent e) {
+        TotemCore c = e.getCore();
+        Totem totem = this.totemStore_.getByCore(c.getWorld(), c.getCoordinates()).orElse(null);
+        if (totem == null) { return; }
+
+        totem.destroy();
+        this.totemStore_.remove(totem);
+        LOGGER.debug("Core of totem {} was destroyed. The totem has been destroyed", totem.id());
+    }
+
+    @EventHandler
     void onTotemChanged(StructureChangedEvent e) {
         if (e.getCurrentState() == Structure.State.COMPLETE) { return; }
 
@@ -168,6 +180,7 @@ public class TotemService implements Listener {
         if (tile.piece() instanceof TotemCorePiece) {
             LOGGER.debug("Totem core of totem {} is no longer in the structure. The totem has been destroyed", totem.id());
             totem.destroy();
+            this.totemStore_.remove(totem);
             return;
         }
 

@@ -4,10 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.kntrel.mc.regionLib.event.BlockRightClickedEvent;
 import com.kntrel.mc.territotem.totem.TotemClaim;
-import com.kntrel.mc.territotem.totem.event.TotemCoreCompletedEvent;
-import com.kntrel.mc.territotem.totem.event.TotemCoreCreatedEvent;
-import com.kntrel.mc.territotem.totem.event.TotemCoreHitEvent;
-import com.kntrel.mc.territotem.totem.event.TotemCoreRightClickedEvent;
+import com.kntrel.mc.territotem.totem.event.*;
 import com.kntrel.mc.territotem.util.RayTracing;
 import com.kntrel.util.Vec3i;
 import org.bukkit.Chunk;
@@ -155,14 +152,23 @@ class TotemCoreListener implements Listener {
         this.tracker_.getServer().getPluginManager().callEvent(event);
         if (event.isCancelled()) { return; }
 
+        if (this.onHitWithDirection(event)) { return; };
         this.onHit(event);
     }
 
     @EventHandler
     void onBlockBreak(BlockBreakEvent e) {
         Block b = e.getBlock();
-        if (this.tracker_.breakCore(b)) {
+        TotemCore core = this.tracker_.getCore(b);
+        if (core != null) {
+            TotemCoreBreakEvent coreBreakEvent = new TotemCoreBreakEvent(core, e.getPlayer());
+            this.tracker_.getServer().getPluginManager().callEvent(coreBreakEvent);
+            if (coreBreakEvent.isCancelled()) {
+                e.setCancelled(true);
+                return;
+            }
             e.setDropItems(false);
+            this.tracker_.breakCore(core);
             return;
         }
 
@@ -175,7 +181,13 @@ class TotemCoreListener implements Listener {
                         Vec3i loc = c.getCoordinates();
                         Material newType = world.getBlockAt(loc.x(), loc.y(), loc.z()).getType();
                         if (newType != Material.MEDIUM_AMETHYST_BUD && newType != Material.TINTED_GLASS) {
-                            this.tracker_.breakCore(c);
+                            BlockBreakEvent event = new BlockBreakEvent(c.getCenter().getBlock(), e.getPlayer());
+                            this.tracker_.getServer().getPluginManager().callEvent(event);
+                            if (event.isCancelled()) {
+                                TotemCore.State state = c.getState();
+                                c.setState(TotemCore.State.EMPTY);
+                                c.setState(state);
+                            }
                         }
                     }, 1)
                 ));
@@ -208,14 +220,6 @@ class TotemCoreListener implements Listener {
     @EventHandler
     void onChunkLoad(ChunkLoadEvent e) {
         this.tracker_.handleChunkLoad(e.getChunk());
-    }
-
-    private static TotemCore.Direction cycleDirection(TotemCore.Direction direction) {
-        int i = DIRECTIONS.indexOf(direction) + 1;
-        if (i >= DIRECTIONS.size()) {
-            i = 0;
-        }
-        return DIRECTIONS.get(i);
     }
 
     @EventHandler
@@ -258,7 +262,7 @@ class TotemCoreListener implements Listener {
         this.tracker_.persistCore(core);
         return true;
     }
-    private boolean onHit(TotemCoreHitEvent e) {
+    private boolean onHitWithDirection(TotemCoreHitEvent e) {
         TotemCore core = e.getCore();
         if (core.getDirection() == TotemCore.Direction.ALL) { return false; }
 
@@ -267,6 +271,16 @@ class TotemCoreListener implements Listener {
         core.getWorld().dropItemNaturally(core.getCenter().clone().subtract(pos), new ItemStack(Material.AMETHYST_BLOCK));
         core.setDirection(TotemCore.Direction.ALL);
         this.tracker_.persistCore(core);
+        return true;
+    }
+    private boolean onHit(TotemCoreHitEvent e) {
+        TotemCore core = e.getCore();
+        if (core.getDirection() != TotemCore.Direction.ALL) { return false; }
+
+        TotemCoreBreakEvent event = new TotemCoreBreakEvent(core, e.getPlayer());
+        this.tracker_.getServer().getPluginManager().callEvent(event);
+        if (event.isCancelled()) { return false; }
+        this.tracker_.breakCore(core);
         return true;
     }
 
