@@ -2,11 +2,14 @@ package com.kntrel.mc.territotem.structure;
 
 import com.kntrel.mc.territotem.structure.blueprint.Blueprint;
 import com.kntrel.mc.territotem.structure.piece.Piece;
+import com.kntrel.mc.territotem.structure.piece.Tile;
 import com.kntrel.mc.territotem.structure.worldTile.WorldTile;
 import com.kntrel.util.BitSet3D;
 import com.kntrel.util.IntBoundingBox;
 import com.kntrel.util.Vec3i;
 import org.bukkit.World;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
@@ -87,6 +90,10 @@ public class Structure {
 
 
     //API
+    public @Nullable Piece pieceAt(Vec3i coordinates) {
+        Vec3i offset = coordinates.subtract(this.origin_);
+        return this.blueprint_.pieceAt(offset);
+    }
     public void drop() {
         synchronized (this.mutex_) {
             log(Level.TRACE, "Dropping");
@@ -123,14 +130,14 @@ public class Structure {
     public boolean isEmpty() {
         return this.getState() == State.EMPTY;
     }
-    public void update(Vec3i offset) {
+    public @NonNull UpdateResult update(Vec3i offset) {
 
         log(Level.TRACE, "Block update at offset {}", offset);
         CompletableFuture<Void> pendingScan;
         synchronized (this.mutex_) {
             if (this.dropped_) {
                 log(Level.TRACE, "Dropped. Ignoring update");
-                return;
+                return UpdateResult.noChange();
             }
             pendingScan = this.scanTask_;
         }
@@ -143,27 +150,31 @@ public class Structure {
             if (this.parkedUnlockOffset_ != null) {
                 if (!this.parkedUnlockOffset_.equals(offset)) {
                     log(Level.TRACE, "Parked offset {} does not match update offset {}", this.parkedUnlockOffset_, offset);
-                    return;
+                    return UpdateResult.noChange();
                 }
                 if (!this.presenceMap_.get(offset) || this.blueprint_.matchesAt(offset, worldTile)) {
                     pendingScan = this.fullScan();
-                } else { return; }
+                } else { return UpdateResult.noChange(); }
             }
         }
         if (pendingScan != null) { wait(pendingScan); }
 
         if (!this.presenceMap_.get(offset)) {
             log(Level.TRACE, "Offset {} not in presence map", offset);
-            return;
+            return UpdateResult.noChange();
         }
         while (true) {
             CompletableFuture<Void> scan;
             synchronized (this.mutex_) { scan = this.scanTask_; }
             if (scan != null) { wait(scan); continue; }
 
-            boolean match = blueprint_.matchesAt(offset, worldTile);
+            Tile piece = this.blueprint_.pieceAt(offset);
+            if (piece == null) { return UpdateResult.noChange(); }
+
+            boolean match = piece.matches(worldTile);
             log(Level.DEBUG, "Piece at offset {} " + (match ? "matches" : "does not match"), offset);
             synchronized (this.mutex_) {
+                State oldState = this.state_;
                 if (this.scanTask_ != null) { continue; }
                 this.markMatched(offset, match);
                 if (this.matchCount_ == this.pieceCount_) {
@@ -174,7 +185,7 @@ public class Structure {
                     this.setInProgress();
                 }
                 if (!match && this.shouldPark()) { this.parkAt(offset); }
-                return;
+                return UpdateResult.change(piece, match, oldState, this.state_);
             }
         }
     }

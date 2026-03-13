@@ -5,10 +5,7 @@ import com.kntrel.mc.regionLib.Constants;
 import com.kntrel.mc.territotem.structure.blueprint.Blueprint;
 import com.kntrel.mc.territotem.structure.blueprint.BlueprintRegistration;
 import com.kntrel.mc.territotem.structure.blueprint.BlueprintRegistrationBuilder;
-import com.kntrel.mc.territotem.structure.event.StructureCompletedEvent;
-import com.kntrel.mc.territotem.structure.event.StructureLoadedEvent;
-import com.kntrel.mc.territotem.structure.event.StructureUncompletedEvent;
-import com.kntrel.mc.territotem.structure.event.StructureUnloadedEvent;
+import com.kntrel.mc.territotem.structure.event.*;
 import com.kntrel.mc.territotem.structure.piece.Tile;
 import com.kntrel.mc.territotem.structure.worldTile.WorldTileWriter;
 import com.kntrel.mc.territotem.util.ChunkCache;
@@ -225,57 +222,67 @@ public class StructureService {
     }
     private void updateStructureTask(Entity who, Structure structure, Vec3i where) {
         LOGGER.trace("Updating structure {} at position {}", structure.blueprint().id(), where);
-        StateChange change = this.updateStructure(structure, where);
-        if (change == null || change.noChanges()) { return; }
+        UpdateResult result = this.updateStructure(structure, where);
+        if (result.unchanged()) { return; }
+
+        UpdateResult.Change change = result.getChange().orElse(null);
+        if (change == null) { return; }         //Should never return here
+
+
         this.persistStructuresInChunk(ChunkKey.ofBlock(structure.origin(), structure.world().getUID()));
         if (change.wasCompleted()) {
             this.handleComplete(structure, who, change);
-        }
-        if (change.wasUncompleted()) {
+        } else if (change.wasUncompleted()) {
             this.handleUncompleted(structure, who, change);
+        } else {
+            this.handleChange(structure, who, change);
         }
     }
-    private void handleComplete(Structure structure, Entity who, StateChange change) {
-        LOGGER.info("Structure completed for blueprint {}", structure.blueprint().id());
+    private void handleChange(Structure structure, Entity who, UpdateResult.Change change) {
+        LOGGER.info("Structure {} changed", structure.id());
 
         this.runInMainThreadAsync(() -> {
-            this.getServer().getPluginManager().callEvent(new StructureCompletedEvent(structure, who, change.previousState()));
+            this.getServer().getPluginManager().callEvent(new StructureChangedEvent(structure, who, change.oldState(), change.newState(), change.piece(), change.match()));
             return null;
         });
     }
-    private void handleUncompleted(Structure structure, Entity who, StateChange change) {
-        LOGGER.info("Structure destroyed for blueprint {}", structure.blueprint().id());
+    private void handleComplete(Structure structure, Entity who, UpdateResult.Change change) {
+        LOGGER.info("Structure {} completed", structure.id());
 
         this.runInMainThreadAsync(() -> {
-            this.getServer().getPluginManager().callEvent(new StructureUncompletedEvent(structure, who, change.newState()));
+            this.getServer().getPluginManager().callEvent(new StructureCompletedEvent(structure, who, change.oldState(), change.piece()));
             return null;
         });
     }
-    private StateChange updateStructure(Structure structure, Vec3i where) {
+    private void handleUncompleted(Structure structure, Entity who, UpdateResult.Change change) {
+        LOGGER.info("Structure {} uncompleted", structure.id());
+
+        this.runInMainThreadAsync(() -> {
+            this.getServer().getPluginManager().callEvent(new StructureUncompletedEvent(structure, who, change.newState(), change.piece()));
+            return null;
+        });
+    }
+    private UpdateResult updateStructure(Structure structure, Vec3i where) {
         if (!structure.contains(where)) {
             LOGGER.trace("Position {} is not within structure bounds", where);
-            return null;
+            return UpdateResult.noChange();
         }
 
         ReentrantLock lock = this.structureLocks_.get(structure);
         if (lock == null) {
             LOGGER.warn("No lock found for structure at {}", structure.origin());
-            return null;
+            return UpdateResult.noChange();
         }
 
         Vec3i offset = where.subtract(structure.origin());
 
         lock.lock();
-        Structure.State prev = structure.getState(), curr;
         try {
             LOGGER.debug("Updating structure of {} at offset {}", structure.blueprint().name(), offset);
-            structure.update(offset);
-            curr = structure.getState();
+            return structure.update(offset);
         } finally {
             lock.unlock();
         }
-
-        return new StateChange(prev, curr);
     }
 
 
@@ -303,12 +310,12 @@ public class StructureService {
         Structure.State previousState = (persistedState == null)
                 ? Structure.State.EMPTY
                 : persistedState;
-        StateChange stateChange = new StateChange(previousState, structure.getState());
-        if (stateChange.wasCompleted()) {
-            this.handleComplete(structure, causer, stateChange);
+        UpdateResult.Change change = UpdateResult.change(null, false, previousState, structure.getState());
+        if (change.wasCompleted()) {
+            this.handleComplete(structure, causer, change);
         }
-        if (stateChange.wasUncompleted()) {
-            this.handleUncompleted(structure, causer, stateChange);
+        if (change.wasUncompleted()) {
+            this.handleUncompleted(structure, causer, change);
         }
 
         this.persistStructuresInChunk(ChunkKey.ofBlock(structure.origin(), structure.world().getUID()));
@@ -366,26 +373,5 @@ public class StructureService {
             toSerialize.add(new StructureChunkData(offsetInChunk(structure.origin()), structure.blueprint().id(), structure.id(), structure.getState()));
         }
         this.chunkPersister_.persist(chunk, this.structuresNSK_, StructurePersistentDataType.instance(), toSerialize);
-    }
-
-
-    //SUBTYPES
-    private record StateChange(Structure.State previousState, Structure.State newState) {
-
-        boolean somethingChanged() {
-            return this.previousState != this.newState;
-        }
-        boolean noChanges() {
-            return this.previousState == this.newState;
-        }
-        boolean wasCompleted() {
-            if (noChanges()) { return false; }
-            return this.previousState != Structure.State.COMPLETE
-                    && this.newState == Structure.State.COMPLETE;
-        }
-        boolean wasUncompleted() {
-            if (noChanges()) { return false; }
-            return this.previousState == Structure.State.COMPLETE;
-        }
     }
 }

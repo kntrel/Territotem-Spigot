@@ -36,4 +36,13 @@ public class Tile implements Piece, Comparable<Tile> {
     }
     @Override public void place(WorldTileWriter tile) { this.piece_.place(tile); }
     @Override public int compareTo(Tile o) { return this.offset_.compareTo(o.offset_); }
+    @Override public boolean equals(Object o) {
+        if (o == null) { return false; }
+        if (o == this) { return true; }
+        if (!(o instanceof Piece piece)) { return false; }
+        if (piece instanceof Tile tile) {
+            return tile.offset().equals(this.offset_) && tile.piece_.equals(this.piece_);
+        }
+        return piece.equals(this.piece_);
+    }
 }

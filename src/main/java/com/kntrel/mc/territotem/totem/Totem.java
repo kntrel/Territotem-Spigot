@@ -58,6 +58,7 @@ public class Totem {
         return this.region_.isDestroyed();
     }
     public void destroy() {
+        this.structure_.drop();
         this.region_.destroy();
         this.region_.save();
     }

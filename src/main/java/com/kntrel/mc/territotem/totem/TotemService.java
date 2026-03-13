@@ -9,10 +9,18 @@ import com.kntrel.mc.regionLib.region.context.RegionContext;
 import com.kntrel.mc.regionLib.region.dataContainer.RegionData;
 import com.kntrel.mc.regionLib.region.dataContainer.RegionDataContainer;
 import com.kntrel.mc.territotem.structure.Structure;
+import com.kntrel.mc.territotem.structure.event.StructureChangedEvent;
 import com.kntrel.mc.territotem.structure.event.StructureCompletedEvent;
 import com.kntrel.mc.territotem.structure.event.StructureLoadedEvent;
+import com.kntrel.mc.territotem.structure.piece.Piece;
+import com.kntrel.mc.territotem.structure.piece.Tile;
+import com.kntrel.mc.territotem.structure.worldTile.WorldTile;
+import com.kntrel.mc.territotem.totem.core.TotemCore;
+import com.kntrel.mc.territotem.totem.piece.TotemCorePiece;
 import com.kntrel.mc.territotem.util.ChunkKey;
+import com.kntrel.util.Vec3i;
 import org.bukkit.Chunk;
+import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -99,6 +107,7 @@ public class TotemService implements Listener {
 
         Totem totem = this.totemStore_.get(structure.id()).orElse(null);
         if (totem != null) {
+            LOGGER.debug("Existing totem {} was been completed. Re-enabling", totem.id());
             totem.setEnabled(true);
             return;
         }
@@ -130,6 +139,40 @@ public class TotemService implements Listener {
         }
 
         this.loadTotem(totem);
+    }
+
+    @EventHandler
+    void onTotemChanged(StructureChangedEvent e) {
+        if (e.getCurrentState() == Structure.State.COMPLETE) { return; }
+
+        Structure structure = e.getStructure();
+        if (!(structure.blueprint() instanceof TotemBlueprint blueprint)) { return; }
+
+        Totem totem = this.totemStore_.get(structure.id()).orElse(null);
+        if (totem == null) {
+            LOGGER.warn("A totem structure update was triggered, but no loaded totem claims the structure. Dropping the structure");
+            structure.drop();
+            return;
+        }
+
+        Tile tile = e.getChangedPiece();
+        boolean match = e.getPieceMatched();
+        if (tile == null) {
+            tile = blueprint.core();
+            Vec3i coordinates = e.getStructure().origin().add(tile.offset());
+            match = tile.matches(WorldTile.of(coordinates, structure.world()));
+        }
+
+        if (match) { return; }
+
+        if (tile.piece() instanceof TotemCorePiece) {
+            LOGGER.debug("Totem core of totem {} is no longer in the structure. The totem has been destroyed", totem.id());
+            totem.destroy();
+            return;
+        }
+
+        LOGGER.debug("Piece at offset {} of totem {} is missing. Disabling", tile.offset(), totem.id());
+        totem.setEnabled(false);
     }
 
 
