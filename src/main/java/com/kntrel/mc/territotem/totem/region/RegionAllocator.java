@@ -2,12 +2,17 @@ package com.kntrel.mc.territotem.totem.region;
 
 import com.kntrel.mc.regionLib.region.Region;
 import com.kntrel.mc.regionLib.region.RegionField;
+import com.kntrel.mc.regionLib.region.context.RegionContext;
+import com.kntrel.mc.regionLib.region.hierarchy.Hierarchy;
 import com.kntrel.mc.regionLib.region.repository.Condition;
 import com.kntrel.mc.regionLib.region.repository.RegionRepository;
 import com.kntrel.mc.territotem.totem.core.TotemCore;
+import org.bukkit.World;
 import org.bukkit.util.BoundingBox;
 
+import java.util.Collection;
 import java.util.EnumMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
 
@@ -23,11 +28,11 @@ public class RegionAllocator {
             TotemCore.Direction.WEST
     );
 
-    private final RegionRepository regionRepository_;
+    private final RegionContext regionContext_;
     private final Condition domainCondition_;
 
-    public RegionAllocator(RegionRepository regionRepository, Condition domainCondition) {
-        this.regionRepository_ = Objects.requireNonNull(regionRepository);
+    public RegionAllocator(RegionContext regionContext, Condition domainCondition) {
+        this.regionContext_ = Objects.requireNonNull(regionContext);
         this.domainCondition_ = Objects.requireNonNull(domainCondition);
     }
 
@@ -39,52 +44,103 @@ public class RegionAllocator {
             return new ExpansionResult(expansion, Expansion.none());
         }
 
-        BoundingBox current = region.getBoundingBox();
-        EnumMap<TotemCore.Direction, Double> accomplished = this.newDirectionalMap();
-
-        if (this.isOmnidirectional(expansion)) {
-            this.expandOmnidirectional(region, current, expansion, accomplished);
-        } else {
-            this.expandDirect(region, current, expansion, accomplished);
+        Allocation allocation = this.allocate(
+                region.getBoundingBox(),
+                expansion,
+                region.getWorld(),
+                region.getId(),
+                null,
+                usesRedistribution(expansion)
+        );
+        if (allocation.result().hasGrowth()) {
+            region.resize(allocation.bounds());
         }
-
-        Expansion accomplishedExpansion = toExpansion(accomplished);
-        if (accomplishedExpansion.total() > EPSILON) {
-            region.resize(current);
-        }
-        return new ExpansionResult(expansion, accomplishedExpansion);
+        return allocation.result();
     }
 
-    private void expandDirect(
-            Region region,
+    public RegionPlaceResult place(World world, BoundingBox bounds, BoundingBox critical, String name, Hierarchy hierarchy) {
+        Objects.requireNonNull(world);
+        Objects.requireNonNull(bounds);
+        Objects.requireNonNull(critical);
+        Objects.requireNonNull(name);
+        Objects.requireNonNull(hierarchy);
+
+        BoundingBox proposed = bounds.clone();
+        BoundingBox anchor = critical.clone();
+        if (!proposed.contains(anchor)) {
+            throw new IllegalArgumentException("bounds must fully contain the critical bounding box");
+        }
+
+        LinkedHashSet<Region> blockers = new LinkedHashSet<>(this.findCollidingRegions(world, anchor, null));
+        if (!blockers.isEmpty()) {
+            return RegionPlaceResult.unplaceable(blockers);
+        }
+
+        Expansion intended = expansionBetween(anchor, proposed);
+        Allocation allocation = this.allocate(anchor, intended, world, null, blockers, true);
+        if (allocation.result().unachievedTotal() > EPSILON) {
+            return RegionPlaceResult.unplaceable(blockers);
+        }
+
+        BoundingBox resulting = allocation.bounds();
+        Region placed = this.regionContext_.create(resulting.clone(), world, name, hierarchy);
+        return RegionPlaceResult.placed(proposed, resulting, placed);
+    }
+
+    private Allocation allocate(
+            BoundingBox start,
+            Expansion intended,
+            World world,
+            Long ignoredRegionId,
+            Collection<Region> blockers,
+            boolean redistributeShortages
+    ) {
+        BoundingBox current = start.clone();
+        EnumMap<TotemCore.Direction, Double> accomplished = this.newDirectionalMap();
+
+        if (redistributeShortages) {
+            this.allocateRedistributed(world, current, intended, ignoredRegionId, accomplished, blockers);
+        } else {
+            this.allocateDirect(world, current, intended, ignoredRegionId, accomplished, blockers);
+        }
+
+        return new Allocation(current, new ExpansionResult(intended, toExpansion(accomplished)));
+    }
+
+    private void allocateDirect(
+            World world,
             BoundingBox current,
-            Expansion expansion,
-            EnumMap<TotemCore.Direction, Double> accomplished
+            Expansion intended,
+            Long ignoredRegionId,
+            EnumMap<TotemCore.Direction, Double> accomplished,
+            Collection<Region> blockers
     ) {
         for (TotemCore.Direction side : SIDES) {
-            double requested = expansion.get(side);
+            double requested = intended.get(side);
             if (requested <= EPSILON) {
                 continue;
             }
 
-            double grown = this.grow(region, current, side, requested);
+            double grown = this.grow(world, current, ignoredRegionId, side, requested, blockers);
             if (grown > EPSILON) {
                 accomplished.put(side, grown);
             }
         }
     }
 
-    private void expandOmnidirectional(
-            Region region,
+    private void allocateRedistributed(
+            World world,
             BoundingBox current,
-            Expansion expansion,
-            EnumMap<TotemCore.Direction, Double> accomplished
+            Expansion intended,
+            Long ignoredRegionId,
+            EnumMap<TotemCore.Direction, Double> accomplished,
+            Collection<Region> blockers
     ) {
         EnumMap<TotemCore.Direction, Double> shortages = this.newDirectionalMap();
 
         for (TotemCore.Direction side : SIDES) {
-            double requested = expansion.get(side);
-            double grown = this.grow(region, current, side, requested);
+            double requested = intended.get(side);
+            double grown = this.grow(world, current, ignoredRegionId, side, requested, blockers);
             if (grown > EPSILON) {
                 accomplished.put(side, grown);
             }
@@ -99,20 +155,22 @@ public class RegionAllocator {
             }
 
             TotemCore.Direction opposite = oppositeOf(side);
-            double grown = this.grow(region, current, opposite, shortage);
+            double grown = this.grow(world, current, ignoredRegionId, opposite, shortage, blockers);
             if (grown > EPSILON) {
                 accomplished.compute(opposite, (ignored, previous) -> previous + grown);
             }
             spill += Math.max(0d, shortage - grown);
         }
 
-        this.redistribute(region, current, accomplished, spill);
+        this.redistribute(world, current, ignoredRegionId, accomplished, blockers, spill);
     }
 
     private void redistribute(
-            Region region,
+            World world,
             BoundingBox current,
+            Long ignoredRegionId,
             EnumMap<TotemCore.Direction, Double> accomplished,
+            Collection<Region> blockers,
             double spill
     ) {
         double remaining = spill;
@@ -124,7 +182,7 @@ public class RegionAllocator {
             EnumMap<TotemCore.Direction, Boolean> keepers = new EnumMap<>(TotemCore.Direction.class);
 
             for (TotemCore.Direction side : freeSides) {
-                double grown = this.grow(region, current, side, share);
+                double grown = this.grow(world, current, ignoredRegionId, side, share, blockers);
                 if (grown > EPSILON) {
                     accomplished.compute(side, (ignored, previous) -> previous + grown);
                 }
@@ -145,12 +203,19 @@ public class RegionAllocator {
         }
     }
 
-    private double grow(Region region, BoundingBox current, TotemCore.Direction side, double amount) {
+    private double grow(
+            World world,
+            BoundingBox current,
+            Long ignoredRegionId,
+            TotemCore.Direction side,
+            double amount,
+            Collection<Region> blockers
+    ) {
         if (amount <= EPSILON) {
             return 0d;
         }
 
-        double maxAllowed = this.maxAllowedGrowth(region, current, side, amount);
+        double maxAllowed = this.maxAllowedGrowth(world, current, ignoredRegionId, side, amount, blockers);
         double achieved = Math.min(amount, maxAllowed);
         if (achieved <= EPSILON) {
             return 0d;
@@ -160,20 +225,21 @@ public class RegionAllocator {
         return achieved;
     }
 
-    private double maxAllowedGrowth(Region region, BoundingBox current, TotemCore.Direction side, double requested) {
+    private double maxAllowedGrowth(
+            World world,
+            BoundingBox current,
+            Long ignoredRegionId,
+            TotemCore.Direction side,
+            double requested,
+            Collection<Region> blockers
+    ) {
         BoundingBox candidate = current.clone();
         applyExpansion(candidate, side, requested);
 
-        Condition condition = Condition.in(candidate, region.getWorld()).and(this.domainCondition_);
-        Long regionId = region.getId();
-        if (regionId != null) {
-            condition = condition.and(Condition.notEqual(RegionField.ID, regionId));
-        }
-
         double maxAllowed = requested;
-        for (Region other : this.regionRepository_.get(condition)) {
-            if (other == region) {
-                continue;
+        for (Region other : this.findCollidingRegions(world, candidate, ignoredRegionId)) {
+            if (blockers != null) {
+                blockers.add(other);
             }
 
             double distance = distanceToTouch(current, other, side);
@@ -184,9 +250,13 @@ public class RegionAllocator {
         return Math.max(0d, maxAllowed);
     }
 
-    private boolean isOmnidirectional(Expansion expansion) {
-        return expansion.up() > EPSILON
-                && expansion.isUniform();
+    private List<Region> findCollidingRegions(World world, BoundingBox bounds, Long ignoredRegionId) {
+        Condition condition = Condition.in(bounds, world).and(this.domainCondition_);
+        if (ignoredRegionId != null) {
+            condition = condition.and(Condition.notEqual(RegionField.ID, ignoredRegionId));
+        }
+        RegionRepository repository = this.regionContext_.getRegionRepository();
+        return repository.get(condition);
     }
 
     private EnumMap<TotemCore.Direction, Double> newDirectionalMap() {
@@ -195,6 +265,28 @@ public class RegionAllocator {
             out.put(side, 0d);
         }
         return out;
+    }
+
+    private static boolean usesRedistribution(Expansion expansion) {
+        return expansion.up() > EPSILON && expansion.isUniform();
+    }
+
+    private static Expansion expansionBetween(BoundingBox inner, BoundingBox outer) {
+        return new Expansion(
+                nonNegativeDifference(outer.getMaxY() - inner.getMaxY(), "up"),
+                nonNegativeDifference(inner.getMinY() - outer.getMinY(), "down"),
+                nonNegativeDifference(inner.getMinZ() - outer.getMinZ(), "north"),
+                nonNegativeDifference(outer.getMaxZ() - inner.getMaxZ(), "south"),
+                nonNegativeDifference(outer.getMaxX() - inner.getMaxX(), "east"),
+                nonNegativeDifference(inner.getMinX() - outer.getMinX(), "west")
+        );
+    }
+
+    private static double nonNegativeDifference(double value, String side) {
+        if (value < -EPSILON) {
+            throw new IllegalArgumentException(side + " expansion cannot be negative");
+        }
+        return Math.max(0d, value);
     }
 
     private static Expansion toExpansion(EnumMap<TotemCore.Direction, Double> values) {
@@ -284,6 +376,12 @@ public class RegionAllocator {
                     boundingBox.getMaxZ()
             );
             case ALL -> throw new IllegalArgumentException("ALL is not a concrete side");
+        }
+    }
+
+    private record Allocation(BoundingBox bounds, ExpansionResult result) {
+        private Allocation {
+            bounds = bounds.clone();
         }
     }
 }

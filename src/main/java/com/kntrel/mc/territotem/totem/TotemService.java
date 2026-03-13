@@ -13,7 +13,6 @@ import com.kntrel.mc.territotem.structure.Structure;
 import com.kntrel.mc.territotem.structure.event.StructureChangedEvent;
 import com.kntrel.mc.territotem.structure.event.StructureCompletedEvent;
 import com.kntrel.mc.territotem.structure.event.StructureLoadedEvent;
-import com.kntrel.mc.territotem.structure.piece.Piece;
 import com.kntrel.mc.territotem.structure.piece.Tile;
 import com.kntrel.mc.territotem.structure.worldTile.WorldTile;
 import com.kntrel.mc.territotem.totem.core.TotemCore;
@@ -23,7 +22,9 @@ import com.kntrel.mc.territotem.totem.piece.TotemCorePiece;
 import com.kntrel.mc.territotem.totem.region.Expansion;
 import com.kntrel.mc.territotem.totem.region.ExpansionResult;
 import com.kntrel.mc.territotem.totem.region.RegionAllocator;
+import com.kntrel.mc.territotem.totem.region.RegionPlaceResult;
 import com.kntrel.mc.territotem.util.ChunkKey;
+import com.kntrel.util.IntBoundingBox;
 import com.kntrel.util.Vec3i;
 import org.bukkit.Chunk;
 import org.bukkit.Material;
@@ -35,11 +36,18 @@ import org.bukkit.event.world.ChunkLoadEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.Plugin;
+import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class TotemService implements Listener {
@@ -70,7 +78,7 @@ public class TotemService implements Listener {
         this.regionContext_ = regionContext;
         this.plugin_ = this.regionContext_.getPlugin();
         this.assembler_ = new TotemAssembler();
-        this.regionAllocator_ = new RegionAllocator(this.regionContext_.getRegionRepository(), Condition.hasDataKey(TOTEM_DATA_KEY));
+        this.regionAllocator_ = new RegionAllocator(this.regionContext_, Condition.hasDataKey(TOTEM_DATA_KEY));
         this.pendingExpectationsByChunk_ = new ConcurrentHashMap<>();
         this.pendingIngestionsByChunk_ = new ConcurrentHashMap<>();
         this.scheduledAudits_ = ConcurrentHashMap.newKeySet();
@@ -129,13 +137,29 @@ public class TotemService implements Listener {
                 ? "Unnamed region"
                 : p.getName() + "'s region";
 
-        Region region = this.regionContext_.create(
-                e.getCauser(),
-                blueprint.initialRegionBounds().shift(shift),
-                e.getStructure().world(),
+        BoundingBox proposedBounds = blueprint.initialRegionBounds().shift(shift);
+        BoundingBox criticalBounds = toBoundingBox(structure.boundingBox());
+        RegionPlaceResult placement = this.regionAllocator_.place(
+                structure.world(),
+                proposedBounds,
+                criticalBounds,
                 name,
                 blueprint.hierarchy()
         );
+        RegionPlaceResult.Placed placed = placement.getPlaced().orElse(null);
+        if (placed == null) {
+            Collection<Long> blockers = placement.getUnplaceable()
+                    .map(RegionPlaceResult.Unplaceable::overlappingRegions)
+                    .stream()
+                    .flatMap(Collection::stream)
+                    .map(Region::getId)
+                    .toList();
+            LOGGER.warn("Totem structure {} could not place region '{}'. Blocking regions: {}", structure.id(), name, blockers);
+            this.rejectPlacement(structure, blueprint);
+            return;
+        }
+
+        Region region = placed.region();
         totem = new Totem(e.getStructure(), region);
         TotemClaim claim = TotemClaim.of(totem);
         var dataContainer = region.getDataContainer();
@@ -168,15 +192,15 @@ public class TotemService implements Listener {
         }
 
         Expansion expansion = expansionFor(e.getCore().getDirection());
-        Region region = totem.region();
-        ExpansionResult result = this.regionAllocator_.expand(region, expansion);
+        ExpansionResult result = this.regionAllocator_.expand(totem.region(), expansion);
         if (!result.hasGrowth()) {
             return;
         }
 
         Player player = e.getPlayer();
+        Region region = totem.region();
         consumeOneItem(player, e.getHand(), itemStack);
-        swingHand(player, e.getHand());
+        swingHand(e.getPlayer(), e.getHand());
         region.display(player);
         region.save();
     }
@@ -281,6 +305,17 @@ public class TotemService implements Listener {
         });
     }
 
+    private void rejectPlacement(Structure structure, TotemBlueprint blueprint) {
+        Vec3i coreCoordinates = structure.origin().add(blueprint.core().offset());
+        TotemCore core = blueprint.core().piece().service().getCoreAt(structure.world().getUID(), coreCoordinates);
+        if (core != null) {
+            this.plugin_.getServer().getScheduler().runTaskLater(this.plugin_, () -> {
+                core.setState(TotemCore.State.FULL);
+                structure.drop();
+            }, 1);
+        }
+    }
+
     private static TotemClaim readClaim(Region region) {
         RegionDataContainer dataContainer = region.getDataContainer();
         if (dataContainer == null || !dataContainer.has(TOTEM_DATA_KEY)) {
@@ -316,6 +351,17 @@ public class TotemService implements Listener {
             return Expansion.all(REGION_GROWTH_RATE / 6d);
         }
         return Expansion.forDirection(direction, REGION_GROWTH_RATE);
+    }
+
+    private static BoundingBox toBoundingBox(IntBoundingBox boundingBox) {
+        return new BoundingBox(
+                boundingBox.minX(),
+                boundingBox.minY(),
+                boundingBox.minZ(),
+                boundingBox.maxX() + 1d,
+                boundingBox.maxY() + 1d,
+                boundingBox.maxZ() + 1d
+        );
     }
 
     private static void consumeOneItem(Player player, EquipmentSlot hand, ItemStack stack) {
