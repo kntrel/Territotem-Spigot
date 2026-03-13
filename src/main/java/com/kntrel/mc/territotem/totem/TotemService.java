@@ -8,6 +8,7 @@ import com.kntrel.mc.regionLib.region.Region;
 import com.kntrel.mc.regionLib.region.context.RegionContext;
 import com.kntrel.mc.regionLib.region.dataContainer.RegionData;
 import com.kntrel.mc.regionLib.region.dataContainer.RegionDataContainer;
+import com.kntrel.mc.regionLib.region.repository.Condition;
 import com.kntrel.mc.territotem.structure.Structure;
 import com.kntrel.mc.territotem.structure.event.StructureChangedEvent;
 import com.kntrel.mc.territotem.structure.event.StructureCompletedEvent;
@@ -17,20 +18,27 @@ import com.kntrel.mc.territotem.structure.piece.Tile;
 import com.kntrel.mc.territotem.structure.worldTile.WorldTile;
 import com.kntrel.mc.territotem.totem.core.TotemCore;
 import com.kntrel.mc.territotem.totem.event.TotemCoreBreakEvent;
+import com.kntrel.mc.territotem.totem.event.TotemCoreRightClickedEvent;
 import com.kntrel.mc.territotem.totem.piece.TotemCorePiece;
+import com.kntrel.mc.territotem.totem.region.Expansion;
+import com.kntrel.mc.territotem.totem.region.ExpansionResult;
+import com.kntrel.mc.territotem.totem.region.RegionAllocator;
 import com.kntrel.mc.territotem.util.ChunkKey;
 import com.kntrel.util.Vec3i;
 import org.bukkit.Chunk;
-import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.world.ChunkLoadEvent;
+import org.bukkit.inventory.EquipmentSlot;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.util.Vector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -39,6 +47,7 @@ public class TotemService implements Listener {
     //CONSTANTS
     private static final Logger LOGGER = LoggerFactory.getLogger(TotemService.class);
     private static final String TOTEM_DATA_KEY = "totemData";
+    private static final double REGION_GROWTH_RATE = 6d;
     private static final Gson GSON = new GsonBuilder()
             .registerTypeAdapter(TotemClaim.class, TotemClaim.serializer())
             .registerTypeAdapter(TotemClaim.class, TotemClaim.deserializer())
@@ -49,6 +58,7 @@ public class TotemService implements Listener {
     private final RegionContext regionContext_;
     private final Plugin plugin_;
     private final TotemAssembler assembler_;
+    private final RegionAllocator regionAllocator_;
     private final Map<ChunkKey, Map<UUID, PendingExpectation>> pendingExpectationsByChunk_;
     private final Map<ChunkKey, Map<UUID, Structure>> pendingIngestionsByChunk_;
     private final Set<ChunkKey> scheduledAudits_;
@@ -60,6 +70,7 @@ public class TotemService implements Listener {
         this.regionContext_ = regionContext;
         this.plugin_ = this.regionContext_.getPlugin();
         this.assembler_ = new TotemAssembler();
+        this.regionAllocator_ = new RegionAllocator(this.regionContext_.getRegionRepository(), Condition.hasDataKey(TOTEM_DATA_KEY));
         this.pendingExpectationsByChunk_ = new ConcurrentHashMap<>();
         this.pendingIngestionsByChunk_ = new ConcurrentHashMap<>();
         this.scheduledAudits_ = ConcurrentHashMap.newKeySet();
@@ -140,6 +151,34 @@ public class TotemService implements Listener {
         }
 
         this.loadTotem(totem);
+    }
+
+    @EventHandler
+    void onCoreRightClicked(TotemCoreRightClickedEvent e) {
+        ItemStack itemStack = e.getItemStack();
+        if (itemStack == null || itemStack.getType() != Material.DIAMOND) {
+            return;
+        }
+
+        e.setCancelled(true);
+
+        Totem totem = this.totemStore_.getByCore(e.getCore().getWorld(), e.getCore().getCoordinates()).orElse(null);
+        if (totem == null) {
+            return;
+        }
+
+        Expansion expansion = expansionFor(e.getCore().getDirection());
+        Region region = totem.region();
+        ExpansionResult result = this.regionAllocator_.expand(region, expansion);
+        if (!result.hasGrowth()) {
+            return;
+        }
+
+        Player player = e.getPlayer();
+        consumeOneItem(player, e.getHand(), itemStack);
+        swingHand(player, e.getHand());
+        region.display(player);
+        region.save();
     }
 
     @EventHandler
@@ -272,8 +311,31 @@ public class TotemService implements Listener {
         return null;
     }
 
+    private static Expansion expansionFor(TotemCore.Direction direction) {
+        if (direction == TotemCore.Direction.ALL) {
+            return Expansion.all(REGION_GROWTH_RATE / 6d);
+        }
+        return Expansion.forDirection(direction, REGION_GROWTH_RATE);
+    }
+
+    private static void consumeOneItem(Player player, EquipmentSlot hand, ItemStack stack) {
+        if (stack.getAmount() < 2) {
+            stack = new ItemStack(Material.AIR);
+        } else {
+            stack.setAmount(stack.getAmount() - 1);
+        }
+        player.getInventory().setItem(hand, stack);
+    }
+
+    private static void swingHand(Player player, EquipmentSlot hand) {
+        if (hand == EquipmentSlot.OFF_HAND) {
+            player.swingOffHand();
+        } else {
+            player.swingMainHand();
+        }
+    }
+
 
     //SUBTYPES
     private record PendingExpectation(TotemClaim claim, Region region) {}
 }
-
