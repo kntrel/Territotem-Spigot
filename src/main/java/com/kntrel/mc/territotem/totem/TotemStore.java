@@ -3,6 +3,7 @@ package com.kntrel.mc.territotem.totem;
 import com.kntrel.mc.regionLib.region.Region;
 import com.kntrel.mc.territotem.structure.Structure;
 import com.kntrel.mc.territotem.structure.blueprint.Blueprint;
+import com.kntrel.mc.territotem.util.ChunkCache;
 import com.kntrel.mc.territotem.util.ChunkKey;
 import com.kntrel.util.SetMap;
 import com.kntrel.util.Vec3i;
@@ -14,7 +15,7 @@ class TotemStore {
     //FIELDS
     private final Map<UUID, Totem> byId_;
     private final Map<Long, Totem> byRegion_;
-    private final SetMap<ChunkKey, Totem> byChunk_;
+    private final ChunkCache<Totem> byChunk_;
     private final SetMap<Long, Totem> byBlueprint_;
     private final Map<UUID, Map<Vec3i, Totem>> byCore_;
     private final Object mutex_;
@@ -24,7 +25,7 @@ class TotemStore {
     TotemStore() {
         this.byId_ = new HashMap<>();
         this.byRegion_ = new HashMap<>();
-        this.byChunk_ = new SetMap<>();
+        this.byChunk_ = new ChunkCache<>(t -> ChunkKey.ofBlock(t.origin(), t.world().getUID()));
         this.byBlueprint_ = new SetMap<>();
         this.byCore_ = new HashMap<>();
         this.mutex_ = new Object();
@@ -32,20 +33,20 @@ class TotemStore {
 
 
     //API - BY CHUNK
-    public List<Totem> getAtChunk(ChunkKey chunk) {
-        Set<Totem> l;
+    public List<Totem> getAroundChunk(ChunkKey chunk) {
+        List<Totem> l;
         synchronized (this.mutex_) {
             l = this.byChunk_.get(chunk);
         }
         if (l == null) { return Collections.emptyList(); }
-        return List.copyOf(l);
+        return l;
     }
-    public List<Totem> getAtChunk(int x, int z, World world) {
-        return this.getAtChunk(new ChunkKey(x, z, world.getUID()));
+    public List<Totem> getAroundChunk(int x, int z, World world) {
+        return this.getAroundChunk(new ChunkKey(x, z, world.getUID()));
     }
     public boolean isTotemAt(Vec3i coordinates, World world) {
         ChunkKey chunkKey = ChunkKey.ofBlock(coordinates, world.getUID());
-        Set<Totem> totems;
+        List<Totem> totems;
 
         synchronized (this.mutex_) {
             totems = this.byChunk_.get(chunkKey);
@@ -127,8 +128,7 @@ class TotemStore {
 
             this.byRegion_.put(totem.region().getId(), totem);
 
-            ChunkKey chunkKey = ChunkKey.ofBlock(totem.origin(), totem.world().getUID());
-            this.byChunk_.putInto(chunkKey, totem);
+            this.byChunk_.put(totem);
 
             long blueprintId = totem.blueprint().id();
             this.byBlueprint_.putInto(blueprintId, totem);
@@ -146,17 +146,10 @@ class TotemStore {
 
             this.byRegion_.remove(totem.region().getId());
 
-            ChunkKey chunkKey = ChunkKey.ofBlock(totem.origin(), totem.world().getUID());
-            Set<Totem> set = this.byChunk_.get(chunkKey);
-            if (set != null) {
-                set.remove(totem);
-                if (set.isEmpty()) {
-                    this.byChunk_.remove(chunkKey);
-                }
-            }
+            this.byChunk_.evict(totem);
 
             long blueprintId = totem.blueprint().id();
-            set = this.byBlueprint_.get(blueprintId);
+            Set<Totem> set = this.byBlueprint_.get(blueprintId);
             if (set != null) {
                 set.remove(totem);
                 if (set.isEmpty()) {
@@ -191,11 +184,11 @@ class TotemStore {
     }
     public List<Totem> removeAllFromChunk(ChunkKey chunk) {
         synchronized (this.mutex_) {
-            Set<Totem> toRemove = this.byChunk_.remove(chunk);
+            List<Totem> toRemove = this.byChunk_.evict(chunk);
             if (toRemove == null || toRemove.isEmpty()) { return Collections.emptyList(); }
 
             for (Totem t : toRemove) { this.remove(t.id()); }
-            return List.copyOf(toRemove);
+            return toRemove;
         }
     }
     public List<Totem> removeAllFromChunk(int x, int z, World world) {

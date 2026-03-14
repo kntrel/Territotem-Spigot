@@ -65,7 +65,8 @@ class StructureServiceListener implements Listener {
 
 
     //LISTENERS
-    @EventHandler void onBlockPlaced(BlockPlaceEvent e) {
+    @EventHandler(ignoreCancelled = true, priority = EventPriority.LOW)
+    void onBlockPlaced(BlockPlaceEvent e) {
         Block b = e.getBlock();
         this.service_.updateAt(
                 e.getPlayer(),

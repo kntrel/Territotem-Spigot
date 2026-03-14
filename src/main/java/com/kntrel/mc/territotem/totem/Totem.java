@@ -4,12 +4,14 @@ import com.kntrel.mc.regionLib.region.Region;
 import com.kntrel.mc.territotem.structure.Structure;
 import com.kntrel.mc.territotem.structure.blueprint.InvalidBlueprintException;
 import com.kntrel.mc.territotem.structure.worldTile.WorldTile;
+import com.kntrel.mc.territotem.totem.piece.TotemLecternPiece;
 import com.kntrel.mc.territotem.totem.piece.TotemNameSignPiece;
 import com.kntrel.mc.territotem.totem.piece.TotemTile;
 import com.kntrel.util.Vec3i;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockState;
+import org.bukkit.block.Lectern;
 import org.bukkit.block.Sign;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -65,9 +67,21 @@ public class Totem {
             WorldTile worldTile = WorldTile.of(cords, world);
             if (!sign.piece().isPlaced(worldTile)) { continue; }
             Block b = this.world().getBlockAt(cords.x(), cords.y(), cords.z());
-            BlockState state = b.getState();
-            if (state instanceof Sign s) {
+            if (b.getState() instanceof Sign s) {
                 return Optional.of(s);
+            }
+        }
+        return Optional.empty();
+    }
+    public Optional<Lectern> lectern() {
+        World world = this.world();
+        for (TotemTile<TotemLecternPiece> lectern : this.blueprint().lecterns()) {
+            Vec3i cords = lectern.offset().add(this.origin());
+            WorldTile worldTile = WorldTile.of(cords, world);
+            if (!lectern.piece().isPlaced(worldTile)) { continue; }
+            Block b = this.world().getBlockAt(cords.x(), cords.y(), cords.z());
+            if (b.getState() instanceof Lectern l) {
+                return Optional.of(l);
             }
         }
         return Optional.empty();

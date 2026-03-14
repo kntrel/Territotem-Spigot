@@ -77,7 +77,11 @@ public final class Territotem extends JavaPlugin {
                 new Tile(2, 1, 1, TotemPieces.sign(TotemPieceDirection.EAST)),
                 new Tile(0, 1, 1, TotemPieces.sign(TotemPieceDirection.WEST)),
                 new Tile(1, 1, 2, TotemPieces.sign(TotemPieceDirection.SOUTH)),
-                new Tile(1, 1, 0, TotemPieces.sign(TotemPieceDirection.NORTH))
+                new Tile(1, 1, 0, TotemPieces.sign(TotemPieceDirection.NORTH)),
+                new Tile(2, 0, 1, TotemPieces.lectern(TotemPieceDirection.EAST)),
+                new Tile(0, 0, 1, TotemPieces.lectern(TotemPieceDirection.WEST)),
+                new Tile(1, 0, 2, TotemPieces.lectern(TotemPieceDirection.SOUTH)),
+                new Tile(1, 0, 0, TotemPieces.lectern(TotemPieceDirection.NORTH))
 
         );
         BoundingBox bb = new BoundingBox(-8, -2, -8, 8, 12, 8);

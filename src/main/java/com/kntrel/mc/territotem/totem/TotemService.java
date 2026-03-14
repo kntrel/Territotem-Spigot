@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.kntrel.mc.regionLib.Constants;
+import com.kntrel.mc.regionLib.event.BlockRightClickedEvent;
 import com.kntrel.mc.regionLib.event.RegionLoadEvent;
 import com.kntrel.mc.regionLib.region.Region;
 import com.kntrel.mc.regionLib.region.context.RegionContext;
@@ -30,12 +31,15 @@ import com.kntrel.util.IntBoundingBox;
 import com.kntrel.util.Vec3i;
 import org.bukkit.Chunk;
 import org.bukkit.Material;
+import org.bukkit.Tag;
 import org.bukkit.World;
 import org.bukkit.block.Block;
+import org.bukkit.block.Lectern;
 import org.bukkit.block.Sign;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.block.SignChangeEvent;
 import org.bukkit.event.world.ChunkLoadEvent;
 import org.bukkit.inventory.EquipmentSlot;
@@ -96,7 +100,7 @@ public class TotemService implements Listener {
 
     //API
     public List<Totem> totemsAtChunk(int x, int z, World world) {
-        return this.totemStore_.getAtChunk(x, z, world);
+        return this.totemStore_.getAroundChunk(x, z, world);
     }
     public Optional<Totem> totemOfRegion(Region region) {
         return this.totemStore_.getFromRegion(region);
@@ -267,7 +271,7 @@ public class TotemService implements Listener {
         );
 
         Totem totem = null;
-        for (Totem t : this.totemStore_.getAtChunk(ck)) {
+        for (Totem t : this.totemStore_.getAroundChunk(ck)) {
             Sign s = t.nameSign().orElse(null);
             if (s == null) { continue; }
             if (sign.equals(s)) {
@@ -293,6 +297,56 @@ public class TotemService implements Listener {
         region.save();
 
         e.getPlayer().sendMessage(oldName + "'s name has bee changed to '" + content + "'");
+    }
+
+    @EventHandler
+    void onBlockPlaceAttempt(BlockRightClickedEvent e) {
+        ItemStack item = e.getItem();
+        Material type = item.getType();
+
+        boolean isSign = Tag.SIGNS.isTagged(type),
+                isLectern = type == Material.LECTERN;
+
+        if (!(isSign || isLectern)) { return; }
+
+        Block block = e.getBlock().getRelative(e.getBlockFace());
+        ChunkKey ck = new ChunkKey(
+                block.getX() >> Constants.CHUNK_SHIFT,
+                block.getZ() >> Constants.CHUNK_SHIFT,
+                block.getWorld().getUID()
+        );
+        List<Totem> totems = this.totemStore_.getAroundChunk(ck);
+        if (totems.isEmpty()) { return; }
+        Vec3i cords = new Vec3i(block.getX(), block.getY(), block.getZ());
+
+        if (isLectern) {
+            for (Totem t : totems) {
+                Lectern lectern = t.lectern().orElse(null);
+                if (lectern == null) { continue; }
+
+                Vec3i offset = cords.subtract(t.origin());
+                for (Tile tile : t.blueprint().lecterns()) {
+                    if (offset.equals(tile.offset())) {
+                        e.setCancelled(true);
+                        return;
+                    }
+                }
+            }
+            return;
+        }
+
+        for (Totem t : totems) {
+            Sign sign = t.nameSign().orElse(null);
+            if (sign == null) { continue; }
+
+            Vec3i offset = cords.subtract(t.origin());
+            for (Tile tile : t.blueprint().nameSings()) {
+                if (offset.equals(tile.offset())) {
+                    e.setCancelled(true);
+                    return;
+                }
+            }
+        }
     }
 
 
