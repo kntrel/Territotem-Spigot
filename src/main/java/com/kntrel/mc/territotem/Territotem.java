@@ -12,6 +12,8 @@ import com.kntrel.mc.territotem.structure.piece.Piece;
 import com.kntrel.mc.territotem.structure.piece.Tile;
 import com.kntrel.mc.territotem.totem.TotemService;
 import com.kntrel.mc.territotem.totem.TotemBlueprint;
+import com.kntrel.mc.territotem.totem.piece.TotemPiece;
+import com.kntrel.mc.territotem.totem.piece.TotemPieceDirection;
 import com.kntrel.mc.territotem.totem.piece.TotemPieces;
 import com.kntrel.mc.territotem.totem.core.TotemCoreTracker;
 import com.kntrel.util.Vec3i;
@@ -51,7 +53,7 @@ public final class Territotem extends JavaPlugin {
                     return true;
                 })
                 .track(e -> {
-                    Vec3i origin = e.getCore().getCoordinates().subtract(new Vec3i(0, 2, 0));
+                    Vec3i origin = e.getCore().getCoordinates().subtract(new Vec3i(1, 2, 1));
                     return new TrackingInfo(origin, e.getCore().getWorld(), e.getCompleter());
                 });
 
@@ -69,9 +71,13 @@ public final class Territotem extends JavaPlugin {
 
     private static TotemBlueprint createTotemBlueprint(TotemCoreTracker service, Hierarchy hierarchy) {
         List<Tile> tile = List.of(
-                new Tile(0, 2, 0, TotemPieces.core(service)),
-                new Tile(0, 1, 0, Piece.block(Material.OBSIDIAN)),
-                new Tile(0, 0, 0, Piece.block(Material.OBSIDIAN))
+                new Tile(1, 2, 1, TotemPieces.core(service)),
+                new Tile(1, 1, 1, Piece.block(Material.OBSIDIAN)),
+                new Tile(1, 0, 1, Piece.block(Material.OBSIDIAN)),
+                new Tile(2, 1, 1, TotemPieces.sign(TotemPieceDirection.EAST)),
+                new Tile(0, 1, 1, TotemPieces.sign(TotemPieceDirection.WEST)),
+                new Tile(1, 1, 2, TotemPieces.sign(TotemPieceDirection.SOUTH)),
+                new Tile(1, 1, 0, TotemPieces.sign(TotemPieceDirection.NORTH))
 
         );
         BoundingBox bb = new BoundingBox(-8, -2, -8, 8, 12, 8);

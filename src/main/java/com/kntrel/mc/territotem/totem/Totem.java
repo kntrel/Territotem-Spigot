@@ -3,12 +3,24 @@ package com.kntrel.mc.territotem.totem;
 import com.kntrel.mc.regionLib.region.Region;
 import com.kntrel.mc.territotem.structure.Structure;
 import com.kntrel.mc.territotem.structure.blueprint.InvalidBlueprintException;
+import com.kntrel.mc.territotem.structure.worldTile.WorldTile;
+import com.kntrel.mc.territotem.totem.piece.TotemNameSignPiece;
+import com.kntrel.mc.territotem.totem.piece.TotemTile;
 import com.kntrel.util.Vec3i;
 import org.bukkit.World;
+import org.bukkit.block.Block;
+import org.bukkit.block.BlockState;
+import org.bukkit.block.Sign;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.util.Optional;
 import java.util.UUID;
 
 public class Totem {
+
+    //CONSTANTS
+    private static final Logger LOGGER = LoggerFactory.getLogger(Totem.class);
 
     //FIELDS
     private final Structure structure_;
@@ -45,6 +57,20 @@ public class Totem {
     }
     public World world() {
         return this.structure_.world();
+    }
+    public Optional<Sign> nameSign() {
+        World world = this.world();
+        for (TotemTile<TotemNameSignPiece> sign : this.blueprint().nameSings()) {
+            Vec3i cords = sign.offset().add(this.origin());
+            WorldTile worldTile = WorldTile.of(cords, world);
+            if (!sign.piece().isPlaced(worldTile)) { continue; }
+            Block b = this.world().getBlockAt(cords.x(), cords.y(), cords.z());
+            BlockState state = b.getState();
+            if (state instanceof Sign s) {
+                return Optional.of(s);
+            }
+        }
+        return Optional.empty();
     }
     public boolean isEnabled() {
         return this.region_.isEnabled();

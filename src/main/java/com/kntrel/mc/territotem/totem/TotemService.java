@@ -3,9 +3,11 @@ package com.kntrel.mc.territotem.totem;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
+import com.kntrel.mc.regionLib.Constants;
 import com.kntrel.mc.regionLib.event.RegionLoadEvent;
 import com.kntrel.mc.regionLib.region.Region;
 import com.kntrel.mc.regionLib.region.context.RegionContext;
+import com.kntrel.mc.regionLib.region.context.RegionContextConfig;
 import com.kntrel.mc.regionLib.region.dataContainer.RegionData;
 import com.kntrel.mc.regionLib.region.dataContainer.RegionDataContainer;
 import com.kntrel.mc.regionLib.region.repository.Condition;
@@ -29,9 +31,12 @@ import com.kntrel.util.Vec3i;
 import org.bukkit.Chunk;
 import org.bukkit.Material;
 import org.bukkit.World;
+import org.bukkit.block.Block;
+import org.bukkit.block.Sign;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.SignChangeEvent;
 import org.bukkit.event.world.ChunkLoadEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
@@ -249,6 +254,45 @@ public class TotemService implements Listener {
 
         LOGGER.debug("Piece at offset {} of totem {} is missing. Disabling", tile.offset(), totem.id());
         totem.setEnabled(false);
+    }
+
+    @EventHandler
+    void onSignEdited(SignChangeEvent e) {
+        if (!(e.getBlock().getState() instanceof Sign sign)) { return; }
+
+        ChunkKey ck = new ChunkKey(
+                sign.getX() >> Constants.CHUNK_SHIFT,
+                sign.getZ() >> Constants.CHUNK_SHIFT,
+                e.getBlock().getWorld().getUID()
+        );
+
+        Totem totem = null;
+        for (Totem t : this.totemStore_.getAtChunk(ck)) {
+            Sign s = t.nameSign().orElse(null);
+            if (s == null) { continue; }
+            if (sign.equals(s)) {
+                totem = t;
+                break;
+            }
+        }
+
+        if (totem == null) { return; }
+
+        String content = String.join(" ", e.getLines()).trim();
+
+        int len = content.length();
+        RegionContextConfig conf = this.regionContext_.getConfig();
+        if (len < conf.minNameLength || len > conf.maxNameLength) {
+            e.setCancelled(true);
+            return;
+        }
+
+        Region region = totem.region();
+        String oldName = region.getName();
+        region.setName(content);
+        region.save();
+
+        e.getPlayer().sendMessage(oldName + "'s name has bee changed to '" + content + "'");
     }
 
 

@@ -1,5 +1,6 @@
 package com.kntrel.mc.territotem.totem.piece;
 
+import com.kntrel.mc.state.StateMap;
 import com.kntrel.mc.territotem.structure.worldTile.WorldTile;
 
 public abstract class TotemDirectionalPiece implements TotemPiece {
@@ -19,9 +20,9 @@ public abstract class TotemDirectionalPiece implements TotemPiece {
     //IMPLEMENTATION
     @Override
     public boolean matches(WorldTile tile) {
-        Object val = tile.blockState().get(this.stateKey_);
+        StateMap.Value val = tile.blockState().get(this.stateKey_);
         if (val == null) { return false; }
-        return val.toString().equals(this.direction_.blockStateValue());
+        return val.getAsString().equals(this.direction_.blockStateValue());
     }
 
     //GETTERS
