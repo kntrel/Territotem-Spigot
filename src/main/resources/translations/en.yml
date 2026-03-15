@@ -1,0 +1,35 @@
+_runical:
+  list_formats:
+    and:
+      empty: ""
+      two: "{0} and {1}"
+      start: "{0}, {1}"
+      middle: "{0}, {1}"
+      end: "{0}, and {1}"
+totem:
+  default_name:
+    player_placed: "{player}'s lands"
+    undefined_placer: "Unnamed region"
+  creation: "Region created: '{region}'."
+  creation_failed:
+    blocked: "Cannot claim here, overlapping with {blockers}."
+    generic: "Cannot claim here."
+  region:
+    unnamed: "Region #{id}"
+  expansion:
+    direction:
+      all: "in all directions"
+      up: "upward"
+      down: "downward"
+      north: "to the north"
+      south: "to the south"
+      east: "to the east"
+      west: "to the west"
+    success: "Expanded {direction}. Size: H {height}, X {x}, Z {z}."
+    shifted: "Expanded {direction}; shifted around {blockers}. Size: H {height}, X {x}, Z {z}."
+    partial: "Expanded {direction}; {blockers} blocked the rest. Size: H {height}, X {x}, Z {z}."
+    blocked: "Cannot expand {direction} any further. Blocked by {blockers}"
+    blocked_generic: "Cannot expand {direction}."
+  rename:
+    success: "{old_name} was renamed to '{new_name}'."
+    invalid_length: "Name length must be between {min} and {max} characters."
