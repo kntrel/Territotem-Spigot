@@ -47,7 +47,7 @@ class RegionAllocatorTest {
         Fixture fixture = fixture();
         World world = mock(World.class);
         Region region = fixture.region(1L, world, new BoundingBox(0, 0, 0, 1, 1, 1));
-        fixture.region(2L, world, new BoundingBox(4.5, 0, 0, 6, 1, 1));
+        Region blocker = fixture.region(2L, world, new BoundingBox(4.5, 0, 0, 6, 1, 1));
 
         ExpansionResult result = fixture.allocator().expand(region, Expansion.forDirection(TotemCore.Direction.EAST, 6d));
 
@@ -55,6 +55,7 @@ class RegionAllocatorTest {
         assertEquals(3.5d, result.accomplished().east(), DELTA);
         assertEquals(2.5d, result.unachievedTotal(), DELTA);
         assertEquals(4.5d, region.getMaxX(), DELTA);
+        assertTrue(result.blockingRegions().contains(blocker));
     }
 
     @Test
@@ -62,13 +63,14 @@ class RegionAllocatorTest {
         Fixture fixture = fixture();
         World world = mock(World.class);
         Region region = fixture.region(1L, world, new BoundingBox(0, 0, 0, 1, 1, 1));
-        fixture.region(2L, world, new BoundingBox(1, 0, 0, 2, 1, 1));
+        Region blocker = fixture.region(2L, world, new BoundingBox(1, 0, 0, 2, 1, 1));
 
         ExpansionResult result = fixture.allocator().expand(region, Expansion.forDirection(TotemCore.Direction.EAST, 6d));
 
         assertFalse(result.hasGrowth());
         assertEquals(6d, result.unachievedTotal(), DELTA);
         assertEquals(1d, region.getMaxX(), DELTA);
+        assertTrue(result.blockingRegions().contains(blocker));
     }
 
     @Test
@@ -131,6 +133,7 @@ class RegionAllocatorTest {
         assertEquals(0.5d, result.accomplished().north(), DELTA);
         assertEquals(0.5d, result.accomplished().south(), DELTA);
         assertEquals(3d, result.unachievedTotal(), DELTA);
+        assertEquals(6, result.blockingRegions().size());
     }
 
     @Test

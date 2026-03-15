@@ -44,12 +44,13 @@ public class RegionAllocator {
             return new ExpansionResult(expansion, Expansion.none());
         }
 
+        LinkedHashSet<Region> blockers = new LinkedHashSet<>();
         Allocation allocation = this.allocate(
                 region.getBoundingBox(),
                 expansion,
                 region.getWorld(),
                 region.getId(),
-                null,
+                blockers,
                 usesRedistribution(expansion)
         );
         if (allocation.result().hasGrowth()) {
@@ -104,7 +105,7 @@ public class RegionAllocator {
             this.allocateDirect(world, current, intended, ignoredRegionId, accomplished, blockers);
         }
 
-        return new Allocation(current, new ExpansionResult(intended, toExpansion(accomplished)));
+        return new Allocation(current, new ExpansionResult(intended, toExpansion(accomplished), blockers));
     }
 
     private void allocateDirect(

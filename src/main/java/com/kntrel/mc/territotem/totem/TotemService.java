@@ -41,7 +41,6 @@ import org.bukkit.block.Sign;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.block.SignChangeEvent;
 import org.bukkit.event.world.ChunkLoadEvent;
 import org.bukkit.inventory.EquipmentSlot;
@@ -51,9 +50,10 @@ import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
+import java.math.BigDecimal;
 import java.util.Collection;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -67,6 +67,7 @@ public class TotemService implements Listener {
     private static final Logger LOGGER = LoggerFactory.getLogger(TotemService.class);
     private static final String TOTEM_DATA_KEY = "totemData";
     private static final double REGION_GROWTH_RATE = 6d;
+    private static final double EPSILON = 1.0E-9;
     private static final Gson GSON = new GsonBuilder()
             .registerTypeAdapter(TotemClaim.class, TotemClaim.serializer())
             .registerTypeAdapter(TotemClaim.class, TotemClaim.deserializer())
@@ -134,6 +135,7 @@ public class TotemService implements Listener {
     @EventHandler void onChunkLoad(ChunkLoadEvent e) {
         this.scheduleAudit(new ChunkKey(e.getChunk()));
     }
+
     @EventHandler void onTotemCompleted(StructureCompletedEvent e) {
         Structure structure = e.getStructure();
         if (!(structure.blueprint() instanceof TotemBlueprint blueprint)) { return; }
@@ -145,9 +147,7 @@ public class TotemService implements Listener {
             return;
         }
 
-        Player placer = (e.getCauser() != null && e.getCauser() instanceof Player p)
-                ? p
-                : null;
+        Player placer = (e.getCauser() instanceof Player p) ? p : null;
         String name = (placer != null)
                 ? this.runical_.translateOrDefault(
                         placer,
@@ -172,21 +172,22 @@ public class TotemService implements Listener {
         );
         RegionPlaceResult.Placed placed = placement.getPlaced().orElse(null);
         if (placed == null) {
-            Collection<Long> blockers = placement.getUnplaceable()
+            List<Region> blockers = placement.getUnplaceable()
                     .map(RegionPlaceResult.Unplaceable::overlappingRegions)
-                    .stream()
-                    .flatMap(Collection::stream)
-                    .map(Region::getId)
-                    .toList();
-            LOGGER.warn("Totem structure {} could not place region '{}'. Blocking regions: {}", structure.id(), name, blockers);
+                    .orElse(List.of());
+            Collection<Long> blockerIds = blockers.stream().map(Region::getId).toList();
+            LOGGER.warn("Totem structure {} could not place region '{}'. Blocking regions: {}", structure.id(), name, blockerIds);
+            if (placer != null) {
+                this.sendPlacementRejectedMessage(placer, blockers);
+            }
             this.rejectPlacement(structure, blueprint);
             return;
         }
 
         Region region = placed.region();
-        totem = new Totem(e.getStructure(), region);
+        totem = new Totem(structure, region);
         TotemClaim claim = TotemClaim.of(totem);
-        var dataContainer = region.getDataContainer();
+        RegionDataContainer dataContainer = region.getDataContainer();
         if (dataContainer != null) {
             dataContainer.remove(TOTEM_DATA_KEY);
             dataContainer.add(new RegionData(TOTEM_DATA_KEY, GSON.toJsonTree(claim)));
@@ -198,7 +199,7 @@ public class TotemService implements Listener {
             this.runical_.sendTranslationOrDefault(
                     placer,
                     "totem.creation",
-                    "New region called '{region}' has been created",
+                    "New region called '{region}' has been created.",
                     Placeholder.of("region", name)
             );
         }
@@ -220,18 +221,20 @@ public class TotemService implements Listener {
             return;
         }
 
-        Expansion expansion = expansionFor(e.getCore().getDirection());
-        ExpansionResult result = this.regionAllocator_.expand(totem.region(), expansion);
+        TotemCore.Direction direction = e.getCore().getDirection();
+        ExpansionResult result = this.regionAllocator_.expand(totem.region(), expansionFor(direction));
+        Player player = e.getPlayer();
         if (!result.hasGrowth()) {
+            this.sendExpansionBlockedMessage(player, direction, result);
             return;
         }
 
-        Player player = e.getPlayer();
         Region region = totem.region();
         consumeOneItem(player, e.getHand(), itemStack);
-        swingHand(e.getPlayer(), e.getHand());
+        swingHand(player, e.getHand());
         region.display(player);
         region.save();
+        this.sendExpansionFeedback(player, region, direction, result);
     }
 
     @EventHandler
@@ -263,7 +266,7 @@ public class TotemService implements Listener {
         boolean match = e.getPieceMatched();
         if (tile == null) {
             tile = blueprint.core();
-            Vec3i coordinates = e.getStructure().origin().add(tile.offset());
+            Vec3i coordinates = structure.origin().add(tile.offset());
             match = tile.matches(WorldTile.of(coordinates, structure.world()));
         }
 
@@ -292,9 +295,9 @@ public class TotemService implements Listener {
 
         Totem totem = null;
         for (Totem t : this.totemStore_.getAroundChunk(ck)) {
-            Sign s = t.nameSign().orElse(null);
-            if (s == null) { continue; }
-            if (sign.equals(s)) {
+            Sign candidate = t.nameSign().orElse(null);
+            if (candidate == null) { continue; }
+            if (sign.equals(candidate)) {
                 totem = t;
                 break;
             }
@@ -303,11 +306,17 @@ public class TotemService implements Listener {
         if (totem == null) { return; }
 
         String content = String.join(" ", e.getLines()).trim();
-
-        int len = content.length();
         RegionContextConfig conf = this.regionContext_.getConfig();
-        if (len < conf.minNameLength || len > conf.maxNameLength) {
+        int length = content.length();
+        if (length < conf.minNameLength || length > conf.maxNameLength) {
             e.setCancelled(true);
+            this.runical_.sendTranslationOrDefault(
+                    e.getPlayer(),
+                    "totem.rename.invalid_length",
+                    "Region names must be between {min} and {max} characters.",
+                    Placeholder.of("min", Integer.toString(conf.minNameLength)),
+                    Placeholder.of("max", Integer.toString(conf.maxNameLength))
+            );
             return;
         }
 
@@ -316,7 +325,13 @@ public class TotemService implements Listener {
         region.setName(content);
         region.save();
 
-        e.getPlayer().sendMessage(oldName + "'s name has bee changed to '" + content + "'");
+        this.runical_.sendTranslationOrDefault(
+                e.getPlayer(),
+                "totem.rename.success",
+                "Renamed '{old_name}' to '{new_name}'.",
+                Placeholder.of("old_name", oldName),
+                Placeholder.of("new_name", content)
+        );
     }
 
     @EventHandler
@@ -337,15 +352,15 @@ public class TotemService implements Listener {
         );
         List<Totem> totems = this.totemStore_.getAroundChunk(ck);
         if (totems.isEmpty()) { return; }
-        Vec3i cords = new Vec3i(block.getX(), block.getY(), block.getZ());
+        Vec3i coordinates = new Vec3i(block.getX(), block.getY(), block.getZ());
 
         if (isLectern) {
-            for (Totem t : totems) {
-                Lectern lectern = t.lectern().orElse(null);
+            for (Totem totem : totems) {
+                Lectern lectern = totem.lectern().orElse(null);
                 if (lectern == null) { continue; }
 
-                Vec3i offset = cords.subtract(t.origin());
-                for (Tile tile : t.blueprint().lecterns()) {
+                Vec3i offset = coordinates.subtract(totem.origin());
+                for (Tile tile : totem.blueprint().lecterns()) {
                     if (offset.equals(tile.offset())) {
                         e.setCancelled(true);
                         return;
@@ -355,12 +370,12 @@ public class TotemService implements Listener {
             return;
         }
 
-        for (Totem t : totems) {
-            Sign sign = t.nameSign().orElse(null);
-            if (sign == null) { continue; }
+        for (Totem totem : totems) {
+            Sign candidate = totem.nameSign().orElse(null);
+            if (candidate == null) { continue; }
 
-            Vec3i offset = cords.subtract(t.origin());
-            for (Tile tile : t.blueprint().nameSings()) {
+            Vec3i offset = coordinates.subtract(totem.origin());
+            for (Tile tile : totem.blueprint().nameSings()) {
                 if (offset.equals(tile.offset())) {
                     e.setCancelled(true);
                     return;
@@ -374,6 +389,7 @@ public class TotemService implements Listener {
     private void loadTotem(Totem totem) {
         this.totemStore_.add(totem);
     }
+
     private void scheduleAudit(ChunkKey chunkKey) {
         if (!this.scheduledAudits_.add(chunkKey)) { return; }
 
@@ -432,6 +448,167 @@ public class TotemService implements Listener {
                 structure.drop();
             }, 1);
         }
+    }
+
+    private void sendPlacementRejectedMessage(Player player, Collection<Region> blockers) {
+        String blockerNames = this.formatRegionList(player, blockers);
+        if (!blockerNames.isBlank()) {
+            this.runical_.sendTranslationOrDefault(
+                    player,
+                    "totem.creation_failed.blocked",
+                    "This totem cannot claim land here because it collides with {blockers}. Move it and try again.",
+                    Placeholder.of("blockers", blockerNames)
+            );
+            return;
+        }
+
+        this.runical_.sendTranslationOrDefault(
+                player,
+                "totem.creation_failed.generic",
+                "This totem cannot claim land here. Move it and try again."
+        );
+    }
+
+    private void sendExpansionFeedback(Player player, Region region, TotemCore.Direction direction, ExpansionResult result) {
+        Placeholder[] placeholders = this.expansionPlaceholders(player, region, direction, result);
+        if (this.isShifted(result)) {
+            this.runical_.sendTranslationOrDefault(
+                    player,
+                    "totem.expansion.shifted",
+                    "The totem absorbed your diamond and completed the expansion {direction}, but it had to shift around {blockers}. New size: height {height}, X {x}, Z {z}.",
+                    placeholders
+            );
+            return;
+        }
+
+        if (result.unachievedTotal() > EPSILON) {
+            this.runical_.sendTranslationOrDefault(
+                    player,
+                    "totem.expansion.partial",
+                    "The totem absorbed your diamond and expanded {direction} as much as it could, but {blockers} blocked the rest. New size: height {height}, X {x}, Z {z}.",
+                    placeholders
+            );
+            return;
+        }
+
+        this.runical_.sendTranslationOrDefault(
+                player,
+                "totem.expansion.success",
+                "The totem absorbed your diamond and expanded {direction}. New size: height {height}, X {x}, Z {z}.",
+                placeholders
+        );
+    }
+
+    private void sendExpansionBlockedMessage(Player player, TotemCore.Direction direction, ExpansionResult result) {
+        String blockerNames = this.formatRegionList(player, result.blockingRegions());
+        if (!blockerNames.isBlank()) {
+            this.runical_.sendTranslationOrDefault(
+                    player,
+                    "totem.expansion.blocked",
+                    "The totem could not expand {direction} because of {blockers}. Your diamond was not consumed.",
+                    Placeholder.of("direction", this.translateDirection(player, direction)),
+                    Placeholder.of("blockers", blockerNames)
+            );
+            return;
+        }
+
+        this.runical_.sendTranslationOrDefault(
+                player,
+                "totem.expansion.blocked_generic",
+                "The totem could not expand {direction}. Your diamond was not consumed.",
+                Placeholder.of("direction", this.translateDirection(player, direction))
+        );
+    }
+
+    private Placeholder[] expansionPlaceholders(Player player, Region region, TotemCore.Direction direction, ExpansionResult result) {
+        BoundingBox bounds = region.getBoundingBox();
+        return new Placeholder[] {
+                Placeholder.of("direction", this.translateDirection(player, direction)),
+                Placeholder.of("height", formatMeasure(bounds.getHeight())),
+                Placeholder.of("x", formatMeasure(bounds.getWidthX())),
+                Placeholder.of("z", formatMeasure(bounds.getWidthZ())),
+                Placeholder.of("blockers", this.formatRegionList(player, result.blockingRegions()))
+        };
+    }
+
+    private String translateDirection(Player player, TotemCore.Direction direction) {
+        String key = "totem.expansion.direction." + direction.name().toLowerCase();
+        String fallback = switch (direction) {
+            case ALL -> "in all directions";
+            case UP -> "upward";
+            case DOWN -> "downward";
+            case NORTH -> "to the north";
+            case SOUTH -> "to the south";
+            case EAST -> "to the east";
+            case WEST -> "to the west";
+        };
+
+        if (player != null) {
+            return this.runical_.translateOrDefault(player, key, fallback);
+        }
+        return this.runical_.translateOrDefault(this.runical_.getDefaultLocale(), key, fallback);
+    }
+
+    private String formatRegionList(Player player, Collection<Region> regions) {
+        if (regions == null || regions.isEmpty()) {
+            return "";
+        }
+
+        LinkedHashSet<String> names = new LinkedHashSet<>();
+        for (Region region : regions) {
+            names.add(this.regionName(player, region));
+        }
+
+        if (player != null) {
+            return this.runical_.formatList(player, names);
+        }
+        return this.runical_.formatList(this.runical_.getDefaultLocale(), names);
+    }
+
+    private String regionName(Player player, Region region) {
+        String name = region.getName();
+        if (name != null && !name.isBlank()) {
+            return name;
+        }
+
+        String id = (region.getId() == null) ? "?" : region.getId().toString();
+        if (player != null) {
+            return this.runical_.translateOrDefault(
+                    player,
+                    "totem.region.unnamed",
+                    "Region #{id}",
+                    Placeholder.of("id", id)
+            );
+        }
+        return this.runical_.translateOrDefault(
+                this.runical_.getDefaultLocale(),
+                "totem.region.unnamed",
+                "Region #{id}",
+                Placeholder.of("id", id)
+        );
+    }
+
+    private boolean isShifted(ExpansionResult result) {
+        if (result.unachievedTotal() > EPSILON) {
+            return false;
+        }
+
+        Expansion intended = result.intended();
+        Expansion accomplished = result.accomplished();
+        return !same(intended.up(), accomplished.up())
+                || !same(intended.down(), accomplished.down())
+                || !same(intended.north(), accomplished.north())
+                || !same(intended.south(), accomplished.south())
+                || !same(intended.east(), accomplished.east())
+                || !same(intended.west(), accomplished.west());
+    }
+
+    private static String formatMeasure(double value) {
+        double rounded = Math.rint(value);
+        if (same(value, rounded)) {
+            return Long.toString(Math.round(rounded));
+        }
+        return BigDecimal.valueOf(value).stripTrailingZeros().toPlainString();
     }
 
     private static TotemClaim readClaim(Region region) {
@@ -497,6 +674,10 @@ public class TotemService implements Listener {
         } else {
             player.swingMainHand();
         }
+    }
+
+    private static boolean same(double a, double b) {
+        return Math.abs(a - b) <= EPSILON;
     }
 
 
