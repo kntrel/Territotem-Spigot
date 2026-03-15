@@ -4,6 +4,7 @@ import com.kntrel.mc.chunkPersistence.ChunkPersister;
 import com.kntrel.mc.regionLib.RegionLib;
 import com.kntrel.mc.regionLib.region.context.RegionContext;
 import com.kntrel.mc.regionLib.region.hierarchy.Hierarchy;
+import com.kntrel.mc.runical.bukkit.Runical;
 import com.kntrel.mc.territotem.totem.core.TotemCore;
 import com.kntrel.mc.territotem.totem.event.TotemCoreCompletedEvent;
 import com.kntrel.mc.territotem.structure.StructureService;
@@ -41,10 +42,12 @@ public final class Territotem extends JavaPlugin {
         RegionContext regionContext = RegionLib.createDefaultContext(this);
         Hierarchy hierarchy = regionContext.getHierarchyRepository().get(1).orElse(null);
 
+        Runical runical = new Runical(this, "./translations");
+
         this.chunkPersister_ = new ChunkPersister(this);
         StructureService structureService = new StructureService(this, this.chunkPersister_);
         TotemCoreTracker totemCoreTracker = new TotemCoreTracker(this, this.chunkPersister_);
-        new TotemService(regionContext);
+        new TotemService(regionContext, runical);
         structureService.registerBlueprint(createTotemBlueprint(totemCoreTracker, hierarchy))
                 .on(TotemCoreCompletedEvent.class)
                 .when(e -> {

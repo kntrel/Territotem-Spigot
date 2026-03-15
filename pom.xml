@@ -44,6 +44,8 @@
                             <artifactSet>
                                 <includes>
                                     <include>com.kntrel:RegionsLib-Spigot</include>
+                                    <include>com.kntrel:runical-core</include>
+                                    <include>com.kntrel:runical-bukkit</include>
                                     <include>com.saicone.rtag:rtag</include>
                                     <include>com.saicone.rtag:rtag-block</include>
                                     <include>com.saicone.rtag:rtag-entity</include>
@@ -87,6 +89,16 @@
             <groupId>com.kntrel</groupId>
             <artifactId>RegionsLib-Spigot</artifactId>
             <version>main-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>com.kntrel</groupId>
+            <artifactId>runical-core</artifactId>
+            <version>0.1.0-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>com.kntrel</groupId>
+            <artifactId>runical-bukkit</artifactId>
+            <version>0.1.0-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>com.saicone.rtag</groupId>

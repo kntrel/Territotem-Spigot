@@ -12,6 +12,8 @@ import com.kntrel.mc.regionLib.region.context.RegionContextConfig;
 import com.kntrel.mc.regionLib.region.dataContainer.RegionData;
 import com.kntrel.mc.regionLib.region.dataContainer.RegionDataContainer;
 import com.kntrel.mc.regionLib.region.repository.Condition;
+import com.kntrel.mc.runical.bukkit.Runical;
+import com.kntrel.mc.runical.core.Placeholder;
 import com.kntrel.mc.territotem.structure.Structure;
 import com.kntrel.mc.territotem.structure.event.StructureChangedEvent;
 import com.kntrel.mc.territotem.structure.event.StructureCompletedEvent;
@@ -74,6 +76,7 @@ public class TotemService implements Listener {
     //FIELDS
     private final RegionContext regionContext_;
     private final Plugin plugin_;
+    private final Runical runical_;
     private final TotemAssembler assembler_;
     private final RegionAllocator regionAllocator_;
     private final Map<ChunkKey, Map<UUID, PendingExpectation>> pendingExpectationsByChunk_;
@@ -83,9 +86,10 @@ public class TotemService implements Listener {
 
 
     //CONSTRUCTOR
-    public TotemService(RegionContext regionContext) {
+    public TotemService(RegionContext regionContext, Runical runical) {
         this.regionContext_ = regionContext;
         this.plugin_ = this.regionContext_.getPlugin();
+        this.runical_ = runical;
         this.assembler_ = new TotemAssembler();
         this.regionAllocator_ = new RegionAllocator(this.regionContext_, Condition.hasDataKey(TOTEM_DATA_KEY));
         this.pendingExpectationsByChunk_ = new ConcurrentHashMap<>();
@@ -141,11 +145,22 @@ public class TotemService implements Listener {
             return;
         }
 
-        Vector shift = structure.origin().toDouble();
-        String name = (e.getCauser() == null || !(e.getCauser() instanceof Player p))
-                ? "Unnamed region"
-                : p.getName() + "'s region";
+        Player placer = (e.getCauser() != null && e.getCauser() instanceof Player p)
+                ? p
+                : null;
+        String name = (placer != null)
+                ? this.runical_.translateOrDefault(
+                        placer,
+                        "totem.default_name.player_placed",
+                        "{player}'s lands",
+                        Placeholder.of("player", placer.getName())
+                ) : this.runical_.translateOrDefault(
+                        this.runical_.getDefaultLocale(),
+                        "totem.default_name.undefined_placer",
+                        "Unnamed region"
+                );
 
+        Vector shift = structure.origin().toDouble();
         BoundingBox proposedBounds = blueprint.initialRegionBounds().shift(shift);
         BoundingBox criticalBounds = toBoundingBox(structure.boundingBox());
         RegionPlaceResult placement = this.regionAllocator_.place(
@@ -178,9 +193,14 @@ public class TotemService implements Listener {
             region.save();
         }
 
-        if (e.getCauser() instanceof Player p) {
-            region.display(p);
-            p.sendMessage("Created " + name);
+        if (placer != null) {
+            region.display(placer);
+            this.runical_.sendTranslationOrDefault(
+                    placer,
+                    "totem.creation",
+                    "New region called '{region}' has been created",
+                    Placeholder.of("region", name)
+            );
         }
 
         this.loadTotem(totem);
