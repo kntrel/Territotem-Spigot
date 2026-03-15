@@ -7,10 +7,11 @@ import com.kntrel.mc.territotem.structure.worldTile.WorldTile;
 import com.kntrel.mc.territotem.totem.piece.TotemLecternPiece;
 import com.kntrel.mc.territotem.totem.piece.TotemNameSignPiece;
 import com.kntrel.mc.territotem.totem.piece.TotemTile;
+import com.kntrel.mc.territotem.totem.region.Expansion;
+import com.kntrel.mc.territotem.totem.region.ExpansionResult;
 import com.kntrel.util.Vec3i;
 import org.bukkit.World;
 import org.bukkit.block.Block;
-import org.bukkit.block.BlockState;
 import org.bukkit.block.Lectern;
 import org.bukkit.block.Sign;
 import org.slf4j.Logger;
@@ -25,17 +26,19 @@ public class Totem {
     private static final Logger LOGGER = LoggerFactory.getLogger(Totem.class);
 
     //FIELDS
+    private final TotemService provenance_;
     private final Structure structure_;
     private final Region region_;
 
 
     //CONSTRUCTORS
-    Totem(Structure structure, Region region) {
+    Totem(TotemService provenance, Structure structure, Region region) {
         if (!(structure.blueprint() instanceof TotemBlueprint)) {
             throw new InvalidBlueprintException(
                 "A totem must be backed by a totem blueprint. Passed structure's blueprint member is not an instance of TotemBlueprint"
             );
         }
+        this.provenance_ = provenance;
         this.structure_ = structure;
         this.region_ = region;
     }
@@ -56,6 +59,9 @@ public class Totem {
     }
     public Region region() {
         return this.region_;
+    }
+    public ExpansionResult expand(Expansion expansion) {
+        return this.provenance_.expand(this, expansion);
     }
     public World world() {
         return this.structure_.world();

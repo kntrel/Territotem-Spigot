@@ -4,12 +4,13 @@ import com.kntrel.mc.regionLib.region.Region;
 import com.kntrel.mc.territotem.structure.Structure;
 import com.kntrel.mc.territotem.util.ChunkKey;
 import org.bukkit.Chunk;
+import org.bukkit.plugin.Plugin;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Consumer;
+import java.util.function.BiConsumer;
 
 class TotemAssembler {
 
@@ -21,15 +22,19 @@ class TotemAssembler {
     private final Map<ChunkKey, Set<PendingAudit>> pendingAuditsByChunk_;
     private final Map<UUID, PendingAudit> pendingAuditsByStructure_;
     private final Set<UUID> verifiedClaims_;
-    private final List<Consumer<Totem>> consumers_;
+    private final List<BiConsumer<Structure, Region>> consumers_;
+    private final TottemAssenblyListener listener_;
 
 
     //CONSTRUCTOR
-    public TotemAssembler() {
+    public TotemAssembler(Plugin plugin, TotemClaimRepository claimRepository) {
         this.pendingAuditsByChunk_ = new ConcurrentHashMap<>();
         this.pendingAuditsByStructure_ = new ConcurrentHashMap<>();
         this.verifiedClaims_ = ConcurrentHashMap.newKeySet();
         this.consumers_ = new ArrayList<>();
+        this.listener_ = new TottemAssenblyListener(plugin, this, claimRepository);
+
+        plugin.getServer().getPluginManager().registerEvents(this.listener_, plugin);
     }
 
 
@@ -84,7 +89,7 @@ class TotemAssembler {
         });
 
         if (this.verify(claim, structure, region)) {
-            this.release(new Totem(structure, region));
+            this.release(structure, region);
         }
     }
     public void audit(Chunk chunk) {
@@ -101,14 +106,16 @@ class TotemAssembler {
             this.verify(audit.claim, null, audit.region);
         }
     }
-    public void consume(Consumer<Totem> consumer) {
+    public void consume(BiConsumer<Structure, Region> consumer) {
         this.consumers_.add(consumer);
     }
 
 
     //HELPERS
-    private void release(Totem totem) {
-        for (Consumer<Totem> c : this.consumers_) { c.accept(totem); }
+    private void release(Structure structure, Region region) {
+        for (BiConsumer<Structure, Region> c : this.consumers_) {
+            c.accept(structure, region);
+        }
     }
     private boolean verify(TotemClaim claim, @Nullable Structure structure, Region region) {
 
@@ -165,4 +172,3 @@ class TotemAssembler {
     //SUBTYPES
     private record PendingAudit(TotemClaim claim, Region region) {}
 }
-
