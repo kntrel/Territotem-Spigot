@@ -21,15 +21,13 @@ final class TottemAssenblyListener implements Listener {
 
     private final Plugin plugin_;
     private final TotemAssembler assembler_;
-    private final TotemClaimRepository claimRepository_;
     private final Map<ChunkKey, Map<UUID, PendingExpectation>> pendingExpectationsByChunk_;
     private final Map<ChunkKey, Map<UUID, Structure>> pendingIngestionsByChunk_;
     private final Set<ChunkKey> scheduledAudits_;
 
-    TottemAssenblyListener(Plugin plugin, TotemAssembler assembler, TotemClaimRepository claimRepository) {
+    TottemAssenblyListener(Plugin plugin, TotemAssembler assembler) {
         this.plugin_ = plugin;
         this.assembler_ = assembler;
-        this.claimRepository_ = claimRepository;
         this.pendingExpectationsByChunk_ = new ConcurrentHashMap<>();
         this.pendingIngestionsByChunk_ = new ConcurrentHashMap<>();
         this.scheduledAudits_ = ConcurrentHashMap.newKeySet();
@@ -37,7 +35,7 @@ final class TottemAssenblyListener implements Listener {
 
     @EventHandler
     void onRegionLoad(RegionLoadEvent e) {
-        TotemClaim claim = this.claimRepository_.read(e.getRegion());
+        TotemClaim claim = TotemClaim.read(e.getRegion());
         if (claim == null) { return; }
 
         ChunkKey chunkKey = new ChunkKey(claim.chunkX(), claim.chunkZ(), e.getRegion().getWorld());

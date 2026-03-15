@@ -27,12 +27,12 @@ class TotemAssembler {
 
 
     //CONSTRUCTOR
-    public TotemAssembler(Plugin plugin, TotemClaimRepository claimRepository) {
+    public TotemAssembler(Plugin plugin) {
         this.pendingAuditsByChunk_ = new ConcurrentHashMap<>();
         this.pendingAuditsByStructure_ = new ConcurrentHashMap<>();
         this.verifiedClaims_ = ConcurrentHashMap.newKeySet();
         this.consumers_ = new ArrayList<>();
-        this.listener_ = new TottemAssenblyListener(plugin, this, claimRepository);
+        this.listener_ = new TottemAssenblyListener(plugin, this);
 
         plugin.getServer().getPluginManager().registerEvents(this.listener_, plugin);
     }

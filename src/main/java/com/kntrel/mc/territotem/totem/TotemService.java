@@ -35,22 +35,20 @@ public class TotemService {
 
     //CONSTANTS
     private static final Logger LOGGER = LoggerFactory.getLogger(TotemService.class);
-    private static final String TOTEM_DATA_KEY = TotemClaimRepository.TOTEM_DATA_KEY;
+    private static final String TOTEM_DATA_KEY = TotemClaim.DATA_KEY;
 
 
     //FIELDS
     private final Plugin plugin_;
     private final TotemAssembler assembler_;
     private final RegionAllocator regionAllocator_;
-    private final TotemClaimRepository claimRepository_;
     private final TotemStore totemStore_;
 
 
     //CONSTRUCTOR
     public TotemService(RegionContext regionContext, Runical runical) {
         this.plugin_ = regionContext.getPlugin();
-        this.claimRepository_ = new TotemClaimRepository();
-        this.assembler_ = new TotemAssembler(this.plugin_, this.claimRepository_);
+        this.assembler_ = new TotemAssembler(this.plugin_);
         this.regionAllocator_ = new RegionAllocator(regionContext, Condition.hasDataKey(TOTEM_DATA_KEY));
         this.totemStore_ = new TotemStore();
 
@@ -132,7 +130,7 @@ public class TotemService {
         Region region = placed.region();
         totem = this.loadTotem(structure, region);
         TotemClaim claim = TotemClaim.of(totem);
-        this.claimRepository_.write(region, claim);
+        TotemClaim.write(region, claim);
         return NewTotemResult.created(totem);
     }
 
