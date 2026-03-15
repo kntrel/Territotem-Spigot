@@ -199,7 +199,7 @@ public class TotemService implements Listener {
             this.runical_.sendTranslationOrDefault(
                     placer,
                     "totem.creation",
-                    "New region called '{region}' has been created.",
+                    "Region created: '{region}'.",
                     Placeholder.of("region", name)
             );
         }
@@ -313,7 +313,7 @@ public class TotemService implements Listener {
             this.runical_.sendTranslationOrDefault(
                     e.getPlayer(),
                     "totem.rename.invalid_length",
-                    "Region names must be between {min} and {max} characters.",
+                    "Name length must be {min}-{max} characters.",
                     Placeholder.of("min", Integer.toString(conf.minNameLength)),
                     Placeholder.of("max", Integer.toString(conf.maxNameLength))
             );
@@ -328,7 +328,7 @@ public class TotemService implements Listener {
         this.runical_.sendTranslationOrDefault(
                 e.getPlayer(),
                 "totem.rename.success",
-                "Renamed '{old_name}' to '{new_name}'.",
+                "Region renamed to '{new_name}'.",
                 Placeholder.of("old_name", oldName),
                 Placeholder.of("new_name", content)
         );
@@ -456,7 +456,7 @@ public class TotemService implements Listener {
             this.runical_.sendTranslationOrDefault(
                     player,
                     "totem.creation_failed.blocked",
-                    "This totem cannot claim land here because it collides with {blockers}. Move it and try again.",
+                    "Cannot claim here: {blockers}. Move the totem.",
                     Placeholder.of("blockers", blockerNames)
             );
             return;
@@ -465,7 +465,7 @@ public class TotemService implements Listener {
         this.runical_.sendTranslationOrDefault(
                 player,
                 "totem.creation_failed.generic",
-                "This totem cannot claim land here. Move it and try again."
+                "Cannot claim here. Move the totem."
         );
     }
 
@@ -475,7 +475,7 @@ public class TotemService implements Listener {
             this.runical_.sendTranslationOrDefault(
                     player,
                     "totem.expansion.shifted",
-                    "The totem absorbed your diamond and completed the expansion {direction}, but it had to shift around {blockers}. New size: height {height}, X {x}, Z {z}.",
+                    "Expanded {direction}; shifted around {blockers}. Size: H {height}, X {x}, Z {z}.",
                     placeholders
             );
             return;
@@ -485,7 +485,7 @@ public class TotemService implements Listener {
             this.runical_.sendTranslationOrDefault(
                     player,
                     "totem.expansion.partial",
-                    "The totem absorbed your diamond and expanded {direction} as much as it could, but {blockers} blocked the rest. New size: height {height}, X {x}, Z {z}.",
+                    "Expanded {direction}; {blockers} blocked the rest. Size: H {height}, X {x}, Z {z}.",
                     placeholders
             );
             return;
@@ -494,7 +494,7 @@ public class TotemService implements Listener {
         this.runical_.sendTranslationOrDefault(
                 player,
                 "totem.expansion.success",
-                "The totem absorbed your diamond and expanded {direction}. New size: height {height}, X {x}, Z {z}.",
+                "Expanded {direction}. Size: H {height}, X {x}, Z {z}.",
                 placeholders
         );
     }
@@ -505,7 +505,7 @@ public class TotemService implements Listener {
             this.runical_.sendTranslationOrDefault(
                     player,
                     "totem.expansion.blocked",
-                    "The totem could not expand {direction} because of {blockers}. Your diamond was not consumed.",
+                    "Cannot expand {direction}: {blockers}.",
                     Placeholder.of("direction", this.translateDirection(player, direction)),
                     Placeholder.of("blockers", blockerNames)
             );
@@ -515,7 +515,7 @@ public class TotemService implements Listener {
         this.runical_.sendTranslationOrDefault(
                 player,
                 "totem.expansion.blocked_generic",
-                "The totem could not expand {direction}. Your diamond was not consumed.",
+                "Cannot expand {direction}.",
                 Placeholder.of("direction", this.translateDirection(player, direction))
         );
     }
