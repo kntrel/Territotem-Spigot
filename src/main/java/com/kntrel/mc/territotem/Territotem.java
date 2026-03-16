@@ -42,7 +42,7 @@ public final class Territotem extends JavaPlugin {
         RegionContext regionContext = RegionLib.createDefaultContext(this);
         Hierarchy hierarchy = regionContext.getHierarchyRepository().get(1).orElse(null);
 
-        Runical runical = new Runical(this, "./translations");
+        Runical runical = new Runical(this, "translations");
 
         this.chunkPersister_ = new ChunkPersister(this);
         StructureService structureService = new StructureService(this, this.chunkPersister_);

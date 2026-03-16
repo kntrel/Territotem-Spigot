@@ -64,6 +64,9 @@ final class TotemServiceListener implements Listener {
             Region region = result.totem().region();
             String name = this.defaultTotemName(placer, region);
             region.setName(name);
+            if (placer != null) {
+                region.addPermission(placer, region.getHierarchy().getLowestLever());
+            }
             region.save();
         }
 
