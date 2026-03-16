@@ -17,6 +17,7 @@ import com.kntrel.mc.territotem.totem.event.TotemCoreRightClickedEvent;
 import com.kntrel.mc.territotem.totem.region.Expansion;
 import com.kntrel.mc.territotem.totem.region.ExpansionResult;
 import com.kntrel.util.Vec3i;
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Tag;
 import org.bukkit.block.Block;
@@ -57,8 +58,15 @@ final class TotemServiceListener implements Listener {
         }
 
         Player placer = (e.getCauser() instanceof Player p) ? p : null;
-        String name = this.defaultTotemName(placer);
-        TotemService.NewTotemResult result = this.service_.newTotem(structure, name);
+        TotemService.NewTotemResult result = this.service_.newTotem(structure, "_unnamed_");
+
+        if (result.status() == TotemService.NewTotemResult.Status.CREATED) {
+            Region region = result.totem().region();
+            String name = this.defaultTotemName(placer, region);
+            region.setName(name);
+            region.save();
+        }
+
         if (placer == null) {
             return;
         }
@@ -71,11 +79,16 @@ final class TotemServiceListener implements Listener {
         if (result.status() == TotemService.NewTotemResult.Status.CREATED) {
             Region region = result.totem().region();
             region.display(placer);
+            Location center = region.getCenter();
             this.runical_.sendTranslationOrDefault(
                     placer,
-                    "totem.creation",
+                    "totem.creation.success",
                     "Region created: '{region}'.",
-                    Placeholder.of("region", region.getName())
+                    Placeholder.of("region_name", region.getName()),
+                    Placeholder.of("creator", placer.getName()),
+                    Placeholder.of("x", formatMeasure(center.getX())),
+                    Placeholder.of("y", formatMeasure(center.getY())),
+                    Placeholder.of("z", formatMeasure(center.getZ()))
             );
         }
     }
@@ -156,13 +169,8 @@ final class TotemServiceListener implements Listener {
 
         String oldName = totem.region().getName();
         totem.rename(content);
-        this.runical_.sendTranslationOrDefault(
-                e.getPlayer(),
-                "totem.rename.success",
-                "Region renamed to '{new_name}'.",
-                Placeholder.of("old_name", oldName),
-                Placeholder.of("new_name", content)
-        );
+        Player player = e.getPlayer();
+        this.sendRenamedMessage(totem.region(), player, oldName, content);
     }
 
     @EventHandler
@@ -183,7 +191,7 @@ final class TotemServiceListener implements Listener {
         if (totems.isEmpty()) { return; }
 
         Vec3i coordinates = new Vec3i(target.getX(), target.getY(), target.getZ());
-        boolean allowed = true;
+        Totem rejectingTotem = null;
         for (Totem totem : totems) {
             Vec3i offset = coordinates.subtract(totem.origin());
             if (isLectern) {
@@ -192,7 +200,7 @@ final class TotemServiceListener implements Listener {
 
                 for (Tile tile : totem.blueprint().lecterns()) {
                     if (offset.equals(tile.offset())) {
-                        allowed = false;
+                        rejectingTotem = totem;
                         break;
                     }
                 }
@@ -202,25 +210,27 @@ final class TotemServiceListener implements Listener {
 
                 for (Tile tile : totem.blueprint().nameSings()) {
                     if (offset.equals(tile.offset())) {
-                        allowed = false;
+                        rejectingTotem = totem;
                         break;
                     }
                 }
             }
         }
 
-        if (allowed) { return; }
+        if (rejectingTotem == null) { return; }
 
         e.setCancelled(true);
         this.runical_.sendTranslation(
                 e.getPlayer(),
-                (isSign) ? "totem.block_place_reject.sign" : "totem.block_place_reject.lectern"
+                (isSign) ? "totem.block_place_reject.sign" : "totem.block_place_reject.lectern",
+                Placeholder.of("region_name", rejectingTotem.region().getName()),
+                Placeholder.of("region_id", rejectingTotem.region().getId())
         );
     }
 
 
     //HELPERS
-    private String defaultTotemName(Player placer) {
+    private String defaultTotemName(Player placer, Region region) {
         if (placer != null) {
             return this.runical_.translateOrDefault(
                     placer,
@@ -232,8 +242,35 @@ final class TotemServiceListener implements Listener {
         return this.runical_.translateOrDefault(
                 this.runical_.getDefaultLocale(),
                 "totem.default_name.undefined_placer",
-                "Unnamed region"
+                "Unnamed region",
+                Placeholder.of("id", region.getId())
         );
+    }
+
+    private void sendRenamedMessage(Region region, Player renamer, String oldName, String newName) {
+
+        this.runical_.sendTranslationOrDefault(
+                renamer,
+                "region.renamed.first_person",
+                "Region renamed to '{new_name}'.",
+                Placeholder.of("old_name", oldName),
+                Placeholder.of("new_name", newName),
+                Placeholder.of("region_id", region.getId())
+        );
+
+        List<Player> members = region.getOnlineMembers(p -> !p.getUniqueId().equals(renamer.getUniqueId()));
+        if (members.isEmpty()) { return; }
+
+        for (Player member : members) {
+            this.runical_.sendTranslation(
+                    member,
+                    "region.renamed.third_person",
+                    Placeholder.of("old_name", oldName),
+                    Placeholder.of("new_name", newName),
+                    Placeholder.of("renamer", renamer.getName()),
+                    Placeholder.of("region_id", region.getId())
+            );
+        }
     }
 
     private void sendPlacementRejectedMessage(Player player, Collection<Region> blockers) {
@@ -241,7 +278,7 @@ final class TotemServiceListener implements Listener {
         if (!blockerNames.isBlank()) {
             this.runical_.sendTranslationOrDefault(
                     player,
-                    "totem.creation_failed.blocked",
+                    "totem.creation.blocked",
                     "Cannot claim here: {blockers}. Move the totem.",
                     Placeholder.of("blockers", blockerNames)
             );
@@ -250,7 +287,7 @@ final class TotemServiceListener implements Listener {
 
         this.runical_.sendTranslationOrDefault(
                 player,
-                "totem.creation_failed.generic",
+                "totem.creation.failed",
                 "Cannot claim here. Move the totem."
         );
     }

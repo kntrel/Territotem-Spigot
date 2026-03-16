@@ -7,15 +7,6 @@ _runical:
       middle: "{0}, {1}"
       end: "{0}, and {1}"
 totem:
-  default_name:
-    player_placed: "{player}'s lands"
-    undefined_placer: "Unnamed region"
-  creation: "Region created: '{region}'."
-  creation_failed:
-    blocked: "Cannot claim here, overlapping with {blockers}."
-    generic: "Cannot claim here."
-  region:
-    unnamed: "Region #{id}"
   expansion:
     direction:
       all: "in all directions"
@@ -30,6 +21,20 @@ totem:
     partial: "Expanded {direction}; {blockers} blocked the rest. Size: H {height}, X {x}, Z {z}."
     blocked: "Cannot expand {direction} any further. Blocked by {blockers}"
     blocked_generic: "Cannot expand {direction}."
-  rename:
-    success: "{old_name} was renamed to '{new_name}'."
+  default_name:
+    player_placed: "{player}'s lands"
+    undefined_placer: "Unnamed region"
+  creation:
+    success: "Region created: '{region_name}'."
+    blocked: "Cannot claim here, overlapping with {blockers}."
+    failed: "Cannot claim here."
+  block_place_reject:
+    sign: "There's already a sign attached to the totem"
+    lectern: "There's already a lectern attached to the totem"
+
+
+region:
+  renamed:
     invalid_length: "Name length must be between {min} and {max} characters."
+    first_person: "{old_name} was renamed to '{new_name}'."
+    third_person: "{old_name} was renamed to '{new_name}' by {renamer}."

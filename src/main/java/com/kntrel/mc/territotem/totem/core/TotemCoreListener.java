@@ -1,9 +1,6 @@
 package com.kntrel.mc.territotem.totem.core;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import com.kntrel.mc.regionLib.event.BlockRightClickedEvent;
-import com.kntrel.mc.territotem.totem.TotemClaim;
 import com.kntrel.mc.territotem.totem.event.*;
 import com.kntrel.mc.territotem.util.RayTracing;
 import com.kntrel.util.Vec3i;
@@ -28,19 +25,12 @@ import org.bukkit.util.Vector;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
 class TotemCoreListener implements Listener {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(TotemCoreListener.class);
-    private static final List<TotemCore.Direction> DIRECTIONS = Arrays.stream(TotemCore.Direction.values()).toList();
-    private static final String TOTEM_DATA_KEY = "totemData";
-    private static final Gson CLAIM_GSON = new GsonBuilder()
-            .registerTypeAdapter(TotemClaim.class, TotemClaim.serializer())
-            .registerTypeAdapter(TotemClaim.class, TotemClaim.deserializer())
-            .create();
 
     private final TotemCoreTracker tracker_;
 
