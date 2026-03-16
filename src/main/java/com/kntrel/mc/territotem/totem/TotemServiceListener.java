@@ -1,5 +1,6 @@
 package com.kntrel.mc.territotem.totem;
 
+import com.kntrel.mc.regionLib.Constants;
 import com.kntrel.mc.regionLib.event.BlockRightClickedEvent;
 import com.kntrel.mc.regionLib.region.Region;
 import com.kntrel.mc.regionLib.region.context.RegionContext;
@@ -9,14 +10,17 @@ import com.kntrel.mc.runical.core.Placeholder;
 import com.kntrel.mc.territotem.structure.Structure;
 import com.kntrel.mc.territotem.structure.event.StructureChangedEvent;
 import com.kntrel.mc.territotem.structure.event.StructureCompletedEvent;
+import com.kntrel.mc.territotem.structure.piece.Tile;
 import com.kntrel.mc.territotem.totem.core.TotemCore;
 import com.kntrel.mc.territotem.totem.event.TotemCoreBreakEvent;
 import com.kntrel.mc.territotem.totem.event.TotemCoreRightClickedEvent;
 import com.kntrel.mc.territotem.totem.region.Expansion;
 import com.kntrel.mc.territotem.totem.region.ExpansionResult;
+import com.kntrel.util.Vec3i;
 import org.bukkit.Material;
 import org.bukkit.Tag;
 import org.bukkit.block.Block;
+import org.bukkit.block.Lectern;
 import org.bukkit.block.Sign;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -25,10 +29,10 @@ import org.bukkit.event.block.SignChangeEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.BoundingBox;
-
 import java.math.BigDecimal;
 import java.util.Collection;
 import java.util.LinkedHashSet;
+import java.util.List;
 
 final class TotemServiceListener implements Listener {
 
@@ -133,9 +137,7 @@ final class TotemServiceListener implements Listener {
         }
 
         Totem totem = this.service_.totemAtSign(sign).orElse(null);
-        if (totem == null) {
-            return;
-        }
+        if (totem == null) { return; }
 
         String content = String.join(" ", e.getLines()).trim();
         RegionContextConfig conf = this.regionContext_.getConfig();
@@ -153,7 +155,7 @@ final class TotemServiceListener implements Listener {
         }
 
         String oldName = totem.region().getName();
-        this.service_.renameTotem(totem, content);
+        totem.rename(content);
         this.runical_.sendTranslationOrDefault(
                 e.getPlayer(),
                 "totem.rename.success",
@@ -170,14 +172,50 @@ final class TotemServiceListener implements Listener {
 
         boolean isSign = Tag.SIGNS.isTagged(type);
         boolean isLectern = type == Material.LECTERN;
-        if (!(isSign || isLectern)) {
-            return;
-        }
+        if (!(isSign || isLectern)) { return; }
 
         Block target = e.getBlock().getRelative(e.getBlockFace());
-        if (this.service_.blocksTotemPlacement(target, isLectern)) {
-            e.setCancelled(true);
+        List<Totem> totems = this.service_.totemsAtChunk(
+                target.getX() >> Constants.CHUNK_SHIFT,
+                target.getZ() >> Constants.CHUNK_SHIFT,
+                target.getWorld()
+        );
+        if (totems.isEmpty()) { return; }
+
+        Vec3i coordinates = new Vec3i(target.getX(), target.getY(), target.getZ());
+        boolean allowed = true;
+        for (Totem totem : totems) {
+            Vec3i offset = coordinates.subtract(totem.origin());
+            if (isLectern) {
+                Lectern lectern = totem.lectern().orElse(null);
+                if (lectern == null) { continue; }
+
+                for (Tile tile : totem.blueprint().lecterns()) {
+                    if (offset.equals(tile.offset())) {
+                        allowed = false;
+                        break;
+                    }
+                }
+            } else {
+                Sign sign = totem.nameSign().orElse(null);
+                if (sign == null) { continue; }
+
+                for (Tile tile : totem.blueprint().nameSings()) {
+                    if (offset.equals(tile.offset())) {
+                        allowed = false;
+                        break;
+                    }
+                }
+            }
         }
+
+        if (allowed) { return; }
+
+        e.setCancelled(true);
+        this.runical_.sendTranslation(
+                e.getPlayer(),
+                (isSign) ? "totem.block_place_reject.sign" : "totem.block_place_reject.lectern"
+        );
     }
 
 

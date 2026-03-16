@@ -103,6 +103,10 @@ public class Totem {
     public boolean isDestroyed() {
         return this.region_.isDestroyed();
     }
+    public void rename(String newName) {
+        this.region_.setName(newName);
+        this.region_.save();
+    }
     public void destroy() {
         this.structure_.drop();
         this.region_.destroy();

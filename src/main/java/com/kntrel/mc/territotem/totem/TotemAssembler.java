@@ -23,7 +23,7 @@ class TotemAssembler {
     private final Map<UUID, PendingAudit> pendingAuditsByStructure_;
     private final Set<UUID> verifiedClaims_;
     private final List<BiConsumer<Structure, Region>> consumers_;
-    private final TottemAssenblyListener listener_;
+    private final TotemAssemblyListener listener_;
 
 
     //CONSTRUCTOR
@@ -32,7 +32,7 @@ class TotemAssembler {
         this.pendingAuditsByStructure_ = new ConcurrentHashMap<>();
         this.verifiedClaims_ = ConcurrentHashMap.newKeySet();
         this.consumers_ = new ArrayList<>();
-        this.listener_ = new TottemAssenblyListener(plugin, this);
+        this.listener_ = new TotemAssemblyListener(plugin, this);
 
         plugin.getServer().getPluginManager().registerEvents(this.listener_, plugin);
     }

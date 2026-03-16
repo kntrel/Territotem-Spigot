@@ -17,7 +17,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-final class TottemAssenblyListener implements Listener {
+final class TotemAssemblyListener implements Listener {
 
     private final Plugin plugin_;
     private final TotemAssembler assembler_;
@@ -25,7 +25,7 @@ final class TottemAssenblyListener implements Listener {
     private final Map<ChunkKey, Map<UUID, Structure>> pendingIngestionsByChunk_;
     private final Set<ChunkKey> scheduledAudits_;
 
-    TottemAssenblyListener(Plugin plugin, TotemAssembler assembler) {
+    TotemAssemblyListener(Plugin plugin, TotemAssembler assembler) {
         this.plugin_ = plugin;
         this.assembler_ = assembler;
         this.pendingExpectationsByChunk_ = new ConcurrentHashMap<>();

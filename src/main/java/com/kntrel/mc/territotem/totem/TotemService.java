@@ -18,15 +18,12 @@ import com.kntrel.mc.territotem.util.ChunkKey;
 import com.kntrel.util.IntBoundingBox;
 import com.kntrel.util.Vec3i;
 import org.bukkit.World;
-import org.bukkit.block.Block;
-import org.bukkit.block.Lectern;
 import org.bukkit.block.Sign;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -82,7 +79,7 @@ public class TotemService {
 
         for (Totem totem : this.totemStore_.getAroundChunk(chunkKey)) {
             Sign candidate = totem.nameSign().orElse(null);
-            if (candidate != null && sign.equals(candidate)) {
+            if (sign.equals(candidate)) {
                 return Optional.of(totem);
             }
         }
@@ -172,55 +169,6 @@ public class TotemService {
 
         LOGGER.debug("Piece at offset {} of totem {} is missing. Disabling", changedTile.offset(), totem.id());
         totem.setEnabled(false);
-    }
-
-    public void renameTotem(Totem totem, String content) {
-        Region region = totem.region();
-        region.setName(content);
-        region.save();
-    }
-
-    public boolean blocksTotemPlacement(Block block, boolean lecternPlacement) {
-        ChunkKey ck = new ChunkKey(
-                block.getX() >> Constants.CHUNK_SHIFT,
-                block.getZ() >> Constants.CHUNK_SHIFT,
-                block.getWorld().getUID()
-        );
-        List<Totem> totems = this.totemStore_.getAroundChunk(ck);
-        if (totems.isEmpty()) {
-            return false;
-        }
-
-        Vec3i coordinates = new Vec3i(block.getX(), block.getY(), block.getZ());
-        for (Totem totem : totems) {
-            if (lecternPlacement) {
-                Lectern lectern = totem.lectern().orElse(null);
-                if (lectern == null) {
-                    continue;
-                }
-
-                Vec3i offset = coordinates.subtract(totem.origin());
-                for (Tile tile : totem.blueprint().lecterns()) {
-                    if (offset.equals(tile.offset())) {
-                        return true;
-                    }
-                }
-                continue;
-            }
-
-            Sign candidate = totem.nameSign().orElse(null);
-            if (candidate == null) {
-                continue;
-            }
-
-            Vec3i offset = coordinates.subtract(totem.origin());
-            for (Tile tile : totem.blueprint().nameSings()) {
-                if (offset.equals(tile.offset())) {
-                    return true;
-                }
-            }
-        }
-        return false;
     }
 
     ExpansionResult expand(Totem totem, Expansion expansion) {
