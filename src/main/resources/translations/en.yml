@@ -32,6 +32,12 @@ totem:
     sign: "There's already a sign attached to the totem"
     lectern: "There's already a lectern attached to the totem"
   deeds:
+    item_name: "Deeds for {regionName}"
+    placement_error:
+      not_a_deeds_book: "This lectern only permits deeds books."
+      old_version: "Those are outdated deeds."
+      region_mismatch: "Those deeds belong to a different region."
+      generic: "Invalid deeds book."
     formatting_error:
       empty_input: "No content"
       message: "Deeds formatting error. page: {pageNumber} line: {lineNumber}\n{details}"

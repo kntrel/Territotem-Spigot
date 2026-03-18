@@ -118,9 +118,7 @@ class DeedsTranspiler {
 
         List<String> pages = new ArrayList<>();
         int membersPerPage = chunkSize - 1;
-        List<Hierarchy.Group> groups = region.getHierarchy().getGroups().stream()
-                .sorted(Comparator.reverseOrder())
-                .toList();
+        List<Hierarchy.Group> groups = region.getHierarchy().getGroups().stream().sorted().toList();
         for (Hierarchy.Group group : groups) {
             List<String> players = playersByGroup.getOrDefault(group, List.of()).stream()
                     .sorted(String.CASE_INSENSITIVE_ORDER)

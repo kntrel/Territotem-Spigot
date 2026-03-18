@@ -19,6 +19,7 @@ import com.kntrel.mc.territotem.util.ChunkKey;
 import com.kntrel.util.IntBoundingBox;
 import com.kntrel.util.Vec3i;
 import org.bukkit.World;
+import org.bukkit.block.Lectern;
 import org.bukkit.block.Sign;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.util.BoundingBox;
@@ -33,7 +34,7 @@ public class TotemService {
 
     //CONSTANTS
     private static final Logger LOGGER = LoggerFactory.getLogger(TotemService.class);
-    private static final String TOTEM_DATA_KEY = TotemClaim.DATA_KEY;
+    static final String TOTEM_DATA_KEY = TotemClaim.DATA_KEY;
 
 
     //FIELDS
@@ -79,7 +80,7 @@ public class TotemService {
         return this.totemStore_.getByCore(core.getWorld(), core.getCoordinates());
     }
 
-    public Optional<Totem> totemAtSign(Sign sign) {
+    public Optional<Totem> ownerOfSign(Sign sign) {
         ChunkKey chunkKey = new ChunkKey(
                 sign.getX() >> Constants.CHUNK_SHIFT,
                 sign.getZ() >> Constants.CHUNK_SHIFT,
@@ -89,6 +90,22 @@ public class TotemService {
         for (Totem totem : this.totemStore_.getAroundChunk(chunkKey)) {
             Sign candidate = totem.nameSign().orElse(null);
             if (sign.equals(candidate)) {
+                return Optional.of(totem);
+            }
+        }
+        return Optional.empty();
+    }
+
+    public Optional<Totem> ownerOfLectern(Lectern lectern) {
+        ChunkKey chunkKey = new ChunkKey(
+                lectern.getX() >> Constants.CHUNK_SHIFT,
+                lectern.getZ() >> Constants.CHUNK_SHIFT,
+                lectern.getWorld().getUID()
+        );
+
+        for (Totem totem : this.totemStore_.getAroundChunk(chunkKey)) {
+            Lectern candidate = totem.lectern().orElse(null);
+            if (lectern.equals(candidate)) {
                 return Optional.of(totem);
             }
         }

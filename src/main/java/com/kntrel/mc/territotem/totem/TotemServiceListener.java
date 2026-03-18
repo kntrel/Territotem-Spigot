@@ -3,6 +3,7 @@ package com.kntrel.mc.territotem.totem;
 import com.kntrel.mc.regionLib.Constants;
 import com.kntrel.mc.regionLib.event.BlockRightClickedEvent;
 import com.kntrel.mc.regionLib.region.Region;
+import com.kntrel.mc.regionLib.region.ability.Permission;
 import com.kntrel.mc.regionLib.region.context.RegionContext;
 import com.kntrel.mc.regionLib.region.context.RegionContextConfig;
 import com.kntrel.mc.runical.bukkit.Runical;
@@ -12,6 +13,7 @@ import com.kntrel.mc.territotem.structure.event.StructureChangedEvent;
 import com.kntrel.mc.territotem.structure.event.StructureCompletedEvent;
 import com.kntrel.mc.territotem.structure.piece.Tile;
 import com.kntrel.mc.territotem.totem.core.TotemCore;
+import com.kntrel.mc.territotem.totem.deeds.Deeds;
 import com.kntrel.mc.territotem.totem.deeds.DeedsDeTranspilingError;
 import com.kntrel.mc.territotem.totem.deeds.DeedsInterpretationResult;
 import com.kntrel.mc.territotem.totem.event.TotemCoreBreakEvent;
@@ -20,6 +22,7 @@ import com.kntrel.mc.territotem.totem.region.Expansion;
 import com.kntrel.mc.territotem.totem.region.ExpansionResult;
 import com.kntrel.util.Vec3i;
 import com.kntrel.util.tuple.Pair;
+import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Tag;
@@ -30,9 +33,9 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.SignChangeEvent;
-import org.bukkit.event.player.PlayerEditBookEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.BookMeta;
 import org.bukkit.util.BoundingBox;
 import java.math.BigDecimal;
 import java.util.Arrays;
@@ -105,29 +108,19 @@ final class TotemServiceListener implements Listener {
     @EventHandler
     void onCoreRightClicked(TotemCoreRightClickedEvent e) {
         ItemStack itemStack = e.getItemStack();
-        if (itemStack == null || itemStack.getType() != Material.DIAMOND) {
-            return;
-        }
-
-        e.setCancelled(true);
+        if (itemStack == null) { return; }
 
         Totem totem = this.service_.totemOfCore(e.getCore()).orElse(null);
-        if (totem == null) {
-            return;
+        if (totem == null) { return; }
+
+        if (itemStack.getType() == Material.DIAMOND) {
+            this.onTotemExpand(totem, e);
+            if (e.isCancelled()) { return; }
         }
 
-        TotemCore.Direction direction = e.getCore().getDirection();
-        ExpansionResult result = totem.expand(expansionFor(direction));
-        Player player = e.getPlayer();
-        if (!result.hasGrowth()) {
-            this.sendExpansionBlockedMessage(player, direction, result);
-            return;
+        if (itemStack.getType() == Material.WRITABLE_BOOK) {
+            this.onDeedsCreation(e.getPlayer(), totem, itemStack);
         }
-
-        consumeOneItem(player, e.getHand(), itemStack);
-        swingHand(player, e.getHand());
-        totem.region().display(player);
-        this.sendExpansionFeedback(player, totem, direction, result);
     }
 
     @EventHandler
@@ -158,7 +151,7 @@ final class TotemServiceListener implements Listener {
             return;
         }
 
-        Totem totem = this.service_.totemAtSign(sign).orElse(null);
+        Totem totem = this.service_.ownerOfSign(sign).orElse(null);
         if (totem == null) { return; }
 
         String content = String.join(" ", e.getLines()).trim();
@@ -180,6 +173,74 @@ final class TotemServiceListener implements Listener {
         totem.rename(content);
         Player player = e.getPlayer();
         this.sendRenamedMessage(totem.region(), player, oldName, content);
+    }
+
+    @EventHandler
+    void onLecternBooKPlace(BlockRightClickedEvent e) {
+        if (!(e.getBlock().getState() instanceof Lectern lectern)) { return; }
+        if (!lectern.getInventory().isEmpty()) { return; }
+
+        ItemStack item = e.getItem();
+        if (!Tag.ITEMS_LECTERN_BOOKS.isTagged(item.getType())) { return; }
+
+        Totem totem = this.service_.ownerOfLectern(lectern).orElse(null);
+        if (totem == null) { return; }
+
+        if (!(item.getItemMeta() instanceof BookMeta bookMeta)) { return; }
+
+        Player player = e.getPlayer();
+        DeedsInterpretationResult interpretation = this.service_.getDeedsFactory().interpret(bookMeta);
+
+        Deeds deeds = null;
+        switch (interpretation) {
+            case DeedsInterpretationResult.DeTranspileError err  -> {
+                this.sendDeedsDeTranspileErrorFeedback(player, err);
+                e.setCancelled(true);
+                return;
+            }
+            case DeedsInterpretationResult.NotADeedsBook nadb -> {
+                this.runical_.sendTranslation(player, "totem.deeds.placement_error.not_a_deeds_book");
+                e.setCancelled(true);
+                return;
+            }
+            case DeedsInterpretationResult.Success success -> deeds = success.deeds().orElse(null);
+            default -> {}
+        }
+
+        if (deeds == null) {
+            this.runical_.sendTranslation(player, "totem.deeds.placement_error.generic");
+            e.setCancelled(true);
+            return;
+        }
+
+        Region region = deeds.region();
+        if (!deeds.region().getId().equals(totem.region().getId())) {
+            this.runical_.sendTranslation(
+                    player,
+                    "totem.deeds.placement_error.region_mismatch",
+                    Placeholder.of("deedsRegionId", region.getId()),
+                    Placeholder.of("totemRegionId", totem.region().getId()),
+                    Placeholder.of("deedsRegionName", region.getName()),
+                    Placeholder.of("totemRegionName", totem.region().getName())
+            );
+            e.setCancelled(true);
+            return;
+        }
+
+        if (totem.getDeedsVersion() > deeds.version()) {
+            this.runical_.sendTranslation(
+                    player,
+                    "totem.deeds.placement_error.old_version",
+                    Placeholder.of("regionId", region.getId()),
+                    Placeholder.of("regionName", region.getName()),
+                    Placeholder.of("deedsVersion", deeds.version()),
+                    Placeholder.of("totemDeedsVersion", totem.getDeedsVersion())
+            );
+            e.setCancelled(true);
+            return;
+        }
+
+        region.setPermissions(deeds.permissions().toArray(new Permission[0]));
     }
 
     @EventHandler
@@ -237,14 +298,49 @@ final class TotemServiceListener implements Listener {
         );
     }
 
-    @EventHandler
-    void onBookSaved(PlayerEditBookEvent e) {
-        DeedsInterpretationResult result = this.service_.getDeedsFactory().interpret(e.getNewBookMeta());
 
-        if (result instanceof DeedsInterpretationResult.DeTranspileError error) {
-            this.sendDeedsDeTranspileErrorFeedback(e.getPlayer(), error);
-            e.setCancelled(true);
+
+
+    //SUB-LISTENERS
+    private void onTotemExpand(Totem totem, TotemCoreRightClickedEvent e) {
+        ItemStack itemStack = e.getItemStack();
+        TotemCore.Direction direction = e.getCore().getDirection();
+        ExpansionResult result = totem.expand(expansionFor(direction));
+        Player player = e.getPlayer();
+        if (!result.hasGrowth()) {
+            this.sendExpansionBlockedMessage(player, direction, result);
+            return;
         }
+
+        consumeOneItem(player, e.getHand(), itemStack);
+        swingHand(player, e.getHand());
+        totem.region().display(player);
+        this.sendExpansionFeedback(player, totem, direction, result);
+        e.setCancelled(true);
+    }
+    public void onDeedsCreation(Player player, Totem totem, ItemStack item) {
+        if (!(item.getItemMeta() instanceof BookMeta bookMeta)) {
+            return;
+        }
+
+        DeedsInterpretationResult interpretation = this.service_.getDeedsFactory().interpret(bookMeta);
+        if (!(interpretation instanceof DeedsInterpretationResult.NotADeedsBook)) {
+            return;
+        }
+
+        if (!bookMeta.getEnchants().isEmpty()) { return; }
+        Deeds deeds = this.service_.getDeedsFactory().generate(bookMeta, totem);
+        String deedsName = this.runical_.translate(
+                player,
+                "totem.deeds.item_name",
+                Placeholder.of("regionName", deeds.region().getName()),
+                Placeholder.of("regionId", deeds.region().getId()),
+                Placeholder.of("playerName", player.getName())
+        );
+
+        bookMeta.setItemName(ChatColor.LIGHT_PURPLE + deedsName);
+        item.setItemMeta(bookMeta);
+        totem.save();
     }
 
 

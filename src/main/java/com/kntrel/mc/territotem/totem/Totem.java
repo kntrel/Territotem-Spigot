@@ -1,6 +1,7 @@
 package com.kntrel.mc.territotem.totem;
 
 import com.kntrel.mc.regionLib.region.Region;
+import com.kntrel.mc.regionLib.region.dataContainer.RegionData;
 import com.kntrel.mc.territotem.structure.Structure;
 import com.kntrel.mc.territotem.structure.blueprint.InvalidBlueprintException;
 import com.kntrel.mc.territotem.structure.worldTile.WorldTile;
@@ -117,6 +118,11 @@ public class Totem {
     public void rename(String newName) {
         this.region_.setName(newName);
         this.region_.save();
+    }
+    public void save() {
+        TotemClaim claim = TotemClaim.of(this);
+        TotemClaim.write(this.region(), claim);
+        this.region().save();
     }
     public void destroy() {
         this.structure_.drop();

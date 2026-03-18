@@ -50,7 +50,7 @@ public class DeedsFactory {
         PersistentDataContainer pdc = bookMeta.getPersistentDataContainer();
         pdc.set(this.deedsNsk_, DeedsPersistentDataType.instance(), data);
 
-        return new Deeds(region, bookMeta, perms);
+        return new Deeds(region, bookMeta, perms, data.version());
     }
     public DeedsInterpretationResult interpret(@NonNull BookMeta bookMeta) {
 
@@ -82,6 +82,6 @@ public class DeedsFactory {
             return new DeedsInterpretationResult.DeTranspileError(page, line, e.getLine(), e.getErrorCause(), region);
         }
 
-        return DeedsInterpretationResult.success(new Deeds(region, bookMeta, perms));
+        return DeedsInterpretationResult.success(new Deeds(region, bookMeta, perms, data.version()));
     }
 }
