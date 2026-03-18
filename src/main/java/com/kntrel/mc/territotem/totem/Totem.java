@@ -29,6 +29,7 @@ public class Totem {
     private final TotemService provenance_;
     private final Structure structure_;
     private final Region region_;
+    private int deedsVersion_;
 
 
     //CONSTRUCTORS
@@ -41,6 +42,7 @@ public class Totem {
         this.provenance_ = provenance;
         this.structure_ = structure;
         this.region_ = region;
+        this.deedsVersion_ = 0;
     }
 
 
@@ -65,6 +67,15 @@ public class Totem {
     }
     public World world() {
         return this.structure_.world();
+    }
+    public int getDeedsVersion() {
+        return this.deedsVersion_;
+    }
+    public void setDeedsVersion(int newVersion) {
+        this.deedsVersion_ = newVersion;
+    }
+    public void incrementDeedsVersion() {
+        this.deedsVersion_++;
     }
     public Optional<Sign> nameSign() {
         World world = this.world();

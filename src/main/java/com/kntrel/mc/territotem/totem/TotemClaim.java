@@ -11,7 +11,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.util.UUID;
 
-public record TotemClaim(UUID structureId, int chunkX, int chunkZ) {
+public record TotemClaim(UUID structureId, int chunkX, int chunkZ, int deedsVersion) {
 
     //CONSTANTS
     private static final Logger LOGGER = LoggerFactory.getLogger(TotemClaim.class);
@@ -21,6 +21,7 @@ public record TotemClaim(UUID structureId, int chunkX, int chunkZ) {
         object.addProperty("structure_id", src.structureId.toString());
         object.addProperty("chunkX", src.chunkX);
         object.addProperty("chunkZ", src.chunkZ);
+        object.addProperty("deeds_version", src.deedsVersion);
         return object;
     };
     private static final JsonDeserializer<TotemClaim> DESERIALIZER = (elm, type, ctx) -> {
@@ -35,6 +36,15 @@ public record TotemClaim(UUID structureId, int chunkX, int chunkZ) {
 
         JsonElement czElm = object.get("chunkZ");
         if (czElm == null || !cxElm.isJsonPrimitive()) { return null; }
+
+        JsonElement deedsElm = object.get("deeds_version");
+        int deedsVer = 0;
+        if (deedsElm != null && deedsElm.isJsonPrimitive()) {
+            JsonPrimitive deedsPrimitive = deedsElm.getAsJsonPrimitive();
+            if (deedsPrimitive.isNumber()) {
+                deedsVer = deedsPrimitive.getAsInt();
+            }
+        }
 
         UUID id;
         try {
@@ -51,7 +61,7 @@ public record TotemClaim(UUID structureId, int chunkX, int chunkZ) {
             return null;
         }
 
-        return new TotemClaim(id, chunkX, chunkZ);
+        return new TotemClaim(id, chunkX, chunkZ, deedsVer);
     };
     private static final Gson GSON = new GsonBuilder()
             .registerTypeAdapter(TotemClaim.class, TotemClaim.serializer())
@@ -65,7 +75,7 @@ public record TotemClaim(UUID structureId, int chunkX, int chunkZ) {
         Structure structure = totem.structure();
         Vec3i vec = structure.origin();
         int chunkX = vec.x() >> Constants.CHUNK_SHIFT, chunkZ = vec.z() >> Constants.CHUNK_SHIFT;
-        return new TotemClaim(structure.id(), chunkX, chunkZ);
+        return new TotemClaim(structure.id(), chunkX, chunkZ, totem.getDeedsVersion());
     }
 
 

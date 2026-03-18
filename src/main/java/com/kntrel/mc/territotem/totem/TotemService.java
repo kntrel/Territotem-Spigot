@@ -49,7 +49,7 @@ public class TotemService {
         this.regionAllocator_ = new RegionAllocator(regionContext, Condition.hasDataKey(TOTEM_DATA_KEY));
         this.totemStore_ = new TotemStore();
 
-        this.assembler_.consume(this::loadTotem);
+        this.assembler_.consume((s, r, c) -> this.loadTotem(s, r, c.deedsVersion()));
         this.plugin_.getServer().getPluginManager().registerEvents(
                 new TotemServiceListener(this, regionContext, runical),
                 this.plugin_
@@ -125,7 +125,7 @@ public class TotemService {
         }
 
         Region region = placed.region();
-        totem = this.loadTotem(structure, region);
+        totem = this.loadTotem(structure, region, 0);
         TotemClaim claim = TotemClaim.of(totem);
         TotemClaim.write(region, claim);
         return NewTotemResult.created(totem);
@@ -181,8 +181,9 @@ public class TotemService {
 
 
     //HELPERS
-    private Totem loadTotem(Structure structure, Region region) {
+    private Totem loadTotem(Structure structure, Region region, int deedsVersion) {
         Totem totem = new Totem(this, structure, region);
+        totem.setDeedsVersion(deedsVersion);
         this.totemStore_.add(totem);
         return totem;
     }

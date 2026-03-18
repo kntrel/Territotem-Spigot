@@ -3,6 +3,7 @@ package com.kntrel.mc.territotem.totem;
 import com.kntrel.mc.regionLib.region.Region;
 import com.kntrel.mc.territotem.structure.Structure;
 import com.kntrel.mc.territotem.util.ChunkKey;
+import com.kntrel.util.TriConsumer;
 import org.bukkit.Chunk;
 import org.bukkit.plugin.Plugin;
 import org.jspecify.annotations.Nullable;
@@ -22,7 +23,7 @@ class TotemAssembler {
     private final Map<ChunkKey, Set<PendingAudit>> pendingAuditsByChunk_;
     private final Map<UUID, PendingAudit> pendingAuditsByStructure_;
     private final Set<UUID> verifiedClaims_;
-    private final List<BiConsumer<Structure, Region>> consumers_;
+    private final List<TriConsumer<Structure, Region, TotemClaim>> consumers_;
     private final TotemAssemblyListener listener_;
 
 
@@ -89,7 +90,7 @@ class TotemAssembler {
         });
 
         if (this.verify(claim, structure, region)) {
-            this.release(structure, region);
+            this.release(structure, region, claim);
         }
     }
     public void audit(Chunk chunk) {
@@ -106,15 +107,15 @@ class TotemAssembler {
             this.verify(audit.claim, null, audit.region);
         }
     }
-    public void consume(BiConsumer<Structure, Region> consumer) {
+    public void consume(TriConsumer<Structure, Region, TotemClaim> consumer) {
         this.consumers_.add(consumer);
     }
 
 
     //HELPERS
-    private void release(Structure structure, Region region) {
-        for (BiConsumer<Structure, Region> c : this.consumers_) {
-            c.accept(structure, region);
+    private void release(Structure structure, Region region, TotemClaim claim) {
+        for (TriConsumer<Structure, Region, TotemClaim> c : this.consumers_) {
+            c.accept(structure, region, claim);
         }
     }
     private boolean verify(TotemClaim claim, @Nullable Structure structure, Region region) {
