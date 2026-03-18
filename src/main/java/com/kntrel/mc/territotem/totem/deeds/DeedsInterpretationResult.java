@@ -16,7 +16,7 @@ public sealed interface DeedsInterpretationResult {
         @Override public Optional<Deeds> deeds() { return Optional.of(deeds_); }
 
     }
-    record DeTranspileError(int lineNumber, String line, DeedsDeTranspilingError error) implements DeedsInterpretationResult {}
+    record DeTranspileError(int page, int lineNumber, String line, DeedsDeTranspilingError error) implements DeedsInterpretationResult {}
     record WrongNamesPace(String foundNameSpace) implements DeedsInterpretationResult {}
     record NonExistentRegion(long foundId) implements DeedsInterpretationResult {}
     record NotADeedsBook(ItemStack providedItem) implements DeedsInterpretationResult {}
@@ -26,8 +26,8 @@ public sealed interface DeedsInterpretationResult {
     static Success success(Deeds deeds) {
         return new Success(deeds);
     }
-    static DeTranspileError deTranspileError(int lineNumber, String line, DeedsDeTranspilingError error) {
-        return new DeTranspileError(lineNumber, line, error);
+    static DeTranspileError deTranspileError(int page, int lineNumber, String line, DeedsDeTranspilingError error) {
+        return new DeTranspileError(page, lineNumber, line, error);
     }
     static WrongNamesPace wrongNameSpace(String foundNameSpace) {
         return new WrongNamesPace(foundNameSpace);

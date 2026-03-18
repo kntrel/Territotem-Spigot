@@ -15,7 +15,7 @@ public class DeedsFactory {
 
     //CONSTANTS
     private static final String DEEDS_KEY = "deeds";
-    private static final int PAGE_LINE_COUNT = 10;
+    private static final int PAGE_LINE_COUNT = 13;      //Minecraft books have 14 lines per page. Using 13 to leave a 1 line buffer.
 
 
     //FIELDS
@@ -85,10 +85,12 @@ public class DeedsFactory {
         try {
             perms = this.transpiler_.deTranspile(region, bookMeta.getPages());
         } catch (DeedsDeTranspilingException e) {
-            return new DeedsInterpretationResult.DeTranspileError(e.getLineNumber(), e.getLine(), e.getErrorCause());
+            int lNum = e.getLineNumber(),
+                line = lNum % PAGE_LINE_COUNT,
+                page = lNum / PAGE_LINE_COUNT;
+            return new DeedsInterpretationResult.DeTranspileError(page, line, e.getLine(), e.getErrorCause());
         }
 
         return DeedsInterpretationResult.success(new Deeds(region, bookMeta, item, perms));
     }
-
 }
