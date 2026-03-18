@@ -1,6 +1,6 @@
 package com.kntrel.mc.territotem.totem.deeds;
 
-sealed interface DeedsDeTranspilingError {
+public sealed interface DeedsDeTranspilingError {
 
     record PlayerNotFound(String name) implements DeedsDeTranspilingError {}
 

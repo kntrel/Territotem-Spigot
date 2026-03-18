@@ -74,8 +74,8 @@ public class Totem {
     public void setDeedsVersion(int newVersion) {
         this.deedsVersion_ = newVersion;
     }
-    public void incrementDeedsVersion() {
-        this.deedsVersion_++;
+    public int incrementAndGetDeedsVersion() {
+        return ++this.deedsVersion_;
     }
     public Optional<Sign> nameSign() {
         World world = this.world();

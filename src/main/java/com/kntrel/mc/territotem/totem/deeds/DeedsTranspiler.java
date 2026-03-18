@@ -3,19 +3,11 @@ package com.kntrel.mc.territotem.totem.deeds;
 import com.kntrel.mc.regionLib.region.Region;
 import com.kntrel.mc.regionLib.region.ability.Permission;
 import com.kntrel.mc.regionLib.region.hierarchy.Hierarchy;
-import com.kntrel.mc.runical.bukkit.Runical;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.Server;
 import org.bukkit.entity.Player;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.UUID;
+
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -51,13 +43,13 @@ class DeedsTranspiler {
             if (line.isEmpty()) { continue; }
 
             boolean isGroup = line.endsWith(":");
+            this.validateLine(src, rawLine, l, isGroup);
             if (isGroup) {
                 line = line.substring(0, line.length() - 1);
             }
-            this.validateLine(src, line, l);
 
             if (isGroup) {
-                String groupName = line.substring(0, line.length() - 1).strip();
+                String groupName = line.strip();
                 if (groupName.isEmpty()) {
                     throw new DeedsDeTranspilingException(src, l, new DeedsDeTranspilingError.EmptyGroupName());
                 }
@@ -83,16 +75,33 @@ class DeedsTranspiler {
         return permissions;
     }
 
-    List<Permission> deTranspile(Region region, String[] src) throws DeedsDeTranspilingException {
+    List<Permission> deTranspile(Region region, String... src) throws DeedsDeTranspilingException {
         return this.deTranspile(region, String.join(LINE_SEPARATOR, src));
     }
 
-    String[] transpile(Iterable<Permission> perms) {
+    List<Permission> deTranspile(Region region, List<String> src) throws DeedsDeTranspilingException {
+        StringJoiner joiner = new StringJoiner("\n");
+        src.forEach(joiner::add);
+        return this.deTranspile(region, joiner.toString());
+    }
+
+    String[] transpile(Iterable<Permission> perms, int chunkSize) {
+        if (chunkSize < 2) {
+            throw new IllegalArgumentException("chunkSize must be at least 2");
+        }
+
+        Region region = null;
         Map<Hierarchy.Group, List<String>> playersByGroup = new LinkedHashMap<>();
         for (Permission permission : perms) {
-            if (permission == null || permission.getGroup() == null) {
+            if (permission == null) {
                 continue;
             }
+
+            if (region == null) {
+                region = permission.getRegion();
+            }
+
+            if (permission.getGroup() == null) { continue; }
 
             OfflinePlayer offlinePlayer = this.server_.getOfflinePlayer(permission.getPlayerId());
             String name = offlinePlayer.getName();
@@ -104,17 +113,57 @@ class DeedsTranspiler {
                     .add(name);
         }
 
-        return playersByGroup.entrySet().stream()
-                .sorted(Map.Entry.comparingByKey(Comparator.reverseOrder()))
-                .map(entry -> renderSection(entry.getKey().getName(), entry.getValue()))
-                .toArray(String[]::new);
+        if (region == null) {
+            return new String[0];
+        }
+
+        List<String> pages = new ArrayList<>();
+        int membersPerPage = chunkSize - 1;
+        List<Hierarchy.Group> groups = region.getHierarchy().getGroups().stream()
+                .sorted(Comparator.reverseOrder())
+                .toList();
+        for (Hierarchy.Group group : groups) {
+            List<String> players = playersByGroup.getOrDefault(group, List.of()).stream()
+                    .sorted(String.CASE_INSENSITIVE_ORDER)
+                    .toList();
+            if (players.isEmpty()) {
+                pages.add(renderSection(group.getName(), List.of()));
+                continue;
+            }
+
+            for (int start = 0; start < players.size(); start += membersPerPage) {
+                int end = Math.min(start + membersPerPage, players.size());
+                pages.add(renderSection(group.getName(), players.subList(start, end)));
+            }
+        }
+
+        return pages.toArray(String[]::new);
     }
 
 
     //INTERNALS
-    private void validateLine(String src, String line, int lineNumber) throws DeedsDeTranspilingException {
-        for (int i = 0; i < line.length(); i++) {
-            if (!isValidCharacter(line.charAt(i))) {
+    private void validateLine(String src, String rawLine, int lineNumber, boolean isGroup) throws DeedsDeTranspilingException {
+        String line = rawLine.strip();
+        if (line.isEmpty()) {
+            return;
+        }
+
+        if (isGroup) {
+            String trailingTrimmed = rawLine.stripTrailing();
+            int firstColon = trailingTrimmed.indexOf(':');
+            if (!line.endsWith(":")) {
+                throw new DeedsDeTranspilingException(src, lineNumber, new DeedsDeTranspilingError.UnexpectedCharacter(firstColon + 1));
+            }
+
+            int extraSeparatorIndex = trailingTrimmed.substring(0, trailingTrimmed.length() - 1).indexOf(':');
+            if (extraSeparatorIndex >= 0) {
+                throw new DeedsDeTranspilingException(src, lineNumber, new DeedsDeTranspilingError.UnexpectedCharacter(extraSeparatorIndex + 1));
+            }
+            return;
+        }
+
+        for (int i = 0; i < rawLine.length(); i++) {
+            if (!isValidCharacter(rawLine.charAt(i))) {
                 throw new DeedsDeTranspilingException(src, lineNumber, new DeedsDeTranspilingError.UnexpectedCharacter(i + 1));
             }
         }
