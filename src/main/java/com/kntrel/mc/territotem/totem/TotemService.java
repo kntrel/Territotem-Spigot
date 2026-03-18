@@ -9,6 +9,7 @@ import com.kntrel.mc.territotem.structure.Structure;
 import com.kntrel.mc.territotem.structure.piece.Tile;
 import com.kntrel.mc.territotem.structure.worldTile.WorldTile;
 import com.kntrel.mc.territotem.totem.core.TotemCore;
+import com.kntrel.mc.territotem.totem.deeds.DeedsFactory;
 import com.kntrel.mc.territotem.totem.piece.TotemCorePiece;
 import com.kntrel.mc.territotem.totem.region.Expansion;
 import com.kntrel.mc.territotem.totem.region.ExpansionResult;
@@ -38,6 +39,7 @@ public class TotemService {
     //FIELDS
     private final Plugin plugin_;
     private final TotemAssembler assembler_;
+    private final DeedsFactory deedsFactory_;
     private final RegionAllocator regionAllocator_;
     private final TotemStore totemStore_;
 
@@ -46,6 +48,7 @@ public class TotemService {
     public TotemService(RegionContext regionContext, Runical runical) {
         this.plugin_ = regionContext.getPlugin();
         this.assembler_ = new TotemAssembler(this.plugin_);
+        this.deedsFactory_ = new DeedsFactory(regionContext);
         this.regionAllocator_ = new RegionAllocator(regionContext, Condition.hasDataKey(TOTEM_DATA_KEY));
         this.totemStore_ = new TotemStore();
 
@@ -54,6 +57,12 @@ public class TotemService {
                 new TotemServiceListener(this, regionContext, runical),
                 this.plugin_
         );
+    }
+
+
+    //GETTERS
+    public DeedsFactory getDeedsFactory() {
+        return this.deedsFactory_;
     }
 
 

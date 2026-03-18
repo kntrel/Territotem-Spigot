@@ -5,7 +5,6 @@ import com.kntrel.mc.regionLib.region.ability.Permission;
 import com.kntrel.mc.regionLib.region.context.RegionContext;
 import com.kntrel.mc.territotem.totem.Totem;
 import org.bukkit.NamespacedKey;
-import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BookMeta;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.jspecify.annotations.NonNull;
@@ -35,18 +34,13 @@ public class DeedsFactory {
 
 
     //API
-    public Deeds generate(ItemStack item, Totem totem) {
-        if (!(item.getItemMeta() instanceof BookMeta bookMeta)) {
-            throw new IllegalArgumentException("ItemStack must be a book");
-        }
-
+    public Deeds generate(@NonNull BookMeta bookMeta, @NonNull Totem totem) {
         Region region = totem.region();
         List<Permission> perms = region.getPermissions();
         String[] pages = this.transpiler_.transpile(perms, PAGE_LINE_COUNT);
 
         bookMeta.setPages(pages);
         bookMeta.setEnchantmentGlintOverride(true);
-        item.setItemMeta(bookMeta);
 
         DeedsPersistentData data = new DeedsPersistentData(
                 this.nameSpace_,
@@ -56,21 +50,18 @@ public class DeedsFactory {
         PersistentDataContainer pdc = bookMeta.getPersistentDataContainer();
         pdc.set(this.deedsNsk_, DeedsPersistentDataType.instance(), data);
 
-        return new Deeds(region, bookMeta, item, perms);
+        return new Deeds(region, bookMeta, perms);
     }
-    public DeedsInterpretationResult interpret(@NonNull ItemStack item) {
-        if (!(item.getItemMeta() instanceof BookMeta bookMeta)){
-            return DeedsInterpretationResult.notADeedsBook(item);
-        }
+    public DeedsInterpretationResult interpret(@NonNull BookMeta bookMeta) {
 
         PersistentDataContainer pdc = bookMeta.getPersistentDataContainer();
         if (!pdc.has(this.deedsNsk_)) {
-            return DeedsInterpretationResult.notADeedsBook(item);
+            return DeedsInterpretationResult.notADeedsBook(bookMeta);
         }
 
         DeedsPersistentData data = pdc.get(this.deedsNsk_, DeedsPersistentDataType.instance());
         if (data == null) {
-            return DeedsInterpretationResult.notADeedsBook(item);
+            return DeedsInterpretationResult.notADeedsBook(bookMeta);
         }
         if (!data.nameSpace().equals(this.nameSpace_)) {
             return DeedsInterpretationResult.wrongNameSpace(data.nameSpace());
@@ -85,12 +76,12 @@ public class DeedsFactory {
         try {
             perms = this.transpiler_.deTranspile(region, bookMeta.getPages());
         } catch (DeedsDeTranspilingException e) {
-            int lNum = e.getLineNumber(),
-                line = lNum % PAGE_LINE_COUNT,
-                page = lNum / PAGE_LINE_COUNT;
-            return new DeedsInterpretationResult.DeTranspileError(page, line, e.getLine(), e.getErrorCause());
+            int zeroBasedLineNumber = e.getLineNumber() - 1;
+            int page = zeroBasedLineNumber / PAGE_LINE_COUNT + 1;
+            int line = zeroBasedLineNumber % PAGE_LINE_COUNT + 1;
+            return new DeedsInterpretationResult.DeTranspileError(page, line, e.getLine(), e.getErrorCause(), region);
         }
 
-        return DeedsInterpretationResult.success(new Deeds(region, bookMeta, item, perms));
+        return DeedsInterpretationResult.success(new Deeds(region, bookMeta, perms));
     }
 }

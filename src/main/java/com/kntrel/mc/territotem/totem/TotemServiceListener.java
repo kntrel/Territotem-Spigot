@@ -12,11 +12,14 @@ import com.kntrel.mc.territotem.structure.event.StructureChangedEvent;
 import com.kntrel.mc.territotem.structure.event.StructureCompletedEvent;
 import com.kntrel.mc.territotem.structure.piece.Tile;
 import com.kntrel.mc.territotem.totem.core.TotemCore;
+import com.kntrel.mc.territotem.totem.deeds.DeedsDeTranspilingError;
+import com.kntrel.mc.territotem.totem.deeds.DeedsInterpretationResult;
 import com.kntrel.mc.territotem.totem.event.TotemCoreBreakEvent;
 import com.kntrel.mc.territotem.totem.event.TotemCoreRightClickedEvent;
 import com.kntrel.mc.territotem.totem.region.Expansion;
 import com.kntrel.mc.territotem.totem.region.ExpansionResult;
 import com.kntrel.util.Vec3i;
+import com.kntrel.util.tuple.Pair;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Tag;
@@ -27,13 +30,16 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.SignChangeEvent;
+import org.bukkit.event.player.PlayerEditBookEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.BoundingBox;
 import java.math.BigDecimal;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.stream.Stream;
 
 final class TotemServiceListener implements Listener {
 
@@ -229,6 +235,16 @@ final class TotemServiceListener implements Listener {
                 Placeholder.of("region_name", rejectingTotem.region().getName()),
                 Placeholder.of("region_id", rejectingTotem.region().getId())
         );
+    }
+
+    @EventHandler
+    void onBookSaved(PlayerEditBookEvent e) {
+        DeedsInterpretationResult result = this.service_.getDeedsFactory().interpret(e.getNewBookMeta());
+
+        if (result instanceof DeedsInterpretationResult.DeTranspileError error) {
+            this.sendDeedsDeTranspileErrorFeedback(e.getPlayer(), error);
+            e.setCancelled(true);
+        }
     }
 
 
@@ -435,6 +451,69 @@ final class TotemServiceListener implements Listener {
             return Long.toString(Math.round(rounded));
         }
         return BigDecimal.valueOf(value).stripTrailingZeros().toPlainString();
+    }
+
+    private void sendDeedsDeTranspileErrorFeedback(Player player, DeedsInterpretationResult.DeTranspileError error) {
+
+        List<Placeholder> basePlaceHolders = List.of(
+            Placeholder.of("regionName", error.region().map(Region::getName).orElse(null)),
+            Placeholder.of("regionId", error.region().map(r -> r.getId().toString()).orElse(null)),
+            Placeholder.of("lineNumber", error.lineNumber()),
+            Placeholder.of("line", error.line()),
+            Placeholder.of("pageNumber", error.page())
+        );
+
+        String key; List<Placeholder> detailPlaceHolders;
+
+        String lineContent = error.line();
+        if (lineContent == null || lineContent.isBlank()) {
+            key = "totem.deeds.formatting_error.empty_input";
+            detailPlaceHolders = List.of();
+        } else {
+            Pair<String, List<Placeholder>> details = getDeTranspileErrorTranslationDetails(error.error());
+            key = details.first();
+            detailPlaceHolders = details.second();
+        }
+
+        Placeholder[] placeHolders = Stream.concat(
+                basePlaceHolders.stream(),
+                detailPlaceHolders.stream()
+        ).toArray(Placeholder[]::new);
+
+        this.runical_.translateAsync(player, key, placeHolders)
+                .thenCompose(detail -> {
+                    Placeholder[] ph = Arrays.copyOf(placeHolders, placeHolders.length + 1);
+                    ph[ph.length - 1] = Placeholder.of("details", detail);
+                    return this.runical_.sendTranslation(player, "totem.deeds.formatting_error.message", ph);
+                });
+    }
+
+    private Pair<String, List<Placeholder>> getDeTranspileErrorTranslationDetails(DeedsDeTranspilingError error) {
+
+        final String prefix = "totem.deeds.formatting_error.detail.";
+
+        return switch (error) {
+            case DeedsDeTranspilingError.PlayerNotFound playerNotFound -> Pair.of(
+                    prefix + "player_not_found",
+                    List.of(Placeholder.of("playerName", playerNotFound.name()))
+            );
+            case DeedsDeTranspilingError.UnexpectedCharacter unexpectedCharacter -> Pair.of(
+                    prefix + "unexpected_character",
+                    List.of(Placeholder.of("column", unexpectedCharacter.index()))
+            );
+            case DeedsDeTranspilingError.UnknownGroup unknownGroup -> Pair.of(
+                    prefix + "unknown_group",
+                    List.of(Placeholder.of("groupName", unknownGroup.groupName()))
+            );
+            case DeedsDeTranspilingError.EmptyGroupName ignored -> Pair.of(
+                    prefix + "empty_group_name",
+                    List.of()
+            );
+            case DeedsDeTranspilingError.NoGroupNameProvided ignored -> Pair.of(
+                    prefix + "no_group_name_provided",
+                    List.of()
+            );
+        };
     }
 
     private static Expansion expansionFor(TotemCore.Direction direction) {

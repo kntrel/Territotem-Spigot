@@ -27,6 +27,12 @@ class DeedsDeTranspilingException extends Exception {
         return this.cause_;
     }
     String getLine() {
-        return this.src_.split("\n")[this.line_];
+        String normalizedSource = this.src_.replace("\r\n", "\n").replace('\r', '\n');
+        String[] lines = normalizedSource.split("\n", -1);
+        int lineIndex = this.line_ - 1;
+        if (lineIndex < 0 || lineIndex >= lines.length) {
+            return "";
+        }
+        return lines[lineIndex];
     }
 }

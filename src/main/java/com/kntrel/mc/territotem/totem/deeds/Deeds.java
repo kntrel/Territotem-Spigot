@@ -11,15 +11,13 @@ public class Deeds {
     //FIELDS
     private final Region region_;
     private final BookMeta book_;
-    private final ItemStack bookItem_;
     private final List<Permission> permissions_;
 
 
     //CONSTRUCTOR
-    public Deeds(Region region, BookMeta book, ItemStack bookItem, List<Permission> permissions) {
+    public Deeds(Region region, BookMeta book, List<Permission> permissions) {
         this.region_ = region;
         this.book_ = book;
-        this.bookItem_ = bookItem;
         this.permissions_ = permissions;
     }
 
@@ -30,9 +28,6 @@ public class Deeds {
     }
     public BookMeta book() {
         return this.book_;
-    }
-    public ItemStack bookItem() {
-        return this.bookItem_;
     }
     public List<Permission> permissions() {
         return List.copyOf(this.permissions_);

@@ -31,6 +31,16 @@ totem:
   block_place_reject:
     sign: "There's already a sign attached to the totem"
     lectern: "There's already a lectern attached to the totem"
+  deeds:
+    formatting_error:
+      empty_input: "No content"
+      message: "Deeds formatting error. page: {pageNumber} line: {lineNumber}\n{details}"
+      detail:
+        player_not_found: "No player named '{playerName}' was found."
+        unexpected_character: "Unexpected character at column {column}. Player names may only contain letters, numbers, and '_', and group headers must end with a single ':'."
+        unknown_group: "The group '{groupName}' does not exist in this region."
+        empty_group_name: "Write a group name before the ':' character."
+        no_group_name_provided: "Add a group header such as 'members:' before listing player names."
 
 
 region:
