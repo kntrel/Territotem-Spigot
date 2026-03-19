@@ -32,7 +32,9 @@ totem:
     sign: "There's already a sign attached to the totem"
     lectern: "There's already a lectern attached to the totem"
   deeds:
-    item_name: "Deeds for {regionName}"
+    item:
+      name: "§dDeeds for {regionName}"
+      lore: "§7Region: [{regionId}] {regionName}\n§r§7Version: {version}"
     placement_error:
       not_a_deeds_book: "This lectern only permits deeds books."
       old_version: "Those are outdated deeds."
