@@ -3,7 +3,7 @@ package com.kntrel.mc.territotem.totem.deeds;
 import com.kntrel.mc.regionLib.region.Region;
 import com.kntrel.mc.regionLib.region.ability.Permission;
 import com.kntrel.mc.regionLib.region.hierarchy.Hierarchy;
-import com.kntrel.mc.runical.bukkit.Runical;
+import com.kntrel.mc.runical.bukkit.Translator;
 import com.kntrel.mc.runical.core.Placeholder;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.Server;
@@ -22,15 +22,15 @@ class DeedsTranspiler {
 
     //FIELDS
     private final Server server_;
-    private final Runical runical_;
+    private final Translator translator_;
     private String prologueKey_;
     private int pageSize_;
 
 
     //CONSTRUCTOR
-    DeedsTranspiler(Server server, Runical runical) {
+    DeedsTranspiler(Server server, Translator translator) {
         this.server_ = server;
-        this.runical_ = runical;
+        this.translator_ = translator;
         this.prologueKey_ = null;
         this.pageSize_ = 13;
     }
@@ -140,7 +140,7 @@ class DeedsTranspiler {
 
         List<String> pages = new ArrayList<>();
         if (this.prologueKey_ != null) {
-            String prologue = this.runical_.translateOrNull(player, this.prologueKey_, placeholders);
+            String prologue = this.translator_.translateOrNull(player, this.prologueKey_, placeholders);
             if (prologue != null) {
                 pages.addAll(renderCommentPages(prologue));
             }

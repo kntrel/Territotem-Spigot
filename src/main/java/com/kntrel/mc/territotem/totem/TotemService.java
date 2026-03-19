@@ -4,7 +4,7 @@ import com.kntrel.mc.regionLib.Constants;
 import com.kntrel.mc.regionLib.region.Region;
 import com.kntrel.mc.regionLib.region.context.RegionContext;
 import com.kntrel.mc.regionLib.region.repository.Condition;
-import com.kntrel.mc.runical.bukkit.Runical;
+import com.kntrel.mc.runical.bukkit.Translator;
 import com.kntrel.mc.territotem.structure.Structure;
 import com.kntrel.mc.territotem.structure.piece.Tile;
 import com.kntrel.mc.territotem.structure.worldTile.WorldTile;
@@ -46,16 +46,16 @@ public class TotemService {
 
 
     //CONSTRUCTOR
-    public TotemService(RegionContext regionContext, Runical runical) {
+    public TotemService(RegionContext regionContext, Translator translator) {
         this.plugin_ = regionContext.getPlugin();
         this.assembler_ = new TotemAssembler(this.plugin_);
-        this.deedsFactory_ = new DeedsFactory(regionContext, runical);
+        this.deedsFactory_ = new DeedsFactory(regionContext, translator.getChild("deeds"));
         this.regionAllocator_ = new RegionAllocator(regionContext, Condition.hasDataKey(TOTEM_DATA_KEY));
         this.totemStore_ = new TotemStore();
 
         this.assembler_.consume((s, r, c) -> this.loadTotem(s, r, c.deedsVersion()));
         this.plugin_.getServer().getPluginManager().registerEvents(
-                new TotemServiceListener(this, regionContext, runical),
+                new TotemServiceListener(this, regionContext, translator),
                 this.plugin_
         );
     }

@@ -3,7 +3,7 @@ package com.kntrel.mc.territotem.totem.deeds;
 import com.kntrel.mc.regionLib.region.Region;
 import com.kntrel.mc.regionLib.region.ability.Permission;
 import com.kntrel.mc.regionLib.region.context.RegionContext;
-import com.kntrel.mc.runical.bukkit.Runical;
+import com.kntrel.mc.runical.bukkit.Translator;
 import com.kntrel.mc.territotem.totem.Totem;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
@@ -27,14 +27,14 @@ public class DeedsFactory {
 
 
     //CONSTRUCTOR
-    public DeedsFactory(RegionContext regionContext, Runical runical) {
+    public DeedsFactory(RegionContext regionContext, Translator translator) {
         this.regionContext_ = regionContext;
         this.nameSpace_ = this.regionContext_.getNamespace();
-        this.transpiler_ = new DeedsTranspiler(this.regionContext_.getServer(), runical);
+        this.transpiler_ = new DeedsTranspiler(this.regionContext_.getServer(), translator);
         this.deedsNsk_ = new NamespacedKey(this.regionContext_.getPlugin(), DEEDS_KEY);
 
         this.transpiler_.setPageSizeLines(PAGE_LINE_COUNT);
-        this.transpiler_.setPrologueTranslationKey("totem.deeds.prologue");
+        this.transpiler_.setPrologueTranslationKey("prologue");
     }
 
 

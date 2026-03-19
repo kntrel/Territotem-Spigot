@@ -24,6 +24,10 @@ totem:
   default_name:
     player_placed: "{player}'s lands"
     undefined_placer: "Unnamed region"
+  rename:
+    invalid_length: "Name length must be between {min} and {max} characters."
+    first_person: "{old_name} was renamed to '{new_name}'."
+    third_person: "{old_name} was renamed to '{new_name}' by {renamer}."
   creation:
     success: "Region created: '{region_name}'."
     blocked: "Cannot claim here, overlapping with {blockers}."
@@ -50,10 +54,3 @@ totem:
         unknown_group: "The group '{groupName}' does not exist in this region."
         empty_group_name: "Write a group name before the ':' character."
         no_group_name_provided: "Add a group header such as 'members:' before listing player names."
-
-
-region:
-  renamed:
-    invalid_length: "Name length must be between {min} and {max} characters."
-    first_person: "{old_name} was renamed to '{new_name}'."
-    third_person: "{old_name} was renamed to '{new_name}' by {renamer}."
