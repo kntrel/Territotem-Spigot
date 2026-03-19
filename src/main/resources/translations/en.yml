@@ -32,6 +32,7 @@ totem:
     sign: "There's already a sign attached to the totem"
     lectern: "There's already a lectern attached to the totem"
   deeds:
+    prologue: !file "./deeds_prologue.en.txt"
     item:
       name: "§dDeeds for {regionName}"
       lore: "§7Region: [{regionId}] {regionName}\n§r§7Version: {version}"

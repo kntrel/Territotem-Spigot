@@ -1,0 +1,7 @@
+§lDeeds for
+§l{regionName}
+
+§r§7  Region ID: {regionId}
+§r§7  Deeds version: {version}§r
+
+§rThis book holds the permission definitions for all members of it's region and their roles. Once it's placed into the totem's lectern, all changes will be applied.

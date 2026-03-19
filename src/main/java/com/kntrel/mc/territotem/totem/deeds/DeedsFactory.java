@@ -3,8 +3,10 @@ package com.kntrel.mc.territotem.totem.deeds;
 import com.kntrel.mc.regionLib.region.Region;
 import com.kntrel.mc.regionLib.region.ability.Permission;
 import com.kntrel.mc.regionLib.region.context.RegionContext;
+import com.kntrel.mc.runical.bukkit.Runical;
 import com.kntrel.mc.territotem.totem.Totem;
 import org.bukkit.NamespacedKey;
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.meta.BookMeta;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.jspecify.annotations.NonNull;
@@ -25,22 +27,21 @@ public class DeedsFactory {
 
 
     //CONSTRUCTOR
-    public DeedsFactory(RegionContext regionContext) {
+    public DeedsFactory(RegionContext regionContext, Runical runical) {
         this.regionContext_ = regionContext;
         this.nameSpace_ = this.regionContext_.getNamespace();
-        this.transpiler_ = new DeedsTranspiler(this.regionContext_.getServer());
+        this.transpiler_ = new DeedsTranspiler(this.regionContext_.getServer(), runical);
         this.deedsNsk_ = new NamespacedKey(this.regionContext_.getPlugin(), DEEDS_KEY);
+
+        this.transpiler_.setPageSizeLines(PAGE_LINE_COUNT);
+        this.transpiler_.setPrologueTranslationKey("totem.deeds.prologue");
     }
 
 
     //API
-    public Deeds generate(@NonNull BookMeta bookMeta, @NonNull Totem totem) {
+    public Deeds generate(@NonNull Player player, @NonNull BookMeta bookMeta, @NonNull Totem totem) {
         Region region = totem.region();
         List<Permission> perms = region.getPermissions();
-        String[] pages = this.transpiler_.transpile(perms, PAGE_LINE_COUNT);
-
-        bookMeta.setPages(pages);
-        bookMeta.setEnchantmentGlintOverride(true);
 
         DeedsPersistentData data = new DeedsPersistentData(
                 this.nameSpace_,
@@ -50,7 +51,12 @@ public class DeedsFactory {
         PersistentDataContainer pdc = bookMeta.getPersistentDataContainer();
         pdc.set(this.deedsNsk_, DeedsPersistentDataType.instance(), data);
 
-        return new Deeds(region, bookMeta, perms, data.version());
+        Deeds deeds = new Deeds(region, bookMeta, perms, data.version());
+        String[] pages = this.transpiler_.transpile(player, deeds);
+        bookMeta.setPages(pages);
+        bookMeta.setEnchantmentGlintOverride(true);
+
+        return deeds;
     }
     public DeedsInterpretationResult interpret(@NonNull BookMeta bookMeta) {
 

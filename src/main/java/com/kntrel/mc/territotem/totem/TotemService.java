@@ -49,7 +49,7 @@ public class TotemService {
     public TotemService(RegionContext regionContext, Runical runical) {
         this.plugin_ = regionContext.getPlugin();
         this.assembler_ = new TotemAssembler(this.plugin_);
-        this.deedsFactory_ = new DeedsFactory(regionContext);
+        this.deedsFactory_ = new DeedsFactory(regionContext, runical);
         this.regionAllocator_ = new RegionAllocator(regionContext, Condition.hasDataKey(TOTEM_DATA_KEY));
         this.totemStore_ = new TotemStore();
 

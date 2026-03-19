@@ -329,7 +329,7 @@ final class TotemServiceListener implements Listener {
         }
 
         if (!bookMeta.getEnchants().isEmpty()) { return; }
-        Deeds deeds = this.service_.getDeedsFactory().generate(bookMeta, totem);
+        Deeds deeds = this.service_.getDeedsFactory().generate(player, bookMeta, totem);
         Placeholder[] placeholders = new Placeholder[] {
                 Placeholder.of("regionName", deeds.region().getName()),
                 Placeholder.of("regionId", deeds.region().getId()),
@@ -340,6 +340,7 @@ final class TotemServiceListener implements Listener {
         String deedsName = this.runical_.translate(player, "totem.deeds.item.name", placeholders);
         String lore = this.runical_.translate(player, "totem.deeds.item.lore", placeholders);
         List<String> loreList = Arrays.stream(lore.split("\n")).toList();
+
 
         bookMeta.setItemName(deedsName);
         bookMeta.setLore(loreList);

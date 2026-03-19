@@ -3,6 +3,8 @@ package com.kntrel.mc.territotem.totem.deeds;
 import com.kntrel.mc.regionLib.region.Region;
 import com.kntrel.mc.regionLib.region.ability.Permission;
 import com.kntrel.mc.regionLib.region.hierarchy.Hierarchy;
+import com.kntrel.mc.runical.bukkit.Runical;
+import com.kntrel.mc.runical.core.Placeholder;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.Server;
 import org.bukkit.entity.Player;
@@ -13,14 +15,33 @@ import java.util.stream.Collectors;
 class DeedsTranspiler {
 
     private static final String LINE_SEPARATOR = "\n";
+    private static final String COMMENT_PREFIX = "-";
+    private static final String BLOCK_COMMENT_DELIMITER = "---";
+    private static final String PROLOGUE_PAGE_DELIMITER = "/page";
+    private static final char MINECRAFT_FORMATTING_PREFIX = '\u00A7';
 
     //FIELDS
     private final Server server_;
+    private final Runical runical_;
+    private String prologueKey_;
+    private int pageSize_;
 
 
     //CONSTRUCTOR
-    DeedsTranspiler(Server server) {
+    DeedsTranspiler(Server server, Runical runical) {
         this.server_ = server;
+        this.runical_ = runical;
+        this.prologueKey_ = null;
+        this.pageSize_ = 13;
+    }
+
+
+    //SETTERS
+    public void setPrologueTranslationKey(String key) {
+        this.prologueKey_ = key;
+    }
+    public void setPageSizeLines(int lineCount) {
+        this.pageSize_ = lineCount;
     }
 
 
@@ -35,11 +56,16 @@ class DeedsTranspiler {
         Map<String, Hierarchy.Group> groupMap = toLowerCaseGroupMap(region.getHierarchy());
         List<Permission> permissions = new ArrayList<>();
         Hierarchy.Group currentGroup = null;
+        boolean inBlockComment = false;
         for (int i = 0; i < lines.size(); i++) {
             int l = i + 1;
-            String rawLine = lines.get(i);
+            String rawLine = stripMinecraftFormatting(lines.get(i));
             String line = rawLine.strip();
-            if (line.isEmpty()) { continue; }
+            if (isBlockCommentDelimiter(line)) {
+                inBlockComment = !inBlockComment;
+                continue;
+            }
+            if (inBlockComment || line.isEmpty() || isSingleLineComment(line)) { continue; }
 
             boolean isGroup = line.endsWith(":");
             this.validateLine(src, rawLine, l, isGroup);
@@ -84,20 +110,14 @@ class DeedsTranspiler {
         return this.deTranspile(region, joiner.toString());
     }
 
-    String[] transpile(Iterable<Permission> perms, int chunkSize) {
-        if (chunkSize < 2) {
-            throw new IllegalArgumentException("chunkSize must be at least 2");
-        }
+    String[] transpile(Player player, Deeds deeds) {
 
-        Region region = null;
+        List<Permission> perms = deeds.permissions();
+        Region region = deeds.region();
         Map<Hierarchy.Group, List<String>> playersByGroup = new LinkedHashMap<>();
         for (Permission permission : perms) {
             if (permission == null) {
                 continue;
-            }
-
-            if (region == null) {
-                region = permission.getRegion();
             }
 
             if (permission.getGroup() == null) { continue; }
@@ -112,12 +132,24 @@ class DeedsTranspiler {
                     .add(name);
         }
 
-        if (region == null) {
-            return new String[0];
-        }
+        Placeholder[] placeholders = new Placeholder[]{
+                Placeholder.of("regionName", region.getName()),
+                Placeholder.of("regionId", region.getId()),
+                Placeholder.of("version", deeds.version())
+        };
 
         List<String> pages = new ArrayList<>();
-        int membersPerPage = chunkSize - 1;
+        if (this.prologueKey_ != null) {
+            String prologue = this.runical_.translateOrNull(player, this.prologueKey_, placeholders);
+            if (prologue != null) {
+                pages.addAll(renderCommentPages(prologue));
+            }
+        }
+        if (perms.isEmpty()) {
+            return pages.toArray(String[]::new);
+        }
+
+        int membersPerPage = this.pageSize_ - 1;
         List<Hierarchy.Group> groups = region.getHierarchy().getGroups().stream().sorted().toList();
         for (Hierarchy.Group group : groups) {
             List<String> players = playersByGroup.getOrDefault(group, List.of()).stream()
@@ -193,18 +225,75 @@ class DeedsTranspiler {
                 .sorted(String.CASE_INSENSITIVE_ORDER)
                 .toList();
 
-        StringBuilder builder = new StringBuilder(groupName)
-                .append(':')
-                .append(LINE_SEPARATOR);
-        for (String player : sortedPlayers) {
-            builder.append(player).append(LINE_SEPARATOR);
-        }
-
-        return builder.toString();
+        List<String> lines = new ArrayList<>();
+        lines.add(groupName + ':');
+        lines.addAll(sortedPlayers);
+        return renderLines(lines);
     }
 
     private static String normalizeSource(String src) {
         return src.replace("\r\n", LINE_SEPARATOR).replace('\r', '\n');
+    }
+
+    private static String stripMinecraftFormatting(String src) {
+        StringBuilder builder = new StringBuilder(src.length());
+        for (int i = 0; i < src.length(); i++) {
+            char chr = src.charAt(i);
+            if (chr == MINECRAFT_FORMATTING_PREFIX && i + 1 < src.length() && src.charAt(i + 1) != '\n') {
+                i++;
+                continue;
+            }
+            builder.append(chr);
+        }
+        return builder.toString();
+    }
+
+    private static boolean isSingleLineComment(String line) {
+        return line.startsWith(COMMENT_PREFIX);
+    }
+
+    private static boolean isBlockCommentDelimiter(String line) {
+        return BLOCK_COMMENT_DELIMITER.equals(line);
+    }
+
+    private static List<String> renderCommentPages(String prologue) {
+        List<List<String>> pageLines = new ArrayList<>();
+        List<String> currentPage = new ArrayList<>();
+        for (String rawLine : normalizeSource(prologue).split(LINE_SEPARATOR, -1)) {
+            if (!isProloguePageDelimiter(rawLine)) {
+                currentPage.add(rawLine);
+                continue;
+            }
+            trimTrailingBlankLines(currentPage);
+            pageLines.add(currentPage);
+            currentPage = new ArrayList<>();
+        }
+        pageLines.add(currentPage);
+
+        pageLines.getFirst().addFirst(BLOCK_COMMENT_DELIMITER);
+        pageLines.getLast().add(BLOCK_COMMENT_DELIMITER);
+
+        return pageLines.stream()
+                .map(DeedsTranspiler::renderLines)
+                .toList();
+    }
+
+    private static boolean isProloguePageDelimiter(String line) {
+        return stripMinecraftFormatting(line).strip().startsWith(PROLOGUE_PAGE_DELIMITER);
+    }
+
+    private static void trimTrailingBlankLines(List<String> lines) {
+        while (!lines.isEmpty() && lines.getLast().isBlank()) {
+            lines.removeLast();
+        }
+    }
+
+    private static String renderLines(List<String> lines) {
+        StringBuilder builder = new StringBuilder();
+        for (String line : lines) {
+            builder.append(line).append(LINE_SEPARATOR);
+        }
+        return builder.toString();
     }
 
     private static boolean isValidCharacter(char chr) {
