@@ -240,6 +240,7 @@ final class TotemServiceListener implements Listener {
         }
 
         region.setPermissions(deeds.permissions().toArray(new Permission[0]));
+        region.save();
     }
 
     @EventHandler
