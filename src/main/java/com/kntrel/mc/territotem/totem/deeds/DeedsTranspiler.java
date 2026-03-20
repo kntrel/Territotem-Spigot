@@ -135,7 +135,8 @@ class DeedsTranspiler {
         Placeholder[] placeholders = new Placeholder[]{
                 Placeholder.of("regionName", region.getName()),
                 Placeholder.of("regionId", region.getId()),
-                Placeholder.of("version", deeds.version())
+                Placeholder.of("version", deeds.version()),
+                Placeholder.of("player", player.getName())
         };
 
         List<String> pages = new ArrayList<>();

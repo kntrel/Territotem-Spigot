@@ -1,7 +1,6 @@
-§lDeeds for
-§l{regionName}
+<b>Deeds for {regionName}</b>
 
-§r§7  Region ID: {regionId}
-§r§7  Deeds version: {version}§r
+<c:gray>  Region ID: {regionId}</>
+<c:gray>  Deeds version: {version}</>
 
-§rThis book holds the permission definitions for all members of it's region and their roles. Once it's placed into the totem's lectern, all changes will be applied.
+<i>This book holds the permission definitions for all members of it's region and their roles. Once it's placed into the totem's lectern, all changes will be applied.</>

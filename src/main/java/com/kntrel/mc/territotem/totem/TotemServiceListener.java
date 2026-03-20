@@ -22,7 +22,6 @@ import com.kntrel.mc.territotem.totem.region.Expansion;
 import com.kntrel.mc.territotem.totem.region.ExpansionResult;
 import com.kntrel.util.Vec3i;
 import com.kntrel.util.tuple.Pair;
-import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Tag;
@@ -329,21 +328,8 @@ final class TotemServiceListener implements Listener {
         }
 
         if (!bookMeta.getEnchants().isEmpty()) { return; }
-        Deeds deeds = this.service_.getDeedsFactory().generate(player, bookMeta, totem);
-        Placeholder[] placeholders = new Placeholder[] {
-                Placeholder.of("regionName", deeds.region().getName()),
-                Placeholder.of("regionId", deeds.region().getId()),
-                Placeholder.of("playerName", player.getName()),
-                Placeholder.of("version", deeds.version())
-        };
+        this.service_.getDeedsFactory().generate(player, bookMeta, totem);
 
-        String deedsName = this.translator_.translate(player, "deeds.item.name", placeholders);
-        String lore = this.translator_.translate(player, "deeds.item.lore", placeholders);
-        List<String> loreList = Arrays.stream(lore.split("\n")).toList();
-
-
-        bookMeta.setItemName(deedsName);
-        bookMeta.setLore(loreList);
         item.setItemMeta(bookMeta);
         totem.save();
     }

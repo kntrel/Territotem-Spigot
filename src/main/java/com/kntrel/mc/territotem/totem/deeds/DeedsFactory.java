@@ -3,13 +3,19 @@ package com.kntrel.mc.territotem.totem.deeds;
 import com.kntrel.mc.regionLib.region.Region;
 import com.kntrel.mc.regionLib.region.ability.Permission;
 import com.kntrel.mc.regionLib.region.context.RegionContext;
+import com.kntrel.mc.runical.bukkit.ComponentMarkupCompiler;
 import com.kntrel.mc.runical.bukkit.Translator;
+import com.kntrel.mc.runical.core.Placeholder;
 import com.kntrel.mc.territotem.totem.Totem;
+import net.md_5.bungee.api.chat.BaseComponent;
+import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.meta.BookMeta;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.jspecify.annotations.NonNull;
+
+import java.util.Arrays;
 import java.util.List;
 
 public class DeedsFactory {
@@ -24,6 +30,8 @@ public class DeedsFactory {
     private final String nameSpace_;
     private final DeedsTranspiler transpiler_;
     private final NamespacedKey deedsNsk_;
+    private final ComponentMarkupCompiler markupCompiler_;
+    private final Translator translator_;
 
 
     //CONSTRUCTOR
@@ -32,9 +40,11 @@ public class DeedsFactory {
         this.nameSpace_ = this.regionContext_.getNamespace();
         this.transpiler_ = new DeedsTranspiler(this.regionContext_.getServer(), translator);
         this.deedsNsk_ = new NamespacedKey(this.regionContext_.getPlugin(), DEEDS_KEY);
+        this.translator_ = translator;
 
         this.transpiler_.setPageSizeLines(PAGE_LINE_COUNT);
         this.transpiler_.setPrologueTranslationKey("prologue");
+        this.markupCompiler_ = new ComponentMarkupCompiler();
     }
 
 
@@ -50,10 +60,31 @@ public class DeedsFactory {
         );
         PersistentDataContainer pdc = bookMeta.getPersistentDataContainer();
         pdc.set(this.deedsNsk_, DeedsPersistentDataType.instance(), data);
-
         Deeds deeds = new Deeds(region, bookMeta, perms, data.version());
-        String[] pages = this.transpiler_.transpile(player, deeds);
-        bookMeta.setPages(pages);
+
+        String[] rawPages = this.transpiler_.transpile(player, deeds);
+        List<BaseComponent[]> pages = Arrays.stream(rawPages)
+                .map(this.markupCompiler_::compile)
+                .map(c -> new BaseComponent[]{c})
+                .toList();
+        bookMeta.spigot().setPages(pages);
+
+        Placeholder[] placeholders = new Placeholder[] {
+                Placeholder.of("regionName", region.getName()),
+                Placeholder.of("regionId", region.getId()),
+                Placeholder.of("playerName", player.getName()),
+                Placeholder.of("version", deeds.version())
+        };
+
+        String name = this.translator_.translateOrNull(player, "item.name", placeholders);
+        String rawLore = this.translator_.translateOrNull(player, "item.lore", placeholders);
+
+        if (name != null) {
+            bookMeta.setItemName(name);
+        }
+        if (rawLore != null) {
+            bookMeta.setLore(Arrays.stream(rawLore.split("\n")).toList());
+        }
         bookMeta.setEnchantmentGlintOverride(true);
 
         return deeds;
