@@ -45,9 +45,10 @@ public final class Territotem extends JavaPlugin {
         Hierarchy hierarchy = regionContext.getHierarchyRepository().get(1).orElse(null);
 
         Runical runical = new Runical(this, "translations");
+        runical.setDefaultLocale("en");
         Translator totemTranslator = runical.getChild("totem");
         this.getServer().getPluginManager().registerEvents(
-                new RegionListener(runical.getChild("not_allowed")),
+                new RegionListener(this, runical.getChild("not_allowed"), runical.getChild("region").getChild("permissions")),
                 this
         );
 

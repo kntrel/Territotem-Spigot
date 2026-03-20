@@ -55,6 +55,25 @@ totem:
         empty_group_name: "Write a group name before the ':' character."
         no_group_name_provided: "Add a group header such as 'members:' before listing player names."
 
+region:
+  permissions:
+    add:
+      third_person_third_person: "{affected_player} has been granted with the role of {group_name} at {region_name} by {responsible_player}"
+      third_person_first_person: "{responsible_player} has granted you with the role of {group_name} at {region_name}"
+      first_person_third_person: "You've granted {affected_player} with the role of {group_name} at {region_name}"
+      first_person_first_person: "You've granted yourself with the role of {group_name} at {region_name}"
+    remove:
+      third_person_third_person: "{responsible_player} has taken the role of {group_name} at {region_name} away from {affected_player}"
+      third_person_first_person: "{responsible_player} has taken the role of {group_name} at {region_name} away from you"
+      first_person_third_person: "You got rid of {affected_player}'s role of {group_name} at {region_name}"
+      first_person_first_person: "You took the role of {group_name} at {region_name} away from yourself"
+    change:
+      third_person_third_person: "{responsible_player} has changed the role of {affected_player} at {region_name} from {old_group_name} to {new_group_name}"
+      third_person_first_person: "{responsible_player} has changed your role at {region_name} from {old_group_name} to {new_group_name}"
+      first_person_third_person: "You've changed the role of {affected_player} at {region_name} from {old_group_name} to {new_group_name}"
+      first_person_first_person: "You've has changed your role at {region_name} from {old_group_name} to {new_group_name}"
+
+
 not_allowed:
   default: "You're not allowed to do that in §a§l{regionName}"
   access_anvils: "Only §a§l{regionName}§r's members can use that"
