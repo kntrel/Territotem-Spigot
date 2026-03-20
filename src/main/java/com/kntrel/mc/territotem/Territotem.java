@@ -6,6 +6,7 @@ import com.kntrel.mc.regionLib.region.context.RegionContext;
 import com.kntrel.mc.regionLib.region.hierarchy.Hierarchy;
 import com.kntrel.mc.runical.bukkit.Runical;
 import com.kntrel.mc.runical.bukkit.Translator;
+import com.kntrel.mc.territotem.region.RegionListener;
 import com.kntrel.mc.territotem.totem.core.TotemCore;
 import com.kntrel.mc.territotem.totem.event.TotemCoreCompletedEvent;
 import com.kntrel.mc.territotem.structure.StructureService;
@@ -45,6 +46,10 @@ public final class Territotem extends JavaPlugin {
 
         Runical runical = new Runical(this, "translations");
         Translator totemTranslator = runical.getChild("totem");
+        this.getServer().getPluginManager().registerEvents(
+                new RegionListener(runical.getChild("not_allowed")),
+                this
+        );
 
         this.chunkPersister_ = new ChunkPersister(this);
         StructureService structureService = new StructureService(this, this.chunkPersister_);
