@@ -8,9 +8,8 @@ import com.kntrel.mc.runical.core.Placeholder;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.Server;
 import org.bukkit.entity.Player;
+import java.math.BigInteger;
 import java.util.*;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 class DeedsTranspiler {
 
@@ -53,41 +52,30 @@ class DeedsTranspiler {
             return List.of();
         }
 
-        Map<String, Hierarchy.Group> groupMap = toLowerCaseGroupMap(region.getHierarchy());
+        List<Hierarchy.Group> groups = toGroupsSortedByLevel(region.getHierarchy());
         List<Permission> permissions = new ArrayList<>();
         Hierarchy.Group currentGroup = null;
         boolean inBlockComment = false;
         for (int i = 0; i < lines.size(); i++) {
             int l = i + 1;
-            String rawLine = stripMinecraftFormatting(lines.get(i));
-            String line = rawLine.strip();
-            if (isBlockCommentDelimiter(line)) {
-                inBlockComment = !inBlockComment;
+            String strippedFormatting = stripMinecraftFormatting(lines.get(i));
+            CommentStrippingResult commentResult = stripComments(strippedFormatting, inBlockComment);
+            inBlockComment = commentResult.inBlockComment();
+
+            String line = commentResult.line().strip();
+            if (line.isEmpty()) {
                 continue;
             }
-            if (inBlockComment || line.isEmpty() || isSingleLineComment(line)) { continue; }
 
-            boolean isGroup = line.endsWith(":");
-            this.validateLine(src, rawLine, l, isGroup);
-            if (isGroup) {
-                line = line.substring(0, line.length() - 1);
-            }
-
-            if (isGroup) {
-                String groupName = line.strip();
-                if (groupName.isEmpty()) {
-                    throw new DeedsDeTranspilingException(src, l, new DeedsDeTranspilingError.EmptyGroupName());
-                }
-
-                currentGroup = groupMap.get(groupName.toLowerCase());
-                if (currentGroup == null) {
-                    throw new DeedsDeTranspilingException(src, l, new DeedsDeTranspilingError.UnknownGroup(groupName));
-                }
+            if (isGroupHeader(line)) {
+                currentGroup = resolveGroupByLevel(src, l, groups, line);
                 continue;
             }
+
+            this.validatePlayerLine(src, line, l);
 
             if (currentGroup == null) {
-                throw new DeedsDeTranspilingException(src, l, new DeedsDeTranspilingError.NoGroupNameProvided());
+                throw new DeedsDeTranspilingException(src, l, new DeedsDeTranspilingError.NoGroupProvided());
             }
 
             UUID playerId = this.resolvePlayerId(line).orElse(null);
@@ -151,19 +139,19 @@ class DeedsTranspiler {
         }
 
         int membersPerPage = this.pageSize_ - 1;
-        List<Hierarchy.Group> groups = region.getHierarchy().getGroups().stream().sorted().toList();
+        List<Hierarchy.Group> groups = toGroupsSortedByLevel(region.getHierarchy());
         for (Hierarchy.Group group : groups) {
             List<String> players = playersByGroup.getOrDefault(group, List.of()).stream()
                     .sorted(String.CASE_INSENSITIVE_ORDER)
                     .toList();
             if (players.isEmpty()) {
-                pages.add(renderSection(group.getName(), List.of()));
+                pages.add(renderSection(group.getLevel(), List.of()));
                 continue;
             }
 
             for (int start = 0; start < players.size(); start += membersPerPage) {
                 int end = Math.min(start + membersPerPage, players.size());
-                pages.add(renderSection(group.getName(), players.subList(start, end)));
+                pages.add(renderSection(group.getLevel(), players.subList(start, end)));
             }
         }
 
@@ -172,39 +160,37 @@ class DeedsTranspiler {
 
 
     //INTERNALS
-    private void validateLine(String src, String rawLine, int lineNumber, boolean isGroup) throws DeedsDeTranspilingException {
-        String line = rawLine.strip();
-        if (line.isEmpty()) {
-            return;
-        }
-
-        if (isGroup) {
-            String trailingTrimmed = rawLine.stripTrailing();
-            int firstColon = trailingTrimmed.indexOf(':');
-            if (!line.endsWith(":")) {
-                throw new DeedsDeTranspilingException(src, lineNumber, new DeedsDeTranspilingError.UnexpectedCharacter(firstColon + 1));
-            }
-
-            int extraSeparatorIndex = trailingTrimmed.substring(0, trailingTrimmed.length() - 1).indexOf(':');
-            if (extraSeparatorIndex >= 0) {
-                throw new DeedsDeTranspilingException(src, lineNumber, new DeedsDeTranspilingError.UnexpectedCharacter(extraSeparatorIndex + 1));
-            }
-            return;
-        }
-
-        for (int i = 0; i < rawLine.length(); i++) {
-            if (!isValidCharacter(rawLine.charAt(i))) {
+    private void validatePlayerLine(String src, String line, int lineNumber) throws DeedsDeTranspilingException {
+        for (int i = 0; i < line.length(); i++) {
+            if (!isValidCharacter(line.charAt(i))) {
                 throw new DeedsDeTranspilingException(src, lineNumber, new DeedsDeTranspilingError.UnexpectedCharacter(i + 1));
             }
         }
     }
 
-    private static Map<String, Hierarchy.Group> toLowerCaseGroupMap(Hierarchy hierarchy) {
-        return hierarchy.getGroups().stream()
-                .collect(Collectors.toMap(
-                        g -> g.getName().toLowerCase(),
-                        Function.identity()
-                ));
+    private static List<Hierarchy.Group> toGroupsSortedByLevel(Hierarchy hierarchy) {
+        return hierarchy.getGroups().stream().sorted().toList();
+    }
+
+    private static Hierarchy.Group resolveGroupByLevel(
+            String src,
+            int lineNumber,
+            List<Hierarchy.Group> groups,
+            String groupLevel
+    ) throws DeedsDeTranspilingException {
+        BigInteger requestedLevel = new BigInteger(groupLevel);
+        Hierarchy.Group resolved = null;
+        for (Hierarchy.Group group : groups) {
+            if (BigInteger.valueOf(group.getLevel()).compareTo(requestedLevel) > 0) {
+                break;
+            }
+            resolved = group;
+        }
+
+        if (resolved == null) {
+            throw new DeedsDeTranspilingException(src, lineNumber, new DeedsDeTranspilingError.UnknownGroup(groupLevel));
+        }
+        return resolved;
     }
 
     private Optional<UUID> resolvePlayerId(String playerName) {
@@ -221,13 +207,13 @@ class DeedsTranspiler {
                 .findFirst();
     }
 
-    private static String renderSection(String groupName, List<String> players) {
+    private static String renderSection(int groupLevel, List<String> players) {
         List<String> sortedPlayers = players.stream()
                 .sorted(String.CASE_INSENSITIVE_ORDER)
                 .toList();
 
         List<String> lines = new ArrayList<>();
-        lines.add(groupName + ':');
+        lines.add(Integer.toString(groupLevel));
         lines.addAll(sortedPlayers);
         return renderLines(lines);
     }
@@ -249,12 +235,47 @@ class DeedsTranspiler {
         return builder.toString();
     }
 
-    private static boolean isSingleLineComment(String line) {
-        return line.startsWith(COMMENT_PREFIX);
+    private static CommentStrippingResult stripComments(String line, boolean inBlockComment) {
+        StringBuilder content = new StringBuilder(line.length());
+        int i = 0;
+        while (i < line.length()) {
+            if (startsWithAt(line, i, BLOCK_COMMENT_DELIMITER)) {
+                inBlockComment = !inBlockComment;
+                i += BLOCK_COMMENT_DELIMITER.length();
+                continue;
+            }
+
+            if (inBlockComment) {
+                i++;
+                continue;
+            }
+
+            if (startsSingleLineComment(line, i)) {
+                break;
+            }
+
+            content.append(line.charAt(i));
+            i++;
+        }
+        return new CommentStrippingResult(content.toString(), inBlockComment);
     }
 
-    private static boolean isBlockCommentDelimiter(String line) {
-        return BLOCK_COMMENT_DELIMITER.equals(line);
+    private static boolean startsSingleLineComment(String line, int index) {
+        return line.charAt(index) == COMMENT_PREFIX.charAt(0)
+                && (index == 0 || Character.isWhitespace(line.charAt(index - 1)));
+    }
+
+    private static boolean startsWithAt(String line, int index, String token) {
+        return line.regionMatches(index, token, 0, token.length());
+    }
+
+    private static boolean isGroupHeader(String line) {
+        for (int i = 0; i < line.length(); i++) {
+            if (!Character.isDigit(line.charAt(i))) {
+                return false;
+            }
+        }
+        return !line.isEmpty();
     }
 
     private static List<String> renderCommentPages(String prologue) {
@@ -300,4 +321,6 @@ class DeedsTranspiler {
     private static boolean isValidCharacter(char chr) {
         return chr == '_' || chr >= '0' && chr <= '9' || chr >= 'A' && chr <= 'Z' || chr >= 'a' && chr <= 'z';
     }
+
+    private record CommentStrippingResult(String line, boolean inBlockComment) {}
 }

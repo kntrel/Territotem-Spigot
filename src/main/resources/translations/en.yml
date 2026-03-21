@@ -50,10 +50,9 @@ totem:
       message: "Deeds formatting error. page: {pageNumber} line: {lineNumber}\n{details}"
       detail:
         player_not_found: "No player named '{playerName}' was found."
-        unexpected_character: "Unexpected character at column {column}. Player names may only contain letters, numbers, and '_', and group headers must end with a single ':'."
-        unknown_group: "The group '{groupName}' does not exist in this region."
-        empty_group_name: "Write a group name before the ':' character."
-        no_group_name_provided: "Add a group header such as 'members:' before listing player names."
+        unexpected_character: "Unexpected character at column {column}. Player names may only contain letters, numbers, and '_', and group headers must be numeric only."
+        unknown_group: "No group exists at or below level '{groupName}' in this region."
+        no_group_name_provided: "Add a numeric group header before listing player names."
 
 region:
   permissions:

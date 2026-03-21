@@ -41,13 +41,13 @@ class DeedsTranspilerTest {
         UUID claraId = fixture.addOfflinePlayer("Clara");
 
         List<Permission> permissions = fixture.transpiler().deTranspile(fixture.region(), """
-                admins:
+                100
                 Alice
-                members:
-                admins:
+                10
+                100
                 Bob
 
-                members:
+                10
                 Clara
                 """);
 
@@ -56,13 +56,13 @@ class DeedsTranspilerTest {
     }
 
     @Test
-    void deTranspileAllowsWhitespaceBeforeGroupColon() throws Exception {
+    void deTranspileAllowsWhitespaceAndInlineCommentsAroundNumericHeaders() throws Exception {
         Fixture fixture = fixture();
         UUID aliceId = fixture.addOfflinePlayer("Alice");
 
         List<Permission> permissions = fixture.transpiler().deTranspile(fixture.region(), """
-                admins  :
-                Alice
+                   100   - admins
+                   Alice
                 """);
 
         assertEquals(List.of(aliceId), permissions.stream().map(Permission::getPlayerId).toList());
@@ -70,22 +70,19 @@ class DeedsTranspilerTest {
     }
 
     @Test
-    void deTranspileIgnoresSingleLineAndBlockComments() throws Exception {
+    void deTranspileIgnoresInlineSingleLineAndBlockComments() throws Exception {
         Fixture fixture = fixture();
         UUID aliceId = fixture.addOfflinePlayer("Alice");
         UUID bobId = fixture.addOfflinePlayer("Bob");
 
         List<Permission> permissions = fixture.transpiler().deTranspile(fixture.region(), """
                 - this is a prologue line
-                ---
-                this is a longer
-                multiline comment
-                ---
-                admins:
-                Alice
+                100 --- Admins
+                They can do everything members can, but also modify permissions
+                --- Alice - main admin
                 - Bob is recorded below
-                members:
-                Bob
+                10
+                Bob - temporary
                 """);
 
         assertEquals(List.of(aliceId, bobId), permissions.stream().map(Permission::getPlayerId).toList());
@@ -99,14 +96,12 @@ class DeedsTranspilerTest {
         UUID bobId = fixture.addOfflinePlayer("Bob");
 
         List<Permission> permissions = fixture.transpiler().deTranspile(fixture.region(), """
-                §8- comment with formatting
-                §7---
-                §aformatted prologue
-                §7---
-                §cadmins§r:
-                §bAlice
-                members:
-                §6Bob
+                \u00A78- comment with formatting
+                \u00A77100 \u00A77--- admins
+                \u00A7aformatted prologue
+                \u00A77--- \u00A7bAlice
+                10
+                \u00A76Bob \u00A78- temp
                 """);
 
         assertEquals(List.of(aliceId, bobId), permissions.stream().map(Permission::getPlayerId).toList());
@@ -119,10 +114,9 @@ class DeedsTranspilerTest {
         UUID aliceId = fixture.addOfflinePlayer("Alice");
 
         List<Permission> permissions = fixture.transpiler().deTranspile(fixture.region(), """
-                admins:
+                100
                 Alice
-                ---
-                unfinished comment
+                --- unfinished comment
                 still unfinished
                 """);
 
@@ -138,23 +132,43 @@ class DeedsTranspilerTest {
                 DeedsDeTranspilingException.class,
                 () -> fixture.transpiler().deTranspile(fixture.region(), """
                         Alice
-                        admins:
+                        100
                         """)
         );
 
         assertEquals(1, exception.getLineNumber());
-        assertInstanceOf(DeedsDeTranspilingError.NoGroupNameProvided.class, exception.getErrorCause());
+        assertInstanceOf(DeedsDeTranspilingError.NoGroupProvided.class, exception.getErrorCause());
     }
 
     @Test
-    void deTranspileFailsForUnknownGroups() {
+    void deTranspileResolvesNonExactGroupLevelsToTheNextLowestGroup() throws Exception {
+        Fixture fixture = fixture();
+        UUID aliceId = fixture.addOfflinePlayer("Alice");
+        UUID bobId = fixture.addOfflinePlayer("Bob");
+        UUID claraId = fixture.addOfflinePlayer("Clara");
+
+        List<Permission> permissions = fixture.transpiler().deTranspile(fixture.region(), """
+                50
+                Alice
+                999
+                Bob
+                10
+                Clara
+                """);
+
+        assertEquals(List.of(aliceId, bobId, claraId), permissions.stream().map(Permission::getPlayerId).toList());
+        assertEquals(List.of("members", "admins", "members"), permissions.stream().map(permission -> permission.getGroup().getName()).toList());
+    }
+
+    @Test
+    void deTranspileFailsWhenNoLowerGroupLevelExists() {
         Fixture fixture = fixture();
         fixture.addOfflinePlayer("Alice");
 
         DeedsDeTranspilingException exception = assertThrows(
                 DeedsDeTranspilingException.class,
                 () -> fixture.transpiler().deTranspile(fixture.region(), """
-                        owners:
+                        0
                         Alice
                         """)
         );
@@ -164,7 +178,7 @@ class DeedsTranspilerTest {
                 exception.getErrorCause()
         );
         assertEquals(1, exception.getLineNumber());
-        assertEquals("owners", error.groupName());
+        assertEquals("0", error.groupName());
     }
 
     @Test
@@ -174,7 +188,7 @@ class DeedsTranspilerTest {
         DeedsDeTranspilingException exception = assertThrows(
                 DeedsDeTranspilingException.class,
                 () -> fixture.transpiler().deTranspile(fixture.region(), """
-                        admins:
+                        100
                         Alice
                         """)
         );
@@ -194,7 +208,7 @@ class DeedsTranspilerTest {
         DeedsDeTranspilingException exception = assertThrows(
                 DeedsDeTranspilingException.class,
                 () -> fixture.transpiler().deTranspile(fixture.region(), """
-                        admins:
+                        100
                         Ali-ce
                         """)
         );
@@ -208,13 +222,13 @@ class DeedsTranspilerTest {
     }
 
     @Test
-    void deTranspileFailsWhenMoreThanOneColonIsPresent() {
+    void deTranspileFailsForLegacyColonGroupHeaders() {
         Fixture fixture = fixture();
 
         DeedsDeTranspilingException exception = assertThrows(
                 DeedsDeTranspilingException.class,
                 () -> fixture.transpiler().deTranspile(fixture.region(), """
-                        admins::
+                        100:
                         Alice
                         """)
         );
@@ -224,7 +238,7 @@ class DeedsTranspilerTest {
                 exception.getErrorCause()
         );
         assertEquals(1, exception.getLineNumber());
-        assertEquals(7, error.index());
+        assertEquals(4, error.index());
     }
 
     @Test
@@ -246,20 +260,20 @@ class DeedsTranspilerTest {
 
         assertArrayEquals(new String[] {
                 """
-                members:
+                10
                 """,
                 """
-                admins:
+                100
                 Alpha
                 Bravo
                 """,
                 """
-                admins:
+                100
                 Charlie
                 Delta
                 """,
                 """
-                admins:
+                100
                 Echo
                 """
         }, sections);
@@ -286,10 +300,10 @@ class DeedsTranspilerTest {
                 ---
                 """,
                 """
-                members:
+                10
                 """,
                 """
-                admins:
+                100
                 Alice
                 """
         }, sections);
@@ -325,10 +339,10 @@ class DeedsTranspilerTest {
 
         assertArrayEquals(new String[] {
                 """
-                members:
+                10
                 """,
                 """
-                admins:
+                100
                 Alice
                 """
         }, sections);
@@ -347,11 +361,11 @@ class DeedsTranspilerTest {
 
         assertArrayEquals(new String[] {
                 """
-                members:
+                10
                 Bob
                 """,
                 """
-                admins:
+                100
                 Alice
                 """
         }, sections);

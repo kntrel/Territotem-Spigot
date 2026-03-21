@@ -597,11 +597,7 @@ final class TotemServiceListener implements Listener {
                     prefix + "unknown_group",
                     List.of(Placeholder.of("groupName", unknownGroup.groupName()))
             );
-            case DeedsDeTranspilingError.EmptyGroupName ignored -> Pair.of(
-                    prefix + "empty_group_name",
-                    List.of()
-            );
-            case DeedsDeTranspilingError.NoGroupNameProvided ignored -> Pair.of(
+            case DeedsDeTranspilingError.NoGroupProvided ignored -> Pair.of(
                     prefix + "no_group_name_provided",
                     List.of()
             );

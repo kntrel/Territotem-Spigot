@@ -8,7 +8,5 @@ public sealed interface DeedsDeTranspilingError {
 
     record UnknownGroup(String groupName) implements DeedsDeTranspilingError {}
 
-    record EmptyGroupName() implements DeedsDeTranspilingError {}
-
-    record NoGroupNameProvided() implements DeedsDeTranspilingError {}
+    record NoGroupProvided() implements DeedsDeTranspilingError {}
 }
