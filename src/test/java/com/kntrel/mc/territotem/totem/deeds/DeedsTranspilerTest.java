@@ -28,6 +28,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 class DeedsTranspilerTest {
@@ -260,21 +261,72 @@ class DeedsTranspilerTest {
 
         assertArrayEquals(new String[] {
                 """
-                10
+                10 - members
                 """,
                 """
-                100
+                100 --- Admins
+                They can do all members can, plus modifying region deeds.
+                ---
                 Alpha
                 Bravo
                 """,
                 """
-                100
+                100 --- Admins
+                They can do all members can, plus modifying region deeds.
+                ---
                 Charlie
                 Delta
                 """,
                 """
-                100
+                100 --- Admins
+                They can do all members can, plus modifying region deeds.
+                ---
                 Echo
+                """
+        }, sections);
+    }
+
+    @Test
+    void transpileFallsBackToInlineCommentWhenDescriptionTranslationIsMissing() {
+        Fixture fixture = fixture();
+        fixture.putTranslation("hierarchy.1.10.name", "Members");
+        UUID bobId = fixture.addOfflinePlayer("Bob");
+
+        String[] sections = fixture.transpile(List.of(
+                new Permission(bobId, fixture.region(), 10)
+        ), 10);
+
+        assertArrayEquals(new String[] {
+                """
+                10 - Members
+                Bob
+                """,
+                """
+                100 --- Admins
+                They can do all members can, plus modifying region deeds.
+                ---
+                """
+        }, sections);
+    }
+
+    @Test
+    void transpileFallsBackToNativeNameWhenGroupNameTranslationIsMissing() {
+        Fixture fixture = fixture();
+        UUID bobId = fixture.addOfflinePlayer("Bob");
+
+        String[] sections = fixture.transpile(List.of(
+                new Permission(bobId, fixture.region(), 10)
+        ), 10);
+
+        assertArrayEquals(new String[] {
+                """
+                10 - members
+                Bob
+                """,
+                """
+                100 --- Admins
+                They can do all members can, plus modifying region deeds.
+                ---
                 """
         }, sections);
     }
@@ -300,10 +352,12 @@ class DeedsTranspilerTest {
                 ---
                 """,
                 """
-                10
+                10 - members
                 """,
                 """
-                100
+                100 --- Admins
+                They can do all members can, plus modifying region deeds.
+                ---
                 Alice
                 """
         }, sections);
@@ -339,10 +393,12 @@ class DeedsTranspilerTest {
 
         assertArrayEquals(new String[] {
                 """
-                10
+                10 - members
                 """,
                 """
-                100
+                100 --- Admins
+                They can do all members can, plus modifying region deeds.
+                ---
                 Alice
                 """
         }, sections);
@@ -361,11 +417,13 @@ class DeedsTranspilerTest {
 
         assertArrayEquals(new String[] {
                 """
-                10
+                10 - members
                 Bob
                 """,
                 """
-                100
+                100 --- Admins
+                They can do all members can, plus modifying region deeds.
+                ---
                 Alice
                 """
         }, sections);
@@ -397,17 +455,34 @@ class DeedsTranspilerTest {
         when(player.getLocale()).thenReturn("en-US");
 
         Translator translator = mock(Translator.class);
-        return new Fixture(region, new DeedsTranspiler(server, translator), translator, directory, player);
+        Map<String, String> translations = new HashMap<>();
+        translations.put("hierarchy.1.100.name", "Admins");
+        translations.put("hierarchy.1.100.description", "They can do all members can, plus modifying region deeds.");
+        lenient().when(translator.translateOrNull(any(Player.class), anyString(), any(Placeholder[].class)))
+                .thenAnswer(invocation -> translations.get(invocation.getArgument(1, String.class)));
+
+        return new Fixture(region, new DeedsTranspiler(server, translator), translator, directory, player, translations);
     }
 
-    private record Fixture(Region region, DeedsTranspiler transpiler, Translator translator, Directory directory, Player player) {
+    private record Fixture(
+            Region region,
+            DeedsTranspiler transpiler,
+            Translator translator,
+            Directory directory,
+            Player player,
+            Map<String, String> translations
+    ) {
 
         private UUID addOfflinePlayer(String name) {
             return this.directory.addOfflinePlayer(name);
         }
 
+        private void putTranslation(String key, String value) {
+            this.translations.put(key, value);
+        }
+
         private String[] transpile(List<Permission> permissions) {
-            return this.transpile(permissions, null, 3);
+            return this.transpile(permissions, null, 5);
         }
 
         private String[] transpile(List<Permission> permissions, int pageSize) {
@@ -420,7 +495,7 @@ class DeedsTranspilerTest {
                 this.transpiler.setPrologueTranslationKey(null);
             } else {
                 this.transpiler.setPrologueTranslationKey("test.prologue");
-                when(this.translator.translateOrNull(any(Player.class), anyString(), any(Placeholder[].class))).thenReturn(prologue);
+                this.translations.put("test.prologue", prologue);
             }
 
             return this.transpiler.transpile(this.player, new Deeds(this.region, mock(BookMeta.class), permissions, 1));

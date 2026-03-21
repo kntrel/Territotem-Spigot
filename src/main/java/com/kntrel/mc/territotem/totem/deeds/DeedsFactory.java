@@ -28,7 +28,6 @@ public class DeedsFactory {
     private final String nameSpace_;
     private final DeedsTranspiler transpiler_;
     private final NamespacedKey deedsNsk_;
-    private final ComponentMarkupCompiler markupCompiler_;
     private final Translator translator_;
 
 
@@ -42,7 +41,6 @@ public class DeedsFactory {
 
         this.transpiler_.setPageSizeLines(PAGE_LINE_COUNT);
         this.transpiler_.setPrologueTranslationKey("prologue");
-        this.markupCompiler_ = new ComponentMarkupCompiler();
     }
 
 
@@ -62,7 +60,7 @@ public class DeedsFactory {
 
         String[] rawPages = this.transpiler_.transpile(player, deeds);
         List<BaseComponent[]> pages = Arrays.stream(rawPages)
-                .map(this.markupCompiler_::compile)
+                .map(ComponentMarkupCompiler::compile)
                 .map(c -> new BaseComponent[]{c})
                 .toList();
         bookMeta.spigot().setPages(pages);

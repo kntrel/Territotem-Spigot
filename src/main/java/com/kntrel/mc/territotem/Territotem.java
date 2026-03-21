@@ -15,7 +15,6 @@ import com.kntrel.mc.territotem.structure.piece.Piece;
 import com.kntrel.mc.territotem.structure.piece.Tile;
 import com.kntrel.mc.territotem.totem.TotemService;
 import com.kntrel.mc.territotem.totem.TotemBlueprint;
-import com.kntrel.mc.territotem.totem.piece.TotemPiece;
 import com.kntrel.mc.territotem.totem.piece.TotemPieceDirection;
 import com.kntrel.mc.territotem.totem.piece.TotemPieces;
 import com.kntrel.mc.territotem.totem.core.TotemCoreTracker;
@@ -46,7 +45,9 @@ public final class Territotem extends JavaPlugin {
 
         Runical runical = new Runical(this, "translations");
         runical.setDefaultLocale("en");
+        runical.mount("hierarchy", "totem.deeds.hierarchy");
         Translator totemTranslator = runical.getChild("totem");
+
         this.getServer().getPluginManager().registerEvents(
                 new RegionListener(this, runical.getChild("not_allowed"), runical.getChild("region").getChild("permissions")),
                 this

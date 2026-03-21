@@ -54,6 +54,13 @@ totem:
         unknown_group: "No group exists at or below level '{groupName}' in this region."
         no_group_name_provided: "Add a numeric group header before listing player names."
 
+
+hierarchy:
+  1: # domestic
+    1:  # admins
+      name: Admins
+      description: They can do all members can, plus modifying region deeds.
+
 region:
   permissions:
     add:

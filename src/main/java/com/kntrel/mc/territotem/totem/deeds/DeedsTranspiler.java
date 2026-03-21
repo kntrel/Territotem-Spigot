@@ -14,6 +14,9 @@ import java.util.*;
 class DeedsTranspiler {
 
     private static final String LINE_SEPARATOR = "\n";
+    private static final String HIERARCHY_TRANSLATION_ROOT = "hierarchy";
+    private static final String GROUP_NAME_TRANSLATION_KEY = "name";
+    private static final String GROUP_DESCRIPTION_TRANSLATION_KEY = "description";
     private static final String COMMENT_PREFIX = "-";
     private static final String BLOCK_COMMENT_DELIMITER = "---";
     private static final String PROLOGUE_PAGE_DELIMITER = "/page";
@@ -138,20 +141,21 @@ class DeedsTranspiler {
             return pages.toArray(String[]::new);
         }
 
-        int membersPerPage = this.pageSize_ - 1;
         List<Hierarchy.Group> groups = toGroupsSortedByLevel(region.getHierarchy());
         for (Hierarchy.Group group : groups) {
+            List<String> sectionHeader = this.renderSectionHeader(player, region, group);
             List<String> players = playersByGroup.getOrDefault(group, List.of()).stream()
                     .sorted(String.CASE_INSENSITIVE_ORDER)
                     .toList();
+            int membersPerPage = Math.max(1, this.pageSize_ - sectionHeader.size());
             if (players.isEmpty()) {
-                pages.add(renderSection(group.getLevel(), List.of()));
+                pages.add(renderSection(sectionHeader, List.of()));
                 continue;
             }
 
             for (int start = 0; start < players.size(); start += membersPerPage) {
                 int end = Math.min(start + membersPerPage, players.size());
-                pages.add(renderSection(group.getLevel(), players.subList(start, end)));
+                pages.add(renderSection(sectionHeader, players.subList(start, end)));
             }
         }
 
@@ -207,13 +211,56 @@ class DeedsTranspiler {
                 .findFirst();
     }
 
-    private static String renderSection(int groupLevel, List<String> players) {
+    private List<String> renderSectionHeader(Player player, Region region, Hierarchy.Group group) {
+        String groupName = resolveGroupDisplayName(player, region, group);
+        String description = resolveGroupDescription(player, region, group).orElse(null);
+        if (description == null || description.isBlank()) {
+            return List.of(group.getLevel() + " " + COMMENT_PREFIX + " " + groupName);
+        }
+
+        List<String> lines = new ArrayList<>();
+        lines.add(group.getLevel() + " " + BLOCK_COMMENT_DELIMITER + " " + groupName);
+        lines.addAll(Arrays.asList(normalizeSource(description).split(LINE_SEPARATOR, -1)));
+        lines.add(BLOCK_COMMENT_DELIMITER);
+        return lines;
+    }
+
+    private String resolveGroupDisplayName(Player player, Region region, Hierarchy.Group group) {
+        return this.resolveGroupTranslation(player, region, group, GROUP_NAME_TRANSLATION_KEY)
+                .filter(name -> !name.isBlank())
+                .orElse(group.getName());
+    }
+
+    private Optional<String> resolveGroupDescription(Player player, Region region, Hierarchy.Group group) {
+        return this.resolveGroupTranslation(player, region, group, GROUP_DESCRIPTION_TRANSLATION_KEY)
+                .filter(description -> !description.isBlank());
+    }
+
+    private Optional<String> resolveGroupTranslation(Player player, Region region, Hierarchy.Group group, String field) {
+        Placeholder[] placeholders = new Placeholder[] {
+                Placeholder.of("groupLevel", group.getLevel()),
+                Placeholder.of("groupName", group.getName()),
+                Placeholder.of("hierarchyId", region.getHierarchy().getId()),
+                Placeholder.of("hierarchyName", region.getHierarchy().getName()),
+                Placeholder.of("regionId", region.getId()),
+                Placeholder.of("regionName", region.getName())
+        };
+        String key = HIERARCHY_TRANSLATION_ROOT
+                + '.'
+                + region.getHierarchy().getId()
+                + '.'
+                + group.getLevel()
+                + '.'
+                + field;
+        return Optional.ofNullable(this.translator_.translateOrNull(player, key, placeholders));
+    }
+
+    private static String renderSection(List<String> headerLines, List<String> players) {
         List<String> sortedPlayers = players.stream()
                 .sorted(String.CASE_INSENSITIVE_ORDER)
                 .toList();
 
-        List<String> lines = new ArrayList<>();
-        lines.add(Integer.toString(groupLevel));
+        List<String> lines = new ArrayList<>(headerLines);
         lines.addAll(sortedPlayers);
         return renderLines(lines);
     }
