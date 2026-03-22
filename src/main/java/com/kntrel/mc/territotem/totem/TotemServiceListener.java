@@ -106,6 +106,8 @@ final class TotemServiceListener implements Listener {
 
     @EventHandler
     void onCoreRightClicked(TotemCoreRightClickedEvent e) {
+        if (e.isCancelled()) { return; }
+
         ItemStack itemStack = e.getItemStack();
         if (itemStack == null) { return; }
 
@@ -124,6 +126,8 @@ final class TotemServiceListener implements Listener {
 
     @EventHandler
     void onCoreDestroyed(TotemCoreBreakEvent e) {
+        if (e.isCancelled()) { return; }
+
         Totem totem = this.service_.totemOfCore(e.getCore()).orElse(null);
         if (totem == null) {
             return;
@@ -176,6 +180,7 @@ final class TotemServiceListener implements Listener {
 
     @EventHandler
     void onLecternBooKPlace(BlockRightClickedEvent e) {
+        if (e.isCancelled()) { return; }
         if (!(e.getBlock().getState() instanceof Lectern lectern)) { return; }
         if (!lectern.getInventory().isEmpty()) { return; }
 
@@ -245,7 +250,10 @@ final class TotemServiceListener implements Listener {
 
     @EventHandler
     void onBlockPlaceAttempt(BlockRightClickedEvent e) {
+        if (e.isCancelled()) { return; }
+
         ItemStack item = e.getItem();
+        if (item == null) { return; }
         Material type = item.getType();
 
         boolean isSign = Tag.SIGNS.isTagged(type);

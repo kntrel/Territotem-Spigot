@@ -1,0 +1,109 @@
+[
+  {
+    "id": 1,
+    "name": "domestic",
+    "groups": [
+      {
+        "name": "Acmons",
+        "level": 1,
+        "abilities": [
+          "put_books_on_totem_lecterns",
+          "take_books_from_totem_lecterns",
+          "create_deeds"
+        ]
+      },
+      {
+        "name": "Miembros",
+        "level": 2,
+        "abilities": [
+          "break_blocks",
+          "place_blocks",
+          "plant",
+          "place_redstone",
+          "place_item_frames",
+          "place_glow_item_frames",
+          "place_paintings",
+          "place_armor_stands",
+          "interact_with_armor_stands",
+          "put_water",
+          "put_lava",
+          "take_lava",
+          "take_water",
+          "wax_copper",
+          "scrap_copper",
+          "break_paintings",
+          "break_item_frames",
+          "break_glow_item_frame",
+          "break_armor_stands",
+          "pick_from_item_frames",
+          "damege_animals",
+          "put_into_item_frames",
+          "teleport_in",
+          "press_enforced_buttons",
+          "pull_locked_levers",
+          "assign_keys",
+          "access_totem_lecterns",
+          "destroy_totems"
+        ]
+      },
+      {
+        "name": "Plebe",
+        "level": 3,
+        "abilities": [
+          "extinguish_fire",
+          "use_respawn_anchors",
+          "put_books_on_lecterns",
+          "take_books_from_lecterns",
+          "use_beds"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 2,
+    "name": "publicSpaces",
+    "groups": [
+      {
+        "name": "Acmons",
+        "level": 1,
+        "abilities": [
+          "put_books_on_totem_lecterns",
+          "take_books_from_totem_lecterns",
+          "access_totem_lecterns",
+          "create_deeds",
+          "destroy_totems",
+          "break_blocks",
+          "place_blocks",
+          "place_redstone",
+          "place_item_frames",
+          "place_glow_item_frames",
+          "place_paintings",
+          "place_armor_stands",
+          "interact_with_armor_stands",
+          "put_water",
+          "put_lava",
+          "ignite",
+          "ignite_tnt",
+          "take_lava",
+          "take_water",
+          "wax_copper",
+          "scrap_copper",
+          "break_paintings",
+          "break_item_frames",
+          "break_glow_item_frame",
+          "break_armor_stands",
+          "pick_from_item_frames",
+          "damege_animals",
+          "damage_villagers",
+          "put_into_item_frames",
+          "press_enforced_buttons",
+          "pull_locked_levers",
+          "assign_keys",
+          "put_books_on_lecterns",
+          "take_books_from_lecterns",
+          "plant"
+        ]
+      }
+    ]
+  }
+]

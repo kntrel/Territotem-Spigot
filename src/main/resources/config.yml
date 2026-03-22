@@ -128,10 +128,6 @@ regions:
     fadeOut: 8          # The duration in ticks of the fade-out transition.
     refreshRate: 60     # The rate in ticks the plugin will check the regions the players are in.
 
-  #For regions with the "fireProtected" rule set to true. The chance of a fire block extinguishing when it tries to burn a block. If set to 0, fire
-  #won't burn blocks, but big fires could last forever.
-  fire_extinguish_chance: 0.4
-
   #The blocks considered as "crops", affected by the can_plant and can_break_crops abilities. Defined as a JSON list.
   #Must be filled with Spigot's Material enum values. https://hub.spigotmc.org/javadocs/bukkit/org/bukkit/Material.html
   plantable_blocks: [WHEAT, CARROTS, POTATOES, BEETROOTS, KELP, BAMBOO_SAPLING, SUGAR_CANE, BROWN_MUSHROOM, RED_MUSHROOM, NETHER_WART, ACACIA_SAPLING, SPRUCE_SAPLING, BIRCH_SAPLING, DARK_OAK_SAPLING, JUNGLE_SAPLING, OAK_SAPLING]

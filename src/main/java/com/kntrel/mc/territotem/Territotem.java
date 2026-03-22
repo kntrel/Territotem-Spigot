@@ -7,6 +7,7 @@ import com.kntrel.mc.regionLib.region.hierarchy.Hierarchy;
 import com.kntrel.mc.runical.bukkit.Runical;
 import com.kntrel.mc.runical.bukkit.Translator;
 import com.kntrel.mc.territotem.region.RegionListener;
+import com.kntrel.mc.territotem.region.TerritotemRegionFeatures;
 import com.kntrel.mc.territotem.totem.core.TotemCore;
 import com.kntrel.mc.territotem.totem.event.TotemCoreCompletedEvent;
 import com.kntrel.mc.territotem.structure.StructureService;
@@ -39,6 +40,8 @@ public final class Territotem extends JavaPlugin {
     @Override
     public void onEnable() {
 
+        this.saveDefaultConfig();
+        this.saveResource("hierarchies.json", false);
         RegionLib.enable(this);
         RegionContext regionContext = RegionLib.createDefaultContext(this);
         Hierarchy hierarchy = regionContext.getHierarchyRepository().get(1).orElse(null);
@@ -56,7 +59,8 @@ public final class Territotem extends JavaPlugin {
         this.chunkPersister_ = new ChunkPersister(this);
         StructureService structureService = new StructureService(this, this.chunkPersister_);
         TotemCoreTracker totemCoreTracker = new TotemCoreTracker(this, this.chunkPersister_);
-        new TotemService(regionContext, totemTranslator);
+        TotemService totemService = new TotemService(regionContext, totemTranslator);
+        new TerritotemRegionFeatures(this, regionContext, totemService, this.getConfig()).register();
         structureService.registerBlueprint(createTotemBlueprint(totemCoreTracker, hierarchy))
                 .on(TotemCoreCompletedEvent.class)
                 .when(e -> {
