@@ -17,7 +17,11 @@ import org.bukkit.block.Lectern;
 import org.bukkit.block.Sign;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.bukkit.util.BoundingBox;
 
+import java.util.ArrayDeque;
+import java.util.Deque;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -30,6 +34,8 @@ public class Totem {
     private final TotemService provenance_;
     private final Structure structure_;
     private final Region region_;
+    private final Deque<Expansion> expansionHistory_;
+    private BoundingBox baseBounds_;
     private int deedsVersion_;
 
 
@@ -43,6 +49,8 @@ public class Totem {
         this.provenance_ = provenance;
         this.structure_ = structure;
         this.region_ = region;
+        this.expansionHistory_ = new ArrayDeque<>();
+        this.baseBounds_ = region.getBoundingBox();
         this.deedsVersion_ = 0;
     }
 
@@ -63,6 +71,12 @@ public class Totem {
     public Region region() {
         return this.region_;
     }
+    public BoundingBox baseBounds() {
+        return this.baseBounds_.clone();
+    }
+    public List<Expansion> expansionHistory() {
+        return List.copyOf(this.expansionHistory_);
+    }
     public ExpansionResult expand(Expansion expansion) {
         return this.provenance_.expand(this, expansion);
     }
@@ -77,6 +91,31 @@ public class Totem {
     }
     public int incrementAndGetDeedsVersion() {
         return ++this.deedsVersion_;
+    }
+    public void loadGrowthState(BoundingBox baseBounds, Iterable<Expansion> history) {
+        this.baseBounds_ = baseBounds.clone();
+        this.expansionHistory_.clear();
+        if (history == null) {
+            return;
+        }
+        for (Expansion expansion : history) {
+            if (expansion == null || expansion.isZero()) {
+                continue;
+            }
+            this.expansionHistory_.addLast(expansion);
+        }
+    }
+    public void recordExpansion(Expansion expansion) {
+        if (expansion == null || expansion.isZero()) {
+            return;
+        }
+        this.expansionHistory_.addLast(expansion);
+    }
+    public Expansion latestExpansion() {
+        return this.expansionHistory_.peekLast();
+    }
+    public Expansion discardLatestExpansion() {
+        return this.expansionHistory_.pollLast();
     }
     public Optional<Sign> nameSign() {
         World world = this.world();
@@ -122,6 +161,7 @@ public class Totem {
     public void save() {
         TotemClaim claim = TotemClaim.of(this);
         TotemClaim.write(this.region(), claim);
+        TotemGrowthHistory.write(this.region(), TotemGrowthHistory.of(this));
         this.region().save();
     }
     public void destroy() {

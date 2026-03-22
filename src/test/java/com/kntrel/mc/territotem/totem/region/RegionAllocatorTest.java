@@ -137,6 +137,24 @@ class RegionAllocatorTest {
     }
 
     @Test
+    void contractsPreviouslyAppliedGrowthExactly() {
+        Fixture fixture = fixture();
+        World world = mock(World.class);
+        Region region = fixture.region(1L, world, new BoundingBox(0, 0, 0, 1, 1, 1));
+        Expansion growth = new Expansion(2d, 1d, 0.5d, 3d, 4d, 1.5d);
+
+        fixture.allocator().expand(region, growth);
+        fixture.allocator().contract(region, growth);
+
+        assertEquals(0d, region.getMinX(), DELTA);
+        assertEquals(0d, region.getMinY(), DELTA);
+        assertEquals(0d, region.getMinZ(), DELTA);
+        assertEquals(1d, region.getMaxX(), DELTA);
+        assertEquals(1d, region.getMaxY(), DELTA);
+        assertEquals(1d, region.getMaxZ(), DELTA);
+    }
+
+    @Test
     void placesRegionAsRequestedWhenNothingOverlaps() {
         Fixture fixture = fixture();
         World world = mock(World.class);

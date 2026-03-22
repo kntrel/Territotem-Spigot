@@ -53,7 +53,7 @@ public class TotemService {
         this.regionAllocator_ = new RegionAllocator(regionContext, Condition.hasDataKey(TOTEM_DATA_KEY));
         this.totemStore_ = new TotemStore();
 
-        this.assembler_.consume((s, r, c) -> this.loadTotem(s, r, c.deedsVersion()));
+        this.assembler_.consume((s, r, c) -> this.loadTotem(s, r, c.deedsVersion(), true));
         this.plugin_.getServer().getPluginManager().registerEvents(
                 new TotemServiceListener(this, regionContext, translator),
                 this.plugin_
@@ -151,9 +151,8 @@ public class TotemService {
         }
 
         Region region = placed.region();
-        totem = this.loadTotem(structure, region, 0);
-        TotemClaim claim = TotemClaim.of(totem);
-        TotemClaim.write(region, claim);
+        totem = this.loadTotem(structure, region, 0, false);
+        totem.save();
         return NewTotemResult.created(totem);
     }
 
@@ -200,16 +199,38 @@ public class TotemService {
     ExpansionResult expand(Totem totem, Expansion expansion) {
         ExpansionResult result = this.regionAllocator_.expand(totem.region(), expansion);
         if (result.hasGrowth()) {
-            totem.region().save();
+            totem.recordExpansion(result.accomplished());
+            totem.save();
         }
         return result;
     }
 
+    boolean rollbackLastExpansion(Totem totem) {
+        Expansion expansion = totem.latestExpansion();
+        if (expansion == null) {
+            return false;
+        }
+
+        this.regionAllocator_.contract(totem.region(), expansion);
+        totem.discardLatestExpansion();
+        totem.save();
+        return true;
+    }
+
 
     //HELPERS
-    private Totem loadTotem(Structure structure, Region region, int deedsVersion) {
+    private Totem loadTotem(Structure structure, Region region, int deedsVersion, boolean bootstrapMissingGrowthHistory) {
         Totem totem = new Totem(this, structure, region);
         totem.setDeedsVersion(deedsVersion);
+        TotemGrowthHistory.State growthState = TotemGrowthHistory.read(region);
+        if (growthState == null) {
+            if (bootstrapMissingGrowthHistory) {
+                growthState = TotemGrowthHistory.bootstrap(totem);
+            } else {
+                growthState = new TotemGrowthHistory.State(region.getBoundingBox(), List.of());
+            }
+        }
+        totem.loadGrowthState(growthState.baseBounds(), growthState.history());
         this.totemStore_.add(totem);
         return totem;
     }

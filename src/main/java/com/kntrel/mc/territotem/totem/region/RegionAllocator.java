@@ -59,6 +59,19 @@ public class RegionAllocator {
         return allocation.result();
     }
 
+    public void contract(Region region, Expansion expansion) {
+        Objects.requireNonNull(region);
+        Objects.requireNonNull(expansion);
+
+        if (expansion.isZero()) {
+            return;
+        }
+
+        BoundingBox contracted = region.getBoundingBox().clone();
+        applyContraction(contracted, expansion);
+        region.resize(contracted);
+    }
+
     public RegionPlaceResult place(World world, BoundingBox bounds, BoundingBox critical, String name, Hierarchy hierarchy) {
         Objects.requireNonNull(world);
         Objects.requireNonNull(bounds);
@@ -378,6 +391,21 @@ public class RegionAllocator {
             );
             case ALL -> throw new IllegalArgumentException("ALL is not a concrete side");
         }
+    }
+
+    private static void applyContraction(BoundingBox boundingBox, Expansion expansion) {
+        double minX = boundingBox.getMinX() + expansion.west();
+        double minY = boundingBox.getMinY() + expansion.down();
+        double minZ = boundingBox.getMinZ() + expansion.north();
+        double maxX = boundingBox.getMaxX() - expansion.east();
+        double maxY = boundingBox.getMaxY() - expansion.up();
+        double maxZ = boundingBox.getMaxZ() - expansion.south();
+
+        if (minX >= maxX || minY >= maxY || minZ >= maxZ) {
+            throw new IllegalArgumentException("Expansion would contract region into an invalid bounding box");
+        }
+
+        boundingBox.resize(minX, minY, minZ, maxX, maxY, maxZ);
     }
 
     private record Allocation(BoundingBox bounds, ExpansionResult result) {

@@ -17,6 +17,7 @@ import com.kntrel.mc.territotem.totem.deeds.Deeds;
 import com.kntrel.mc.territotem.totem.deeds.DeedsDeTranspilingError;
 import com.kntrel.mc.territotem.totem.deeds.DeedsInterpretationResult;
 import com.kntrel.mc.territotem.totem.event.TotemCoreBreakEvent;
+import com.kntrel.mc.territotem.totem.event.TotemCoreHitEvent;
 import com.kntrel.mc.territotem.totem.event.TotemCoreRightClickedEvent;
 import com.kntrel.mc.territotem.totem.region.Expansion;
 import com.kntrel.mc.territotem.totem.region.ExpansionResult;
@@ -133,6 +134,19 @@ final class TotemServiceListener implements Listener {
             return;
         }
         this.service_.destroyTotem(totem);
+    }
+
+    @EventHandler
+    void onCoreHit(TotemCoreHitEvent e) {
+        if (e.isCancelled()) { return; }
+        if (e.getCore().getDirection() != TotemCore.Direction.ALL) { return; }
+
+        Totem totem = this.service_.totemOfCore(e.getCore()).orElse(null);
+        if (totem == null) { return; }
+        if (!this.service_.rollbackLastExpansion(totem)) { return; }
+
+        this.regionContext_.displayRegion(totem.region(), e.getPlayer());
+        e.setCancelled(true);
     }
 
     @EventHandler
