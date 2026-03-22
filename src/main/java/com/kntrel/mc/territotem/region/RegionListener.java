@@ -2,6 +2,7 @@ package com.kntrel.mc.territotem.region;
 
 import com.kntrel.mc.regionLib.cache.RegionSnapshot;
 import com.kntrel.mc.regionLib.event.AbilityTriggeredEvent;
+import com.kntrel.mc.regionLib.event.PlayerEnterRegionEvent;
 import com.kntrel.mc.regionLib.event.RegionUpdatedEvent;
 import com.kntrel.mc.regionLib.region.Region;
 import com.kntrel.mc.regionLib.region.ability.Ability;
@@ -108,6 +109,11 @@ public class RegionListener implements Listener {
                     );
                     return null;
                 });
+    }
+
+    @EventHandler
+    void onPlayerEntersRegion(PlayerEnterRegionEvent e) {
+        e.getPlayer().sendTitle(e.getRegion().getName(), "", 10, 20, 10);
     }
 
     private static PermissionNotificationSeed capturePermissionNotificationSeed(RegionUpdatedEvent e) {
