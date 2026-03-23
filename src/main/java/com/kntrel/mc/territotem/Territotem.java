@@ -8,7 +8,10 @@ import com.kntrel.mc.runical.bukkit.Runical;
 import com.kntrel.mc.runical.bukkit.Translator;
 import com.kntrel.mc.territotem.region.RegionListener;
 import com.kntrel.mc.territotem.region.TerritotemRegionFeatures;
+import com.kntrel.mc.territotem.region.RegionEnterTitleConfig;
+import com.kntrel.mc.territotem.region.RegionFeatureMaterialsConfig;
 import com.kntrel.mc.territotem.totem.core.TotemCore;
+import com.kntrel.mc.territotem.totem.core.TotemCoreTracker;
 import com.kntrel.mc.territotem.totem.event.TotemCoreCompletedEvent;
 import com.kntrel.mc.territotem.structure.StructureService;
 import com.kntrel.mc.territotem.structure.blueprint.TrackingInfo;
@@ -18,13 +21,14 @@ import com.kntrel.mc.territotem.totem.TotemService;
 import com.kntrel.mc.territotem.totem.TotemBlueprint;
 import com.kntrel.mc.territotem.totem.piece.TotemPieceDirection;
 import com.kntrel.mc.territotem.totem.piece.TotemPieces;
-import com.kntrel.mc.territotem.totem.core.TotemCoreTracker;
 import com.kntrel.util.Vec3i;
 import org.bukkit.Material;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.util.BoundingBox;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.File;
 import java.util.List;
 
 public final class Territotem extends JavaPlugin {
@@ -40,10 +44,18 @@ public final class Territotem extends JavaPlugin {
     @Override
     public void onEnable() {
 
-        this.saveDefaultConfig();
         this.saveResource("hierarchies.json", false);
+        Config config = Config.load(this, "config.yaml");
+
         RegionLib.enable(this);
-        RegionContext regionContext = RegionLib.createDefaultContext(this);
+        RegionContext regionContext = RegionLib.createContext(
+                this,
+                this.getName(),
+                config.regionContextConfig(),
+                new File(this.getDataFolder(), "hierarchies.json").toURI(),
+                new File(this.getDataFolder(), ".db").toURI()
+        );
+        RegionLib.setDefault(regionContext);
         Hierarchy hierarchy = regionContext.getHierarchyRepository().get(1).orElse(null);
 
         Runical runical = new Runical(this, "translations");
@@ -52,15 +64,26 @@ public final class Territotem extends JavaPlugin {
         Translator totemTranslator = runical.getChild("totem");
 
         this.getServer().getPluginManager().registerEvents(
-                new RegionListener(this, runical.getChild("not_allowed"), runical.getChild("region").getChild("permissions")),
+                new RegionListener(
+                        this,
+                        runical.getChild("not_allowed"),
+                        runical.getChild("region").getChild("permissions"),
+                        config.regionEnterTitle()
+                ),
                 this
         );
 
         this.chunkPersister_ = new ChunkPersister(this);
         StructureService structureService = new StructureService(this, this.chunkPersister_);
-        TotemCoreTracker totemCoreTracker = new TotemCoreTracker(this, this.chunkPersister_);
-        TotemService totemService = new TotemService(regionContext, totemTranslator);
-        new TerritotemRegionFeatures(this, regionContext, totemService, this.getConfig()).register();
+        TotemCoreTracker totemCoreTracker = new TotemCoreTracker(this, this.chunkPersister_, config.directionalSelectorItem());
+        TotemService totemService = new TotemService(regionContext, totemTranslator, config.allowedDeedsRequestItems());
+        new TerritotemRegionFeatures(
+                this,
+                regionContext,
+                totemService,
+                config.allowedDeedsRequestItems(),
+                config.regionFeatureMaterials()
+        ).register();
         structureService.registerBlueprint(createTotemBlueprint(totemCoreTracker, hierarchy))
                 .on(TotemCoreCompletedEvent.class)
                 .when(e -> {
@@ -104,4 +127,3 @@ public final class Territotem extends JavaPlugin {
         return new TotemBlueprint(25, "totem", tile, bb, hierarchy);
     }
 }
-

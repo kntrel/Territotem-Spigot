@@ -5,6 +5,7 @@ import com.kntrel.mc.regionLib.Constants;
 import com.kntrel.mc.territotem.structure.worldTile.WorldView;
 import com.kntrel.util.Vec3i;
 import org.bukkit.Chunk;
+import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Server;
 import org.bukkit.World;
@@ -29,6 +30,7 @@ public class TotemCoreTracker {
     //FIELDS
     private final Plugin plugin_;
     private final ChunkPersister chunkPersister_;
+    private final Material directionalSelectorItem_;
     private final NamespacedKey coresNSK_;
     private final TotemCoreListener listener_;
     private final Map<UUID, Map<Vec3i, TotemCore>> coresByWorld_;
@@ -37,12 +39,13 @@ public class TotemCoreTracker {
 
 
     //CONSTRUCTORS
-    public TotemCoreTracker(Plugin plugin, ChunkPersister chunkPersister) {
+    public TotemCoreTracker(Plugin plugin, ChunkPersister chunkPersister, Material directionalSelectorItem) {
         this.plugin_ = plugin;
         this.chunkPersister_ = chunkPersister;
+        this.directionalSelectorItem_ = directionalSelectorItem;
         this.coresNSK_ = new NamespacedKey(this.plugin_, CORES_KEY);
         this.coresByWorld_ = new ConcurrentHashMap<>();
-        this.listener_ = new TotemCoreListener(this);
+        this.listener_ = new TotemCoreListener(this, directionalSelectorItem);
         this.coresById_ = new ConcurrentHashMap<>();
         this.executor_ = Executors.newVirtualThreadPerTaskExecutor();
 
@@ -71,7 +74,7 @@ public class TotemCoreTracker {
             return existing;
         }
 
-        TotemCore core = new TotemCore(this.plugin_, coordinates, world, state, direction);
+        TotemCore core = new TotemCore(this.plugin_, coordinates, world, state, direction, this.directionalSelectorItem_);
         worldCores.put(coordinates, core);
         this.coresById_.put(core.getRuntimeId(), core);
         this.persistCore(core);

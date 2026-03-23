@@ -52,6 +52,7 @@ public class TotemCore {
     //FIELDS
     private final UUID id_;
     private final Plugin plugin_;
+    private final Material directionalSelectorItem_;
     private final Vec3i coordinates_;
     private final World world_;
     private BlockDisplay amethist_, directional_;
@@ -61,9 +62,10 @@ public class TotemCore {
     private Direction direction_;
 
 
-    TotemCore(Plugin plugin, Vec3i coordinates, World world, State state, Direction direction) {
+    TotemCore(Plugin plugin, Vec3i coordinates, World world, State state, Direction direction, Material directionalSelectorItem) {
         this.id_ = UUID.randomUUID();
         this.plugin_ = plugin;
+        this.directionalSelectorItem_ = directionalSelectorItem;
         this.coordinates_ = coordinates;
         this.world_ = world;
         this.amethist_ = null;
@@ -76,8 +78,8 @@ public class TotemCore {
         this.setState(state);
         this.setDirection(direction);
     }
-    TotemCore(Plugin plugin, Vec3i coordinates, World world, State state) {
-        this(plugin, coordinates, world,  state, Direction.ALL);
+    TotemCore(Plugin plugin, Vec3i coordinates, World world, State state, Material directionalSelectorItem) {
+        this(plugin, coordinates, world,  state, Direction.ALL, directionalSelectorItem);
     }
 
 
@@ -171,7 +173,7 @@ public class TotemCore {
             kill(this.directional_);
             this.directional_ = null;
         } else if (this.directional_ == null) {
-            this.directional_ = spawnBlockDisplay();
+            this.directional_ = this.spawnBlockDisplay();
         }
         this.refinishDirectional();
         this.refinishDirectionalEnderEye();
@@ -190,7 +192,7 @@ public class TotemCore {
             this.world_.dropItemNaturally(this.location(CENTER), new ItemStack(Material.AMETHYST_SHARD, 1));
         }
         if (this.state_ == State.ACTIVE && this.direction_ != Direction.ALL) {
-            this.world_.dropItemNaturally(this.location(CENTER), new ItemStack(Material.AMETHYST_BLOCK, 1));
+            this.world_.dropItemNaturally(this.location(CENTER), new ItemStack(this.directionalSelectorItem_, 1));
         }
 
         this.kill();
@@ -208,7 +210,7 @@ public class TotemCore {
     public void removeDirection() {
         if (this.direction_ == Direction.ALL) { return; }
 
-        this.world_.dropItemNaturally(this.location(CENTER), new ItemStack(Material.AMETHYST_BLOCK, 1));
+        this.world_.dropItemNaturally(this.location(CENTER), new ItemStack(this.directionalSelectorItem_, 1));
         this.setDirection(Direction.ALL);
     }
 
@@ -257,7 +259,8 @@ public class TotemCore {
         if (this.directional_ == null) { return; }
         if (this.direction_ == null || this.direction_ == Direction.ALL) { return; }
 
-        this.directional_.setBlock(Material.AMETHYST_BLOCK.createBlockData());
+        this.directional_.setBlock(this.directionalSelectorItem_.createBlockData());
+        this.directional_.setBrightness(BRIGHTNESS);
         this.directional_.teleport(this.location());
 
         Vector3f scale = new Vector3f(

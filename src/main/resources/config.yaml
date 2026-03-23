@@ -1,0 +1,55 @@
+totem:
+  directional_selector_item: AMETHYST_BLOCK
+  deeds_request_items:
+    - WRITABLE_BOOK
+
+region:
+  min_name_length: 4
+  max_name_length: 32
+  permissions_overlap_mode: OLDEST
+  display_duration_seconds: 10
+
+  cache:
+    cell_size: 32
+    capacity: 1024
+
+  player_sampling:
+    period_ticks: 1
+    movement_tolerance: 0.0
+
+  enter_title:
+    enabled: true
+    fade_in: 10
+    stay: 20
+    fade_out: 10
+
+  enforced_buttons:
+    - STONE_BUTTON
+    - POLISHED_BLACKSTONE_BUTTON
+
+  lever_locker_blocks:
+    - COPPER_BLOCK
+    - CUT_COPPER
+    - EXPOSED_COPPER
+    - EXPOSED_CUT_COPPER
+    - WEATHERED_COPPER
+    - WEATHERED_CUT_COPPER
+    - WAXED_COPPER_BLOCK
+    - WAXED_CUT_COPPER
+    - WAXED_EXPOSED_COPPER
+    - WAXED_EXPOSED_CUT_COPPER
+    - WAXED_WEATHERED_COPPER
+    - WAXED_WEATHERED_CUT_COPPER
+    - CUT_COPPER_SLAB
+    - CUT_COPPER_STAIRS
+    - EXPOSED_CUT_COPPER_SLAB
+    - EXPOSED_CUT_COPPER_STAIRS
+    - WEATHERED_CUT_COPPER_SLAB
+    - WEATHERED_CUT_COPPER_STAIRS
+    - WAXED_CUT_COPPER_SLAB
+    - WAXED_CUT_COPPER_STAIRS
+    - WAXED_EXPOSED_CUT_COPPER_SLAB
+    - WAXED_EXPOSED_CUT_COPPER_STAIRS
+    - WAXED_WEATHERED_CUT_COPPER_SLAB
+    - WAXED_WEATHERED_CUT_COPPER_STAIRS
+    - IRON_BLOCK

@@ -9,6 +9,7 @@ import com.kntrel.mc.regionLib.region.ability.Ability;
 import com.kntrel.mc.regionLib.region.hierarchy.Hierarchy;
 import com.kntrel.mc.runical.bukkit.Translator;
 import com.kntrel.mc.runical.core.Placeholder;
+import com.kntrel.mc.territotem.region.RegionEnterTitleConfig;
 import net.md_5.bungee.api.ChatMessageType;
 import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.Location;
@@ -43,13 +44,20 @@ public class RegionListener implements Listener {
     private final Plugin plugin_;
     private final Translator deniedAbilityTranslator_;
     private final Translator permissionTranslator_;
+    private final RegionEnterTitleConfig regionEnterTitleConfig_;
 
 
     //CONSTRUCTOR
-    public RegionListener(Plugin plugin, Translator deniedAbilityTranslator, Translator permissionTranslator) {
+    public RegionListener(
+            Plugin plugin,
+            Translator deniedAbilityTranslator,
+            Translator permissionTranslator,
+            RegionEnterTitleConfig regionEnterTitleConfig
+    ) {
         this.plugin_ = plugin;
         this.deniedAbilityTranslator_ = deniedAbilityTranslator;
         this.permissionTranslator_ = permissionTranslator;
+        this.regionEnterTitleConfig_ = regionEnterTitleConfig;
     }
 
 
@@ -113,7 +121,16 @@ public class RegionListener implements Listener {
 
     @EventHandler
     void onPlayerEntersRegion(PlayerEnterRegionEvent e) {
-        e.getPlayer().sendTitle(e.getRegion().getName(), "", 10, 20, 10);
+        if (!this.regionEnterTitleConfig_.enabled()) {
+            return;
+        }
+        e.getPlayer().sendTitle(
+                e.getRegion().getName(),
+                "",
+                this.regionEnterTitleConfig_.fadeIn(),
+                this.regionEnterTitleConfig_.stay(),
+                this.regionEnterTitleConfig_.fadeOut()
+        );
     }
 
     private static PermissionNotificationSeed capturePermissionNotificationSeed(RegionUpdatedEvent e) {

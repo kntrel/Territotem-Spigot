@@ -29,6 +29,7 @@ import org.slf4j.LoggerFactory;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 public class TotemService {
 
@@ -46,7 +47,7 @@ public class TotemService {
 
 
     //CONSTRUCTOR
-    public TotemService(RegionContext regionContext, Translator translator) {
+    public TotemService(RegionContext regionContext, Translator translator, Set<org.bukkit.Material> allowedDeedsRequestItems) {
         this.plugin_ = regionContext.getPlugin();
         this.assembler_ = new TotemAssembler(this.plugin_);
         this.deedsFactory_ = new DeedsFactory(regionContext, translator.getChild("deeds"));
@@ -55,7 +56,7 @@ public class TotemService {
 
         this.assembler_.consume((s, r, c) -> this.loadTotem(s, r, c.deedsVersion(), true));
         this.plugin_.getServer().getPluginManager().registerEvents(
-                new TotemServiceListener(this, regionContext, translator),
+                new TotemServiceListener(this, regionContext, translator, allowedDeedsRequestItems),
                 this.plugin_
         );
     }

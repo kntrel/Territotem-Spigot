@@ -33,9 +33,11 @@ class TotemCoreListener implements Listener {
     private static final Logger LOGGER = LoggerFactory.getLogger(TotemCoreListener.class);
 
     private final TotemCoreTracker tracker_;
+    private final Material directionalSelectorItem_;
 
-    TotemCoreListener(TotemCoreTracker service) {
+    TotemCoreListener(TotemCoreTracker service, Material directionalSelectorItem) {
         this.tracker_ = service;
+        this.directionalSelectorItem_ = directionalSelectorItem;
     }
 
     @EventHandler
@@ -114,7 +116,7 @@ class TotemCoreListener implements Listener {
         this.tracker_.getServer().getPluginManager().callEvent(event);
         if (event.isCancelled()) { return; }
 
-        if (this.onRightClickWithAmethist(event)) { return; }
+        if (this.onRightClickWithDirectionalSelector(event)) { return; }
         this.onRightClick(event);
     }
 
@@ -220,9 +222,9 @@ class TotemCoreListener implements Listener {
 
 
     //SUB-HANDLERS
-    private boolean onRightClickWithAmethist(TotemCoreRightClickedEvent e) {
+    private boolean onRightClickWithDirectionalSelector(TotemCoreRightClickedEvent e) {
         ItemStack itemStack = e.getItemStack();
-        if (itemStack.getType() != Material.AMETHYST_BLOCK) { return false; }
+        if (itemStack == null || itemStack.getType() != this.directionalSelectorItem_) { return false; }
 
         TotemCore core = e.getCore();
         if (core.getDirection() != TotemCore.Direction.ALL) { return false; }
@@ -258,7 +260,10 @@ class TotemCoreListener implements Listener {
 
         Vector pos = core.getCenter().toVector().subtract(e.getLocation().toVector()).normalize().multiply(.3);
 
-        core.getWorld().dropItemNaturally(core.getCenter().clone().subtract(pos), new ItemStack(Material.AMETHYST_BLOCK));
+        core.getWorld().dropItemNaturally(
+                core.getCenter().clone().subtract(pos),
+                new ItemStack(this.directionalSelectorItem_)
+        );
         core.setDirection(TotemCore.Direction.ALL);
         this.tracker_.persistCore(core);
         return true;

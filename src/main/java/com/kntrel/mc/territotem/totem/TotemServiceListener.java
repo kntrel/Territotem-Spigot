@@ -42,6 +42,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Stream;
 
 final class TotemServiceListener implements Listener {
@@ -52,11 +53,18 @@ final class TotemServiceListener implements Listener {
     private final TotemService service_;
     private final RegionContext regionContext_;
     private final Translator translator_;
+    private final Set<Material> allowedDeedsRequestItems_;
 
-    TotemServiceListener(TotemService service, RegionContext regionContext, Translator translator) {
+    TotemServiceListener(
+            TotemService service,
+            RegionContext regionContext,
+            Translator translator,
+            Set<Material> allowedDeedsRequestItems
+    ) {
         this.service_ = service;
         this.regionContext_ = regionContext;
         this.translator_ = translator;
+        this.allowedDeedsRequestItems_ = Set.copyOf(allowedDeedsRequestItems);
     }
 
     @EventHandler
@@ -120,8 +128,8 @@ final class TotemServiceListener implements Listener {
             if (e.isCancelled()) { return; }
         }
 
-        if (itemStack.getType() == Material.WRITABLE_BOOK) {
-            this.onDeedsCreation(e.getPlayer(), totem, itemStack);
+        if (this.allowedDeedsRequestItems_.contains(itemStack.getType())) {
+            this.onDeedsCreation(e.getPlayer(), totem, e.getHand(), itemStack);
         }
     }
 
@@ -340,20 +348,25 @@ final class TotemServiceListener implements Listener {
         this.sendExpansionFeedback(player, totem, direction, result);
         e.setCancelled(true);
     }
-    public void onDeedsCreation(Player player, Totem totem, ItemStack item) {
-        if (!(item.getItemMeta() instanceof BookMeta bookMeta)) {
+    public void onDeedsCreation(Player player, Totem totem, EquipmentSlot hand, ItemStack item) {
+        if (item.getItemMeta() != null && !item.getItemMeta().getEnchants().isEmpty()) {
             return;
         }
 
-        DeedsInterpretationResult interpretation = this.service_.getDeedsFactory().interpret(bookMeta);
-        if (!(interpretation instanceof DeedsInterpretationResult.NotADeedsBook)) {
-            return;
+        if (item.getItemMeta() instanceof BookMeta existingBookMeta) {
+            DeedsInterpretationResult interpretation = this.service_.getDeedsFactory().interpret(existingBookMeta);
+            if (!(interpretation instanceof DeedsInterpretationResult.NotADeedsBook)) {
+                return;
+            }
         }
 
-        if (!bookMeta.getEnchants().isEmpty()) { return; }
+        ItemStack deedsStack = new ItemStack(Material.WRITABLE_BOOK, 1);
+        if (!(deedsStack.getItemMeta() instanceof BookMeta bookMeta)) {
+            return;
+        }
         this.service_.getDeedsFactory().generate(player, bookMeta, totem);
-
-        item.setItemMeta(bookMeta);
+        deedsStack.setItemMeta(bookMeta);
+        giveDeedsBook(player, hand, item, deedsStack);
         totem.save();
     }
 
@@ -640,6 +653,19 @@ final class TotemServiceListener implements Listener {
             stack.setAmount(stack.getAmount() - 1);
         }
         player.getInventory().setItem(hand, stack);
+    }
+
+    private static void giveDeedsBook(Player player, EquipmentSlot hand, ItemStack paymentStack, ItemStack deedsStack) {
+        if (paymentStack.getAmount() < 2) {
+            player.getInventory().setItem(hand, deedsStack);
+            return;
+        }
+
+        paymentStack.setAmount(paymentStack.getAmount() - 1);
+        player.getInventory().setItem(hand, paymentStack);
+        player.getInventory().addItem(deedsStack).values().forEach(leftover ->
+                player.getWorld().dropItemNaturally(player.getLocation(), leftover)
+        );
     }
 
     private static void swingHand(Player player, EquipmentSlot hand) {

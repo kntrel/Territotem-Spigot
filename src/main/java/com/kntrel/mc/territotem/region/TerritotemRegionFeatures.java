@@ -19,7 +19,6 @@ import org.bukkit.block.data.BlockData;
 import org.bukkit.block.data.Directional;
 import org.bukkit.block.data.FaceAttachable;
 import org.bukkit.block.data.type.Sapling;
-import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Item;
 import org.bukkit.entity.Monster;
 import org.bukkit.event.EventHandler;
@@ -39,7 +38,6 @@ import org.jspecify.annotations.Nullable;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Collections;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -52,6 +50,7 @@ public final class TerritotemRegionFeatures implements Listener {
     private final Plugin plugin_;
     private final RegionContext regionContext_;
     private final TotemService totemService_;
+    private final Set<Material> allowedDeedsRequestItems_;
     private final Set<Material> enforcedButtons_;
     private final Set<Material> leverLockerBlocks_;
     private final Set<Event> autoplantHandled_ = Collections.newSetFromMap(new WeakHashMap<>());
@@ -61,13 +60,15 @@ public final class TerritotemRegionFeatures implements Listener {
             Plugin plugin,
             RegionContext regionContext,
             TotemService totemService,
-            FileConfiguration config
+            Set<Material> allowedDeedsRequestItems,
+            RegionFeatureMaterialsConfig materialsConfig
     ) {
         this.plugin_ = plugin;
         this.regionContext_ = regionContext;
         this.totemService_ = totemService;
-        this.enforcedButtons_ = this.readMaterials(config.getStringList("regions.enforced_buttons"));
-        this.leverLockerBlocks_ = this.readMaterials(config.getStringList("regions.lever_locker_blocks"));
+        this.allowedDeedsRequestItems_ = Set.copyOf(allowedDeedsRequestItems);
+        this.enforcedButtons_ = materialsConfig.enforcedButtons();
+        this.leverLockerBlocks_ = materialsConfig.leverLockerBlocks();
     }
 
     public void register() {
@@ -200,7 +201,7 @@ public final class TerritotemRegionFeatures implements Listener {
 
     private boolean isCreateDeedsInteraction(TotemCoreRightClickedEvent e) {
         ItemStack item = e.getItemStack();
-        return item != null && item.getType() == Material.WRITABLE_BOOK;
+        return item != null && this.allowedDeedsRequestItems_.contains(item.getType());
     }
 
     private boolean isSuccessfulCropBreak(AbilityTriggeredEvent e) {
@@ -351,18 +352,6 @@ public final class TerritotemRegionFeatures implements Listener {
             return null;
         }
         return lectern;
-    }
-
-    private Set<Material> readMaterials(List<String> rawValues) {
-        LinkedHashSet<Material> out = new LinkedHashSet<>();
-        for (String raw : rawValues) {
-            try {
-                out.add(Material.valueOf(raw));
-            } catch (IllegalArgumentException ex) {
-                this.plugin_.getLogger().warning("Ignoring unknown material in config: " + raw);
-            }
-        }
-        return Collections.unmodifiableSet(out);
     }
 
     private void restorePendingIfCurrent(Block block, PendingReplant pending) {
