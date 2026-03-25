@@ -1,4 +1,4 @@
-package com.kntrel.mc.territotem;
+package com.kntrel.mc.territotem.config;
 
 import com.kntrel.mc.territotem.totem.region.ExpansionTable;
 import org.bukkit.Material;

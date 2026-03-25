@@ -6,6 +6,7 @@ import com.kntrel.mc.regionLib.region.context.RegionContext;
 import com.kntrel.mc.regionLib.region.hierarchy.Hierarchy;
 import com.kntrel.mc.runical.bukkit.Runical;
 import com.kntrel.mc.runical.bukkit.Translator;
+import com.kntrel.mc.territotem.config.Config;
 import com.kntrel.mc.territotem.region.RegionListener;
 import com.kntrel.mc.territotem.region.TerritotemRegionFeatures;
 import com.kntrel.mc.territotem.totem.core.TotemCore;
