@@ -247,10 +247,14 @@ public class RegionAllocator {
             double requested,
             Collection<Region> blockers
     ) {
-        BoundingBox candidate = current.clone();
-        applyExpansion(candidate, side, requested);
+        double maxAllowed = Math.min(requested, this.maxAllowedWorldGrowth(world, current, side));
+        if (maxAllowed <= EPSILON) {
+            return 0d;
+        }
 
-        double maxAllowed = requested;
+        BoundingBox candidate = current.clone();
+        applyExpansion(candidate, side, maxAllowed);
+
         for (Region other : this.findCollidingRegions(world, candidate, ignoredRegionId)) {
             if (blockers != null) {
                 blockers.add(other);
@@ -262,6 +266,15 @@ public class RegionAllocator {
             }
         }
         return Math.max(0d, maxAllowed);
+    }
+
+    private double maxAllowedWorldGrowth(World world, BoundingBox current, TotemCore.Direction side) {
+        return switch (side) {
+            case UP -> Math.max(0d, world.getMaxHeight() - current.getMaxY());
+            case DOWN -> Math.max(0d, current.getMinY() - world.getMinHeight());
+            case NORTH, SOUTH, EAST, WEST -> Double.POSITIVE_INFINITY;
+            case ALL -> throw new IllegalArgumentException("ALL is not a concrete side");
+        };
     }
 
     private List<Region> findCollidingRegions(World world, BoundingBox bounds, Long ignoredRegionId) {

@@ -31,7 +31,7 @@ class RegionAllocatorTest {
     @Test
     void expandsDirectionalGrowthWithoutCollision() {
         Fixture fixture = fixture();
-        World world = mock(World.class);
+        World world = world();
         Region region = fixture.region(1L, world, new BoundingBox(0, 0, 0, 1, 1, 1));
 
         ExpansionResult result = fixture.allocator().expand(region, Expansion.forDirection(TotemCore.Direction.EAST, 6d));
@@ -45,7 +45,7 @@ class RegionAllocatorTest {
     @Test
     void snapsDirectionalGrowthToTheNearestCollision() {
         Fixture fixture = fixture();
-        World world = mock(World.class);
+        World world = world();
         Region region = fixture.region(1L, world, new BoundingBox(0, 0, 0, 1, 1, 1));
         Region blocker = fixture.region(2L, world, new BoundingBox(4.5, 0, 0, 6, 1, 1));
 
@@ -61,7 +61,7 @@ class RegionAllocatorTest {
     @Test
     void leavesDirectionalGrowthUntouchedWhenAlreadyTouching() {
         Fixture fixture = fixture();
-        World world = mock(World.class);
+        World world = world();
         Region region = fixture.region(1L, world, new BoundingBox(0, 0, 0, 1, 1, 1));
         Region blocker = fixture.region(2L, world, new BoundingBox(1, 0, 0, 2, 1, 1));
 
@@ -76,7 +76,7 @@ class RegionAllocatorTest {
     @Test
     void redistributesOmnidirectionalShortageToTheOppositeSide() {
         Fixture fixture = fixture();
-        World world = mock(World.class);
+        World world = world();
         Region region = fixture.region(1L, world, new BoundingBox(0, 0, 0, 1, 1, 1));
         fixture.region(2L, world, new BoundingBox(1.25, 0, 0, 2, 1, 1));
 
@@ -96,7 +96,7 @@ class RegionAllocatorTest {
     @Test
     void redistributesOmnidirectionalShortageAcrossRemainingFreeSides() {
         Fixture fixture = fixture();
-        World world = mock(World.class);
+        World world = world();
         Region region = fixture.region(1L, world, new BoundingBox(0, 0, 0, 1, 1, 1));
         fixture.region(2L, world, new BoundingBox(1.2, 0, 0, 2, 1, 1));
         fixture.region(3L, world, new BoundingBox(-1, 0, 0, 0, 1, 1));
@@ -115,7 +115,7 @@ class RegionAllocatorTest {
     @Test
     void reportsUnachievedQuotaWhenTheRegionIsTrapped() {
         Fixture fixture = fixture();
-        World world = mock(World.class);
+        World world = world();
         Region region = fixture.region(1L, world, new BoundingBox(0, 0, 0, 1, 1, 1));
         fixture.region(2L, world, new BoundingBox(1.5, 0, 0, 2.5, 1, 1));
         fixture.region(3L, world, new BoundingBox(-1.5, 0, 0, -0.5, 1, 1));
@@ -139,7 +139,7 @@ class RegionAllocatorTest {
     @Test
     void contractsPreviouslyAppliedGrowthExactly() {
         Fixture fixture = fixture();
-        World world = mock(World.class);
+        World world = world();
         Region region = fixture.region(1L, world, new BoundingBox(0, 0, 0, 1, 1, 1));
         Expansion growth = new Expansion(2d, 1d, 0.5d, 3d, 4d, 1.5d);
 
@@ -157,7 +157,7 @@ class RegionAllocatorTest {
     @Test
     void placesRegionAsRequestedWhenNothingOverlaps() {
         Fixture fixture = fixture();
-        World world = mock(World.class);
+        World world = world();
         BoundingBox critical = new BoundingBox(0, 0, 0, 1, 1, 1);
         BoundingBox proposed = new BoundingBox(-2, -1, -2, 3, 2, 3);
 
@@ -177,7 +177,7 @@ class RegionAllocatorTest {
     @Test
     void rejectsPlacementWhenCriticalBoxAlreadyCollides() {
         Fixture fixture = fixture();
-        World world = mock(World.class);
+        World world = world();
         Region blocker = fixture.region(1L, world, new BoundingBox(0.5, 0, 0, 1.5, 1, 1));
 
         RegionPlaceResult result = fixture.allocator().place(
@@ -195,7 +195,7 @@ class RegionAllocatorTest {
     @Test
     void shiftsPlacementTowardsTheOppositeSide() {
         Fixture fixture = fixture();
-        World world = mock(World.class);
+        World world = world();
         fixture.region(1L, world, new BoundingBox(2.5, 0, 0, 4, 1, 1));
 
         RegionPlaceResult result = fixture.allocator().place(
@@ -215,7 +215,7 @@ class RegionAllocatorTest {
     @Test
     void rejectsPlacementWhenTheFullBoundsCannotBeRedistributed() {
         Fixture fixture = fixture();
-        World world = mock(World.class);
+        World world = world();
         fixture.region(1L, world, new BoundingBox(1.5, 0, 0, 2.5, 1, 1));
         fixture.region(2L, world, new BoundingBox(-1.5, 0, 0, -0.5, 1, 1));
         fixture.region(3L, world, new BoundingBox(0, 1.5, 0, 1, 2.5, 1));
@@ -233,6 +233,123 @@ class RegionAllocatorTest {
 
         assertFalse(result.isPlaced());
         assertEquals(6, result.getUnplaceable().orElseThrow().overlappingRegions().size());
+    }
+
+    @Test
+    void snapsUpwardGrowthToTheWorldMaxHeight() {
+        Fixture fixture = fixture();
+        World world = world(0, 12);
+        Region region = fixture.region(1L, world, new BoundingBox(0, 10, 0, 1, 11, 1));
+
+        ExpansionResult result = fixture.allocator().expand(region, Expansion.forDirection(TotemCore.Direction.UP, 6d));
+
+        assertTrue(result.hasGrowth());
+        assertEquals(1d, result.accomplished().up(), DELTA);
+        assertEquals(5d, result.unachievedTotal(), DELTA);
+        assertEquals(12d, region.getMaxY(), DELTA);
+        assertTrue(result.blockingRegions().isEmpty());
+    }
+
+    @Test
+    void snapsDownwardGrowthToTheWorldMinHeight() {
+        Fixture fixture = fixture();
+        World world = world(0, 64);
+        Region region = fixture.region(1L, world, new BoundingBox(0, 1, 0, 1, 2, 1));
+
+        ExpansionResult result = fixture.allocator().expand(region, Expansion.forDirection(TotemCore.Direction.DOWN, 6d));
+
+        assertTrue(result.hasGrowth());
+        assertEquals(1d, result.accomplished().down(), DELTA);
+        assertEquals(5d, result.unachievedTotal(), DELTA);
+        assertEquals(0d, region.getMinY(), DELTA);
+        assertTrue(result.blockingRegions().isEmpty());
+    }
+
+    @Test
+    void redistributesCeilingShortageToTheFloor() {
+        Fixture fixture = fixture();
+        World world = world(0, 12);
+        Region region = fixture.region(1L, world, new BoundingBox(0, 10, 0, 1, 11, 1));
+
+        ExpansionResult result = fixture.allocator().expand(region, Expansion.all(2d));
+
+        assertEquals(1d, result.accomplished().up(), DELTA);
+        assertEquals(3d, result.accomplished().down(), DELTA);
+        assertEquals(2d, result.accomplished().north(), DELTA);
+        assertEquals(2d, result.accomplished().south(), DELTA);
+        assertEquals(2d, result.accomplished().east(), DELTA);
+        assertEquals(2d, result.accomplished().west(), DELTA);
+        assertEquals(0d, result.unachievedTotal(), DELTA);
+        assertEquals(12d, region.getMaxY(), DELTA);
+        assertEquals(7d, region.getMinY(), DELTA);
+    }
+
+    @Test
+    void redistributesFloorShortageToTheCeiling() {
+        Fixture fixture = fixture();
+        World world = world(0, 64);
+        Region region = fixture.region(1L, world, new BoundingBox(0, 1, 0, 1, 2, 1));
+
+        ExpansionResult result = fixture.allocator().expand(region, Expansion.all(2d));
+
+        assertEquals(3d, result.accomplished().up(), DELTA);
+        assertEquals(1d, result.accomplished().down(), DELTA);
+        assertEquals(2d, result.accomplished().north(), DELTA);
+        assertEquals(2d, result.accomplished().south(), DELTA);
+        assertEquals(2d, result.accomplished().east(), DELTA);
+        assertEquals(2d, result.accomplished().west(), DELTA);
+        assertEquals(0d, result.unachievedTotal(), DELTA);
+        assertEquals(5d, region.getMaxY(), DELTA);
+        assertEquals(0d, region.getMinY(), DELTA);
+    }
+
+    @Test
+    void shiftsPlacementAwayFromTheWorldCeiling() {
+        Fixture fixture = fixture();
+        World world = world(-10, 2);
+
+        RegionPlaceResult result = fixture.allocator().place(
+                world,
+                new BoundingBox(-1, -1, -1, 2, 3, 2),
+                new BoundingBox(0, 0, 0, 1, 1, 1),
+                "ceiling-shifted-region",
+                fixture.hierarchy()
+        );
+        RegionPlaceResult.Placed placed = result.getPlaced().orElseThrow();
+
+        assertTrue(result.isPlaced());
+        assertEquals(2d, placed.resulting().getMaxY(), DELTA);
+        assertEquals(-2d, placed.resulting().getMinY(), DELTA);
+    }
+
+    @Test
+    void shiftsPlacementAwayFromTheWorldFloor() {
+        Fixture fixture = fixture();
+        World world = world(-2, 64);
+
+        RegionPlaceResult result = fixture.allocator().place(
+                world,
+                new BoundingBox(-1, -3, -1, 2, 2, 2),
+                new BoundingBox(0, 0, 0, 1, 1, 1),
+                "floor-shifted-region",
+                fixture.hierarchy()
+        );
+        RegionPlaceResult.Placed placed = result.getPlaced().orElseThrow();
+
+        assertTrue(result.isPlaced());
+        assertEquals(-2d, placed.resulting().getMinY(), DELTA);
+        assertEquals(3d, placed.resulting().getMaxY(), DELTA);
+    }
+
+    private static World world() {
+        return world(-64, 320);
+    }
+
+    private static World world(int minHeight, int maxHeight) {
+        World world = mock(World.class);
+        when(world.getMinHeight()).thenReturn(minHeight);
+        when(world.getMaxHeight()).thenReturn(maxHeight);
+        return world;
     }
 
     private static Fixture fixture() {
