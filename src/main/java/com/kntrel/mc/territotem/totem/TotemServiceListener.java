@@ -21,6 +21,7 @@ import com.kntrel.mc.territotem.totem.event.TotemCoreHitEvent;
 import com.kntrel.mc.territotem.totem.event.TotemCoreRightClickedEvent;
 import com.kntrel.mc.territotem.totem.region.Expansion;
 import com.kntrel.mc.territotem.totem.region.ExpansionResult;
+import com.kntrel.mc.territotem.totem.region.ExpansionTable;
 import com.kntrel.util.Vec3i;
 import com.kntrel.util.tuple.Pair;
 import org.bukkit.Location;
@@ -47,23 +48,25 @@ import java.util.stream.Stream;
 
 final class TotemServiceListener implements Listener {
 
-    private static final double REGION_GROWTH_RATE = 6d;
     private static final double EPSILON = 1.0E-9;
 
     private final TotemService service_;
     private final RegionContext regionContext_;
     private final Translator translator_;
+    private final ExpansionTable expansionTable_;
     private final Set<Material> allowedDeedsRequestItems_;
 
     TotemServiceListener(
             TotemService service,
             RegionContext regionContext,
             Translator translator,
+            ExpansionTable expansionTable,
             Set<Material> allowedDeedsRequestItems
     ) {
         this.service_ = service;
         this.regionContext_ = regionContext;
         this.translator_ = translator;
+        this.expansionTable_ = expansionTable;
         this.allowedDeedsRequestItems_ = Set.copyOf(allowedDeedsRequestItems);
     }
 
@@ -123,9 +126,10 @@ final class TotemServiceListener implements Listener {
         Totem totem = this.service_.totemOfCore(e.getCore()).orElse(null);
         if (totem == null) { return; }
 
-        if (itemStack.getType() == Material.DIAMOND) {
-            this.onTotemExpand(totem, e);
-            if (e.isCancelled()) { return; }
+        ExpansionTable.Row expansionRow = this.expansionTable_.findMatch(itemStack).orElse(null);
+        if (expansionRow != null) {
+            this.onTotemExpand(totem, e, expansionRow);
+            return;
         }
 
         if (this.allowedDeedsRequestItems_.contains(itemStack.getType())) {
@@ -332,17 +336,25 @@ final class TotemServiceListener implements Listener {
 
 
     //SUB-LISTENERS
-    private void onTotemExpand(Totem totem, TotemCoreRightClickedEvent e) {
+    private void onTotemExpand(Totem totem, TotemCoreRightClickedEvent e, ExpansionTable.Row row) {
         ItemStack itemStack = e.getItemStack();
+        if (itemStack == null) {
+            return;
+        }
+        if (itemStack.getAmount() < row.consumption()) {
+            return;
+        }
+
         TotemCore.Direction direction = e.getCore().getDirection();
-        ExpansionResult result = totem.expand(expansionFor(direction));
+        double scalar = row.pickExpansionScalar();
+        ExpansionResult result = totem.expand(expansionFor(direction, scalar));
         Player player = e.getPlayer();
         if (!result.hasGrowth()) {
             this.sendExpansionBlockedMessage(player, direction, result);
             return;
         }
 
-        consumeOneItem(player, e.getHand(), itemStack);
+        consumeItems(player, e.getHand(), itemStack, row.consumption());
         swingHand(player, e.getHand());
         totem.region().display(player);
         this.sendExpansionFeedback(player, totem, direction, result);
@@ -639,18 +651,18 @@ final class TotemServiceListener implements Listener {
         };
     }
 
-    private static Expansion expansionFor(TotemCore.Direction direction) {
+    private static Expansion expansionFor(TotemCore.Direction direction, double amount) {
         if (direction == TotemCore.Direction.ALL) {
-            return Expansion.all(REGION_GROWTH_RATE / 6d);
+            return Expansion.all(amount / 6d);
         }
-        return Expansion.forDirection(direction, REGION_GROWTH_RATE);
+        return Expansion.forDirection(direction, amount);
     }
 
-    private static void consumeOneItem(Player player, EquipmentSlot hand, ItemStack stack) {
-        if (stack.getAmount() < 2) {
+    private static void consumeItems(Player player, EquipmentSlot hand, ItemStack stack, int amount) {
+        if (stack.getAmount() <= amount) {
             stack = new ItemStack(Material.AIR);
         } else {
-            stack.setAmount(stack.getAmount() - 1);
+            stack.setAmount(stack.getAmount() - amount);
         }
         player.getInventory().setItem(hand, stack);
     }

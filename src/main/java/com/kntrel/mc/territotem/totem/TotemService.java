@@ -13,6 +13,7 @@ import com.kntrel.mc.territotem.totem.deeds.DeedsFactory;
 import com.kntrel.mc.territotem.totem.piece.TotemCorePiece;
 import com.kntrel.mc.territotem.totem.region.Expansion;
 import com.kntrel.mc.territotem.totem.region.ExpansionResult;
+import com.kntrel.mc.territotem.totem.region.ExpansionTable;
 import com.kntrel.mc.territotem.totem.region.RegionAllocator;
 import com.kntrel.mc.territotem.totem.region.RegionPlaceResult;
 import com.kntrel.mc.territotem.util.ChunkKey;
@@ -47,7 +48,12 @@ public class TotemService {
 
 
     //CONSTRUCTOR
-    public TotemService(RegionContext regionContext, Translator translator, Set<org.bukkit.Material> allowedDeedsRequestItems) {
+    public TotemService(
+            RegionContext regionContext,
+            Translator translator,
+            ExpansionTable expansionTable,
+            Set<org.bukkit.Material> allowedDeedsRequestItems
+    ) {
         this.plugin_ = regionContext.getPlugin();
         this.assembler_ = new TotemAssembler(this.plugin_);
         this.deedsFactory_ = new DeedsFactory(regionContext, translator.getChild("deeds"));
@@ -56,7 +62,7 @@ public class TotemService {
 
         this.assembler_.consume((s, r, c) -> this.loadTotem(s, r, c.deedsVersion(), true));
         this.plugin_.getServer().getPluginManager().registerEvents(
-                new TotemServiceListener(this, regionContext, translator, allowedDeedsRequestItems),
+                new TotemServiceListener(this, regionContext, translator, expansionTable, allowedDeedsRequestItems),
                 this.plugin_
         );
     }

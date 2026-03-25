@@ -8,8 +8,6 @@ import com.kntrel.mc.runical.bukkit.Runical;
 import com.kntrel.mc.runical.bukkit.Translator;
 import com.kntrel.mc.territotem.region.RegionListener;
 import com.kntrel.mc.territotem.region.TerritotemRegionFeatures;
-import com.kntrel.mc.territotem.region.RegionEnterTitleConfig;
-import com.kntrel.mc.territotem.region.RegionFeatureMaterialsConfig;
 import com.kntrel.mc.territotem.totem.core.TotemCore;
 import com.kntrel.mc.territotem.totem.core.TotemCoreTracker;
 import com.kntrel.mc.territotem.totem.event.TotemCoreCompletedEvent;
@@ -27,7 +25,6 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.util.BoundingBox;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import java.io.File;
 import java.util.List;
 
@@ -76,7 +73,12 @@ public final class Territotem extends JavaPlugin {
         this.chunkPersister_ = new ChunkPersister(this);
         StructureService structureService = new StructureService(this, this.chunkPersister_);
         TotemCoreTracker totemCoreTracker = new TotemCoreTracker(this, this.chunkPersister_, config.directionalSelectorItem());
-        TotemService totemService = new TotemService(regionContext, totemTranslator, config.allowedDeedsRequestItems());
+        TotemService totemService = new TotemService(
+                regionContext,
+                totemTranslator,
+                config.expansionTable(),
+                config.allowedDeedsRequestItems()
+        );
         new TerritotemRegionFeatures(
                 this,
                 regionContext,

@@ -1,10 +1,14 @@
 package com.kntrel.mc.territotem;
 
+import com.kntrel.mc.nbt.NBTCompound;
+import com.kntrel.mc.nbt.NBTList;
+import com.kntrel.mc.nbt.NBTTag;
 import com.kntrel.mc.regionLib.region.ability.Permission;
 import com.kntrel.mc.regionLib.region.context.RegionContextConfig;
 import com.kntrel.mc.regionLib.util.Grid;
 import com.kntrel.mc.territotem.region.RegionEnterTitleConfig;
 import com.kntrel.mc.territotem.region.RegionFeatureMaterialsConfig;
+import com.kntrel.mc.territotem.totem.region.ExpansionTable;
 import org.bukkit.Material;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -20,6 +24,7 @@ import java.util.Set;
 
 record Config(
         Material directionalSelectorItem,
+        ExpansionTable expansionTable,
         Set<Material> allowedDeedsRequestItems,
         RegionContextConfig regionContextConfig,
         RegionEnterTitleConfig regionEnterTitle,
@@ -31,6 +36,15 @@ record Config(
 
     private static final Config DEFAULT = new Config(
             Material.AMETHYST_BLOCK,
+            new ExpansionTable(List.of(
+                    new ExpansionTable.Row(
+                            Material.DIAMOND,
+                            1,
+                            null,
+                            6d,
+                            6d
+                    )
+            )),
             immutableLinkedSet(List.of(Material.WRITABLE_BOOK)),
             RegionContextConfig.defaultConfig(),
             new RegionEnterTitleConfig(true, 10, 20, 10),
@@ -72,11 +86,19 @@ record Config(
     static Config load(JavaPlugin plugin, String relativePath) {
         File file = ensureFileExists(plugin, relativePath);
         YamlConfiguration yaml = YamlConfiguration.loadConfiguration(file);
+        return read(yaml);
+    }
 
+    static Config read(YamlConfiguration yaml) {
         Material directionalSelectorItem = readBlockMaterial(
                 yaml,
                 "totem.directional_selector_item",
                 DEFAULT.directionalSelectorItem()
+        );
+        ExpansionTable expansionTable = readExpansionTable(
+                yaml,
+                "totem.expansion",
+                DEFAULT.expansionTable()
         );
         Set<Material> allowedDeedsRequestItems = readMaterialSet(
                 yaml,
@@ -163,6 +185,7 @@ record Config(
 
         return new Config(
                 directionalSelectorItem,
+                expansionTable,
                 allowedDeedsRequestItems,
                 regionContextConfig,
                 regionEnterTitle,
@@ -203,7 +226,12 @@ record Config(
 
     private static Material readBlockMaterial(YamlConfiguration yaml, String path, Material defaultValue) {
         Material material = readMaterial(yaml, path, defaultValue);
-        if (material.isBlock()) {
+        try {
+            if (material.isBlock()) {
+                return material;
+            }
+        } catch (Throwable ignored) {
+            // Material#isBlock() requires a live Bukkit registry on recent Spigot versions.
             return material;
         }
 
@@ -240,6 +268,71 @@ record Config(
             }
         }
         return Collections.unmodifiableSet(out);
+    }
+
+    private static ExpansionTable readExpansionTable(
+            YamlConfiguration yaml,
+            String path,
+            ExpansionTable defaultValue
+    ) {
+        Object raw = yaml.get(path);
+        if (raw == null) {
+            LOGGER.error("Missing config key '{}'. Using default expansion table.", path);
+            return defaultValue;
+        }
+        if (!(raw instanceof List<?> rawList)) {
+            LOGGER.error("Invalid config value type for key '{}'. Using default expansion table.", path);
+            return defaultValue;
+        }
+
+        List<ExpansionTable.Row> rows = new java.util.ArrayList<>();
+        int index = 0;
+        for (Object element : rawList) {
+            String rowPath = path + "[" + index + "]";
+            index++;
+
+            java.util.Map<?, ?> rowMap;
+            if (element instanceof org.bukkit.configuration.ConfigurationSection section) {
+                rowMap = section.getValues(false);
+            } else if (element instanceof java.util.Map<?, ?> rawMap) {
+                rowMap = rawMap;
+            } else {
+                LOGGER.error("Ignoring non-section expansion row at '{}'.", rowPath);
+                continue;
+            }
+
+            Material item = readMaterial(rowMap, rowPath + ".item");
+            if (item == null) {
+                continue;
+            }
+
+            Integer consumption = readPositiveInt(rowMap, rowPath + ".consume");
+            Double min = readNonNegativeDouble(rowMap, rowPath + ".min");
+            Double max = readNonNegativeDouble(rowMap, rowPath + ".max");
+            if (consumption == null || min == null || max == null) {
+                continue;
+            }
+            if (min > max) {
+                LOGGER.error(
+                        "Ignoring expansion row at '{}'. 'min' ({}) must be <= 'max' ({}).",
+                        rowPath,
+                        min,
+                        max
+                );
+                continue;
+            }
+
+            NBTCompound nbt = null;
+            if (rowMap.containsKey("nbt")) {
+                nbt = readNbtCompound(rowMap, rowPath + ".nbt");
+            }
+            if (rowMap.containsKey("nbt") && nbt == null) {
+                continue;
+            }
+
+            rows.add(new ExpansionTable.Row(item, consumption, nbt, min, max));
+        }
+        return new ExpansionTable(rows);
     }
 
     private static boolean readBoolean(YamlConfiguration yaml, String path, boolean defaultValue) {
@@ -406,5 +499,156 @@ record Config(
 
     private static Set<Material> immutableLinkedSet(List<Material> values) {
         return Collections.unmodifiableSet(new LinkedHashSet<>(values));
+    }
+
+    private static Material readMaterial(java.util.Map<?, ?> section, String path) {
+        Object raw = section.get(keyName(path));
+        if (raw == null) {
+            LOGGER.error("Missing config key '{}'. Ignoring row.", path);
+            return null;
+        }
+        if (!(raw instanceof String text)) {
+            LOGGER.error("Invalid material '{}' for config key '{}'. Ignoring row.", raw, path);
+            return null;
+        }
+        try {
+            return Material.valueOf(text);
+        } catch (IllegalArgumentException ex) {
+            LOGGER.error("Invalid material '{}' for config key '{}'. Ignoring row.", text, path);
+            return null;
+        }
+    }
+
+    private static Integer readPositiveInt(java.util.Map<?, ?> section, String path) {
+        Object raw = section.get(keyName(path));
+        if (raw == null) {
+            LOGGER.error("Missing config key '{}'. Ignoring row.", path);
+            return null;
+        }
+        Integer value = coerceInt(raw);
+        if (value == null || value < 1) {
+            LOGGER.error("Invalid positive integer '{}' for config key '{}'. Ignoring row.", raw, path);
+            return null;
+        }
+        return value;
+    }
+
+    private static Double readNonNegativeDouble(java.util.Map<?, ?> section, String path) {
+        Object raw = section.get(keyName(path));
+        if (raw == null) {
+            LOGGER.error("Missing config key '{}'. Ignoring row.", path);
+            return null;
+        }
+        Double value = coerceDouble(raw);
+        if (value == null || value < 0d) {
+            LOGGER.error("Invalid non-negative decimal '{}' for config key '{}'. Ignoring row.", raw, path);
+            return null;
+        }
+        return value;
+    }
+
+    private static NBTCompound readNbtCompound(java.util.Map<?, ?> section, String path) {
+        Object raw = section.get(keyName(path));
+        if (raw instanceof org.bukkit.configuration.ConfigurationSection configurationSection) {
+            raw = configurationSection.getValues(false);
+        }
+        if (raw == null) {
+            LOGGER.error("Invalid null NBT value for config key '{}'. Expected a map. Ignoring row.", path);
+            return null;
+        }
+        if (!(raw instanceof java.util.Map<?, ?> rawMap)) {
+            LOGGER.error("Invalid NBT value '{}' for config key '{}'. Expected a map. Ignoring row.", raw, path);
+            return null;
+        }
+
+        NBTTag tag = toNbt(rawMap, path);
+        if (tag instanceof NBTCompound compound) {
+            return compound;
+        }
+
+        LOGGER.error("Invalid NBT value '{}' for config key '{}'. Expected a compound. Ignoring row.", raw, path);
+        return null;
+    }
+
+    private static NBTTag toNbt(Object raw, String path) {
+        if (raw instanceof org.bukkit.configuration.ConfigurationSection section) {
+            raw = section.getValues(false);
+        }
+
+        if (raw instanceof java.util.Map<?, ?> rawMap) {
+            NBTCompound compound = NBTCompound.create();
+            for (var entry : rawMap.entrySet()) {
+                Object key = entry.getKey();
+                if (key == null) {
+                    LOGGER.error("Invalid null NBT key at '{}'.", path);
+                    return null;
+                }
+                NBTTag child = toNbt(entry.getValue(), path + "." + key);
+                if (child == null) {
+                    return null;
+                }
+                compound.put(key.toString(), child);
+            }
+            return compound;
+        }
+
+        if (raw instanceof List<?> rawList) {
+            NBTList list = NBTList.create();
+            int index = 0;
+            for (Object element : rawList) {
+                NBTTag child = toNbt(element, path + "[" + index + "]");
+                if (child == null) {
+                    return null;
+                }
+                list.add(child);
+                index++;
+            }
+            return list;
+        }
+
+        if (raw == null) {
+            LOGGER.error("Invalid null NBT value at '{}'.", path);
+            return null;
+        }
+
+        try {
+            return NBTTag.asTag(raw);
+        } catch (IllegalArgumentException ex) {
+            LOGGER.error("Invalid NBT value '{}' at '{}'.", raw, path);
+            return null;
+        }
+    }
+
+    private static String keyName(String path) {
+        int index = path.lastIndexOf('.');
+        return (index < 0) ? path : path.substring(index + 1);
+    }
+
+    private static Integer coerceInt(Object raw) {
+        if (raw instanceof Number number) {
+            return number.intValue();
+        }
+        if (raw instanceof String text) {
+            try {
+                return Integer.parseInt(text);
+            } catch (NumberFormatException ignored) {
+                return null;
+            }
+        }
+        return null;
+    }
+
+    private static Double coerceDouble(Object raw) {
+        if (raw instanceof Number number) {
+            return number.doubleValue();
+        }
+        if (raw instanceof String text) {
+            try {
+                return Double.parseDouble(text);
+            } catch (NumberFormatException ignored) {
+                return null;
+            }
+        }
+        return null;
     }
 }

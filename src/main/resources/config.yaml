@@ -1,5 +1,10 @@
 totem:
   directional_selector_item: AMETHYST_BLOCK
+  expansion:
+    - item: DIAMOND
+      consume: 1
+      min: 6
+      max: 6
   deeds_request_items:
     - WRITABLE_BOOK
 
