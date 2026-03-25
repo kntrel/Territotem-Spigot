@@ -41,21 +41,15 @@ class ConfigTest {
     @Test
     void readUsesDefaultExpansionTableWhenMissing() {
         Config config = Config.read(new YamlConfiguration());
-        assertEquals(8, config.expansionTable().rows().size());
+        assertEquals(4, config.expansionTable().rows().size());
 
-        ExpansionTable.Row firstRow = config.expansionTable().rows().get(0);
-        assertEquals(Material.RAW_COPPER, firstRow.item());
-        assertEquals(1, firstRow.consumption());
-        assertEquals(0.15d, firstRow.expansionMin(), DELTA);
-        assertEquals(0.25d, firstRow.expansionMax(), DELTA);
-
-        ExpansionTable.Row diamondRow = config.expansionTable().rows().get(4);
+        ExpansionTable.Row diamondRow = config.expansionTable().rows().getFirst();
         assertEquals(Material.DIAMOND, diamondRow.item());
         assertEquals(1, diamondRow.consumption());
         assertEquals(6d, diamondRow.expansionMin(), DELTA);
         assertEquals(6d, diamondRow.expansionMax(), DELTA);
 
-        ExpansionTable.Row lastRow = config.expansionTable().rows().get(7);
+        ExpansionTable.Row lastRow = config.expansionTable().rows().getLast();
         assertEquals(Material.NETHERITE_BLOCK, lastRow.item());
         assertEquals(1, lastRow.consumption());
         assertEquals(216d, lastRow.expansionMin(), DELTA);
