@@ -7,6 +7,7 @@ import com.saicone.rtag.item.ItemObject;
 import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
 import org.jspecify.annotations.Nullable;
+import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -14,15 +15,35 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public final class ExpansionTable {
 
+    //FIELDS
     private final List<Row> rows_;
 
-    public ExpansionTable(List<Row> rows) {
-        this.rows_ = List.copyOf((rows == null) ? List.of() : rows);
-    }
 
+    //FACTORY
     public static ExpansionTable empty() {
         return new ExpansionTable(List.of());
     }
+    public static ExpansionTable of(Row... rows) {
+        return new ExpansionTable(rows);
+    }
+    public static Row row(Material item, int consumption, @Nullable NBTCompound nbt, double expansionMin, double expansionMax) {
+        return new Row(item, consumption, nbt, expansionMin, expansionMax);
+    }
+    public static Row row(Material item, double expansionMin, double expansionMax) {
+        return new Row(item, 1, null, expansionMin, expansionMax);
+    }
+
+
+    //CONSTRUCTOR
+    public ExpansionTable(Collection<Row> rows) {
+        this.rows_ = (rows == null) ? List.of() : List.copyOf(rows);
+    }
+    public ExpansionTable(Row... rows) {
+        this.rows_ = List.of(rows);
+    }
+
+
+
 
     public List<Row> rows() {
         return this.rows_;
@@ -106,9 +127,5 @@ public final class ExpansionTable {
                 throw new IllegalArgumentException(name + " must be >= 0");
             }
         }
-    }
-
-    private static ExpansionTable of(Row row) {
-        return new ExpansionTable(List.of(row));
     }
 }

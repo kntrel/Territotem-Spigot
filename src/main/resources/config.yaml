@@ -1,10 +1,72 @@
 totem:
   directional_selector_item: AMETHYST_BLOCK
   expansion:
+    # Farmable. Not recommended unless farming of these is disabled.
+    # - item: RAW_COPPER
+    #   consume: 1
+    #   min: 0.15
+    #   max: 0.25
+    # - item: COPPER_NUGGET
+    #   consume: 9
+    #   min: 0.20
+    #   max: 0.30
+    # - item: COPPER_INGOT
+    #   consume: 1
+    #   min: 0.20
+    #   max: 0.30
+    # - item: COPPER_BLOCK
+    #   consume: 1
+    #   min: 2.0
+    #   max: 3.0
+    # - item: RAW_IRON
+    #   consume: 1
+    #   min: 0.30
+    #   max: 0.45
+    # - item: IRON_NUGGET
+    #   consume: 9
+    #   min: 0.35
+    #   max: 0.50
+    # - item: IRON_INGOT
+    #   consume: 1
+    #   min: 0.35
+    #   max: 0.50
+    # - item: IRON_BLOCK
+    #   consume: 1
+    #   min: 3.5
+    #   max: 5.0
+    #
+    # - item: RAW_GOLD
+    #   consume: 1
+    #   min: 0.40
+    #   max: 0.60
+    # - item: GOLD_NUGGET
+    #   consume: 9
+    #   min: 0.50
+    #   max: 0.70
+    # - item: GOLD_INGOT
+    #   consume: 1
+    #   min: 0.50
+    #   max: 0.70
+    # - item: GOLD_BLOCK
+    #   consume: 1
+    #   min: 5.0
+    #   max: 7.0
     - item: DIAMOND
       consume: 1
-      min: 6
-      max: 6
+      min: 6.0
+      max: 6.0
+    - item: DIAMOND_BLOCK
+      consume: 1
+      min: 54.0
+      max: 60.0
+    - item: NETHERITE_INGOT
+      consume: 1
+      min: 24.0
+      max: 30.0
+    - item: NETHERITE_BLOCK
+      consume: 1
+      min: 216.0
+      max: 270.0
   deeds_request_items:
     - WRITABLE_BOOK
 

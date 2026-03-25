@@ -41,12 +41,25 @@ class ConfigTest {
     @Test
     void readUsesDefaultExpansionTableWhenMissing() {
         Config config = Config.read(new YamlConfiguration());
-        ExpansionTable.Row row = config.expansionTable().rows().get(0);
+        assertEquals(8, config.expansionTable().rows().size());
 
-        assertEquals(Material.DIAMOND, row.item());
-        assertEquals(1, row.consumption());
-        assertEquals(6d, row.expansionMin(), DELTA);
-        assertEquals(6d, row.expansionMax(), DELTA);
+        ExpansionTable.Row firstRow = config.expansionTable().rows().get(0);
+        assertEquals(Material.RAW_COPPER, firstRow.item());
+        assertEquals(1, firstRow.consumption());
+        assertEquals(0.15d, firstRow.expansionMin(), DELTA);
+        assertEquals(0.25d, firstRow.expansionMax(), DELTA);
+
+        ExpansionTable.Row diamondRow = config.expansionTable().rows().get(4);
+        assertEquals(Material.DIAMOND, diamondRow.item());
+        assertEquals(1, diamondRow.consumption());
+        assertEquals(6d, diamondRow.expansionMin(), DELTA);
+        assertEquals(6d, diamondRow.expansionMax(), DELTA);
+
+        ExpansionTable.Row lastRow = config.expansionTable().rows().get(7);
+        assertEquals(Material.NETHERITE_BLOCK, lastRow.item());
+        assertEquals(1, lastRow.consumption());
+        assertEquals(216d, lastRow.expansionMin(), DELTA);
+        assertEquals(270d, lastRow.expansionMax(), DELTA);
     }
 
     @Test

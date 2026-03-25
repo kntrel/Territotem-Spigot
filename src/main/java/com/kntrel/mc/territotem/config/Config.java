@@ -29,15 +29,29 @@ public record Config(
 
     private static final Config DEFAULT = new Config(
             Material.AMETHYST_BLOCK,
-            new ExpansionTable(List.of(
-                    new ExpansionTable.Row(
-                            Material.DIAMOND,
-                            1,
-                            null,
-                            6d,
-                            6d
-                    )
-            )),
+            ExpansionTable.of(
+                    /* =============== Farmable by default; enable manually if desired. ===============
+                    ExpansionTable.row(Material.RAW_COPPER, 0.15, 0.25),
+                    ExpansionTable.row(Material.COPPER_NUGGET, 0.20, 0.30),
+                    ExpansionTable.row(Material.COPPER_INGOT, 0.20, 0.30),
+                    ExpansionTable.row(Material.COPPER_BLOCK, 2.0, 3.0),
+
+                    ExpansionTable.row(Material.RAW_IRON, 0.30, 0.45),
+                    ExpansionTable.row(Material.IRON_NUGGET, 0.35, 0.50),
+                    ExpansionTable.row(Material.IRON_INGOT, 0.35, 0.50),
+                    ExpansionTable.row(Material.IRON_BLOCK, 3.5, 5.0),
+
+                    ExpansionTable.row(Material.RAW_GOLD, 0.40, 0.60),
+                    ExpansionTable.row(Material.GOLD_NUGGET, 0.50, 0.70),
+                    ExpansionTable.row(Material.GOLD_INGOT, 0.50, 0.70),
+                    ExpansionTable.row(Material.GOLD_BLOCK, 5.0, 7.0),*/
+
+                    ExpansionTable.row(Material.DIAMOND, 6.0, 6.0),
+                    ExpansionTable.row(Material.DIAMOND_BLOCK, 54.0, 60.0),
+
+                    ExpansionTable.row(Material.NETHERITE_INGOT, 24.0, 30.0),
+                    ExpansionTable.row(Material.NETHERITE_BLOCK, 216.0, 270.0)
+            ),
             immutableLinkedSet(List.of(Material.WRITABLE_BOOK)),
             RegionContextConfig.defaultConfig(),
             new RegionEnterTitleConfig(true, 10, 20, 10),
