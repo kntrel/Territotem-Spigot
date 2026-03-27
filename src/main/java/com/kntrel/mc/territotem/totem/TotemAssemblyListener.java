@@ -64,7 +64,7 @@ final class TotemAssemblyListener implements Listener {
         }
 
         // Delay so RegionLoadEvent/StructureLoadedEvent can be captured before auditing.
-        this.plugin_.getServer().getScheduler().runTaskLater(this.plugin_, () -> this.processChunk(chunkKey), 8);
+        this.plugin_.getServer().getScheduler().runTaskLater(this.plugin_, () -> this.processChunk(chunkKey), 40);
     }
 
     private void processChunk(ChunkKey chunkKey) {
