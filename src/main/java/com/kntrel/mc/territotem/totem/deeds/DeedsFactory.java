@@ -6,7 +6,7 @@ import com.kntrel.mc.regionLib.region.context.RegionContext;
 import com.kntrel.mc.runical.bukkit.ComponentMarkupCompiler;
 import com.kntrel.mc.runical.bukkit.Translator;
 import com.kntrel.mc.runical.core.Placeholder;
-import com.kntrel.mc.territotem.region.RegionColors;
+import com.kntrel.mc.territotem.region.RegionPlaceHolder;
 import com.kntrel.mc.territotem.totem.Totem;
 import net.md_5.bungee.api.chat.BaseComponent;
 import org.bukkit.NamespacedKey;
@@ -67,8 +67,7 @@ public class DeedsFactory {
         bookMeta.spigot().setPages(pages);
 
         Placeholder[] placeholders = new Placeholder[] {
-                Placeholder.of("regionName", RegionColors.displayName(region)),
-                Placeholder.of("regionId", region.getId()),
+                RegionPlaceHolder.of(region),
                 Placeholder.of("playerName", player.getName()),
                 Placeholder.of("version", deeds.version())
         };

@@ -1,5 +1,7 @@
 package com.kntrel.mc.territotem.region;
 
+import com.kntrel.mc.runical.core.Translatable;
+import com.kntrel.mc.runical.core.TranslationProperty;
 import org.bukkit.Color;
 import org.bukkit.DyeColor;
 import java.util.List;
@@ -7,6 +9,7 @@ import java.util.Locale;
 import java.util.Objects;
 import java.util.stream.Stream;
 
+@Translatable
 public final class RegionColor {
 
     //CONSTANTS
@@ -104,6 +107,7 @@ public final class RegionColor {
     public int blue() {
         return this.rgb_ & 0xFF;
     }
+    @TranslationProperty
     public String hex() {
         return HEX_PREFIX + String.format(Locale.ROOT, "%06X", this.rgb_);
     }
@@ -116,6 +120,7 @@ public final class RegionColor {
     public net.md_5.bungee.api.ChatColor chatColor() {
         return net.md_5.bungee.api.ChatColor.of(this.hex());
     }
+    @TranslationProperty(value = "code", root = true)
     public String minecraftCode() {
         char[] digits = String.format(Locale.ROOT, "%06X", this.rgb_).toCharArray();
         StringBuilder builder = new StringBuilder(14);
@@ -128,6 +133,7 @@ public final class RegionColor {
     public org.bukkit.ChatColor legacyChatColor() {
         return nearestOf(LEGACY_COLORS).value();
     }
+    @TranslationProperty("legacyCode")
     public String legacyCode() {
         return this.legacyChatColor().toString();
     }

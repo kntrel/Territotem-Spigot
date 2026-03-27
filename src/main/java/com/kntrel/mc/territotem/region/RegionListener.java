@@ -70,9 +70,7 @@ public class RegionListener implements Listener {
         Region region = e.getRegion();
         Location where = e.getLocation();
         Placeholder[] placeholders = new Placeholder[] {
-                Placeholder.of("regionName", RegionColors.displayName(region)),
-                Placeholder.of("regionDisplayName", RegionColors.displayName(region)),
-                Placeholder.of("regionId", region.getId()),
+                RegionPlaceHolder.of(region),
                 Placeholder.of("player", player.getName()),
                 Placeholder.of("abilityName", ability.name()),
                 Placeholder.of("x", where.getX()),
@@ -113,7 +111,7 @@ public class RegionListener implements Listener {
                 .exceptionally(ex -> {
                     LOGGER.error(
                             "Failed to send region permission change notifications for region {}",
-                            seed.regionName(),
+                            seed.region().name(),
                             ex
                     );
                     return null;
@@ -135,10 +133,11 @@ public class RegionListener implements Listener {
     }
 
     private static PermissionNotificationSeed capturePermissionNotificationSeed(RegionUpdatedEvent e) {
+        Region region = e.getRegion();
         List<RegionSnapshot.Permission> oldPermissions = List.copyOf(e.getOldState().permissions());
         List<RegionSnapshot.Permission> currentPermissions = List.copyOf(e.getCurrentState().permissions());
 
-        Map<Integer, String> groupNames = e.getRegion().getHierarchy().getGroups().stream()
+        Map<Integer, String> groupNames = region.getHierarchy().getGroups().stream()
                 .collect(Collectors.toMap(
                         Hierarchy.Group::getLevel,
                         Hierarchy.Group::getName,
@@ -157,8 +156,7 @@ public class RegionListener implements Listener {
                 .orElse(UNKNOWN_RESPONSIBLE_PLAYER);
 
         return new PermissionNotificationSeed(
-                e.getCurrentState().name(),
-                RegionColors.displayName(e.getRegion()),
+                RegionPlaceHolder.from(region),
                 groupNames,
                 updaterId,
                 responsiblePlayer,
@@ -179,8 +177,7 @@ public class RegionListener implements Listener {
         }
 
         return new PermissionNotificationPlan(
-                seed.regionName(),
-                seed.regionDisplayName(),
+                seed.region(),
                 seed.groupNames(),
                 seed.updaterId(),
                 seed.responsiblePlayer(),
@@ -215,10 +212,10 @@ public class RegionListener implements Listener {
             Placeholder[] placeholders = new Placeholder[] {
                     Placeholder.of("affected_player", affectedPlayer),
                     Placeholder.of("responsible_player", plan.responsiblePlayer()),
-                Placeholder.of("group_name", groupName),
-                Placeholder.of("old_group_name", oldGroupName),
-                Placeholder.of("new_group_name", newGroupName),
-                Placeholder.of("region_name", plan.regionDisplayName())
+                    Placeholder.of("group_name", groupName),
+                    Placeholder.of("old_group_name", oldGroupName),
+                    Placeholder.of("new_group_name", newGroupName),
+                    RegionPlaceHolder.of(plan.region())
             };
 
             for (Player recipient : recipients) {
@@ -331,8 +328,7 @@ public class RegionListener implements Listener {
     }
 
     record PermissionNotificationSeed(
-            String regionName,
-            String regionDisplayName,
+            RegionPlaceHolder region,
             Map<Integer, String> groupNames,
             UUID updaterId,
             String responsiblePlayer,
@@ -341,8 +337,7 @@ public class RegionListener implements Listener {
     ) {}
 
     record PermissionNotificationPlan(
-            String regionName,
-            String regionDisplayName,
+            RegionPlaceHolder region,
             Map<Integer, String> groupNames,
             UUID updaterId,
             String responsiblePlayer,

@@ -1,6 +1,6 @@
-<b>Deeds for {regionName}</b>
+<b>Deeds for {region.colorizedName}</b>
 
-<c:gray>  Region ID: {regionId}</>
+<c:gray>  Region ID: {region.id}</>
 <c:gray>  Deeds version: {version}</>
 
 <i>This book holds the permission definitions for all members of it's region and their roles. Once it's placed into the totem's lectern, all changes will be applied.</>

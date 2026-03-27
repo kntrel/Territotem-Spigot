@@ -5,7 +5,7 @@ import com.kntrel.mc.regionLib.region.ability.Permission;
 import com.kntrel.mc.regionLib.region.hierarchy.Hierarchy;
 import com.kntrel.mc.runical.bukkit.Translator;
 import com.kntrel.mc.runical.core.Placeholder;
-import com.kntrel.mc.territotem.region.RegionColors;
+import com.kntrel.mc.territotem.region.RegionPlaceHolder;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.Server;
 import org.bukkit.entity.Player;
@@ -125,8 +125,7 @@ class DeedsTranspiler {
         }
 
         Placeholder[] placeholders = new Placeholder[]{
-                Placeholder.of("regionName", RegionColors.displayName(region)),
-                Placeholder.of("regionId", region.getId()),
+                RegionPlaceHolder.of(region),
                 Placeholder.of("version", deeds.version()),
                 Placeholder.of("player", player.getName())
         };
@@ -243,8 +242,7 @@ class DeedsTranspiler {
                 Placeholder.of("groupName", group.getName()),
                 Placeholder.of("hierarchyId", region.getHierarchy().getId()),
                 Placeholder.of("hierarchyName", region.getHierarchy().getName()),
-                Placeholder.of("regionId", region.getId()),
-                Placeholder.of("regionName", RegionColors.displayName(region))
+                RegionPlaceHolder.of(region)
         };
         String key = HIERARCHY_TRANSLATION_ROOT
                 + '.'

@@ -10,6 +10,7 @@ import com.kntrel.mc.runical.bukkit.Translator;
 import com.kntrel.mc.runical.core.Placeholder;
 import com.kntrel.mc.territotem.region.RegionColor;
 import com.kntrel.mc.territotem.region.RegionColors;
+import com.kntrel.mc.territotem.region.RegionPlaceHolder;
 import com.kntrel.mc.territotem.structure.Structure;
 import com.kntrel.mc.territotem.structure.event.StructureChangedEvent;
 import com.kntrel.mc.territotem.structure.event.StructureCompletedEvent;
@@ -118,8 +119,8 @@ final class TotemServiceListener implements Listener {
             this.translator_.sendTranslationOrDefault(
                     placer,
                     "creation.success",
-                    "Region created: '{region}'.",
-                    Placeholder.of("region_name", RegionColors.displayName(region)),
+                    "Region created: '{region.colorizedName}'.",
+                    RegionPlaceHolder.of(region),
                     Placeholder.of("creator", placer.getName()),
                     Placeholder.of("x", formatMeasure(center.getX())),
                     Placeholder.of("y", formatMeasure(center.getY())),
@@ -288,10 +289,8 @@ final class TotemServiceListener implements Listener {
             this.translator_.sendTranslation(
                     player,
                     "deeds.placement_error.region_mismatch",
-                    Placeholder.of("deedsRegionId", region.getId()),
-                    Placeholder.of("totemRegionId", totem.region().getId()),
-                    Placeholder.of("deedsRegionName", RegionColors.displayName(region)),
-                    Placeholder.of("totemRegionName", RegionColors.displayName(totem.region()))
+                    RegionPlaceHolder.of("deedsRegion", region),
+                    RegionPlaceHolder.of("totemRegion", totem.region())
             );
             e.setCancelled(true);
             return;
@@ -301,8 +300,7 @@ final class TotemServiceListener implements Listener {
             this.translator_.sendTranslation(
                     player,
                     "deeds.placement_error.old_version",
-                    Placeholder.of("regionId", region.getId()),
-                    Placeholder.of("regionName", RegionColors.displayName(region)),
+                    RegionPlaceHolder.of(region),
                     Placeholder.of("deedsVersion", deeds.version()),
                     Placeholder.of("totemDeedsVersion", totem.getDeedsVersion())
             );
@@ -367,8 +365,7 @@ final class TotemServiceListener implements Listener {
         this.translator_.sendTranslation(
                 e.getPlayer(),
                 (isSign) ? "block_place_reject.sign" : "block_place_reject.lectern",
-                Placeholder.of("region_name", RegionColors.displayName(rejectingTotem.region())),
-                Placeholder.of("region_id", rejectingTotem.region().getId())
+                RegionPlaceHolder.of(rejectingTotem.region())
         );
     }
 
@@ -437,7 +434,7 @@ final class TotemServiceListener implements Listener {
                 this.defaultLocale(),
                 "default_name.undefined_placer",
                 "Unnamed region",
-                Placeholder.of("id", region.getId())
+                RegionPlaceHolder.of(region)
         );
     }
 
@@ -451,7 +448,7 @@ final class TotemServiceListener implements Listener {
                 "Region renamed to '{new_name}'.",
                 Placeholder.of("old_name", coloredOldName),
                 Placeholder.of("new_name", coloredNewName),
-                Placeholder.of("region_id", region.getId())
+                RegionPlaceHolder.of(region)
         );
 
         List<Player> members = region.getOnlineMembers(p -> !p.getUniqueId().equals(renamer.getUniqueId()));
@@ -464,7 +461,7 @@ final class TotemServiceListener implements Listener {
                     Placeholder.of("old_name", coloredOldName),
                     Placeholder.of("new_name", coloredNewName),
                     Placeholder.of("renamer", renamer.getName()),
-                    Placeholder.of("region_id", region.getId())
+                    RegionPlaceHolder.of(region)
             );
         }
     }
@@ -590,22 +587,21 @@ final class TotemServiceListener implements Listener {
             return RegionColors.displayName(region, name);
         }
 
-        String id = (region.getId() == null) ? "?" : region.getId().toString();
         String fallback;
         if (player != null) {
             fallback = this.translator_.translateOrDefault(
                     player,
                     "region.unnamed",
-                    "Region #{id}",
-                    Placeholder.of("id", id)
+                    "Region #{region.id}",
+                    RegionPlaceHolder.of(region)
             );
         }
         else {
             fallback = this.translator_.translateOrDefault(
                 this.defaultLocale(),
                 "region.unnamed",
-                "Region #{id}",
-                Placeholder.of("id", id)
+                "Region #{region.id}",
+                RegionPlaceHolder.of(region)
             );
         }
         return RegionColors.displayName(region, fallback);
@@ -703,13 +699,14 @@ final class TotemServiceListener implements Listener {
 
     private void sendDeedsDeTranspileErrorFeedback(Player player, DeedsInterpretationResult.DeTranspileError error) {
 
-        List<Placeholder> basePlaceHolders = List.of(
-            Placeholder.of("regionName", error.region().map(RegionColors::displayName).orElse(null)),
-            Placeholder.of("regionId", error.region().map(r -> r.getId().toString()).orElse(null)),
-            Placeholder.of("lineNumber", error.lineNumber()),
-            Placeholder.of("line", error.line()),
-            Placeholder.of("pageNumber", error.page())
-        );
+        List<Placeholder> basePlaceHolders = Stream.concat(
+                error.region().stream().map(RegionPlaceHolder::of),
+                Stream.of(
+                        Placeholder.of("lineNumber", error.lineNumber()),
+                        Placeholder.of("line", error.line()),
+                        Placeholder.of("pageNumber", error.page())
+                )
+        ).toList();
 
         String key; List<Placeholder> detailPlaceHolders;
 
