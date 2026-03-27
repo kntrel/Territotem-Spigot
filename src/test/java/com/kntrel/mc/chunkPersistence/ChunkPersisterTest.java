@@ -10,6 +10,8 @@ import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginManager;
+import org.bukkit.scheduler.BukkitScheduler;
+import org.bukkit.scheduler.BukkitTask;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -18,6 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.mock;
@@ -31,9 +34,9 @@ class ChunkPersisterTest {
 
     @BeforeEach
     void setUp() {
-        this.plugin = mockPlugin();
-        this.persister = new ChunkPersister(this.plugin);
         this.world = new MockWorld("chunk_persister_test_world");
+        this.plugin = mockPlugin(this.world);
+        this.persister = new ChunkPersister(this.plugin, 40L);
     }
 
     @Test
@@ -125,19 +128,66 @@ class ChunkPersisterTest {
         assertEquals("B", testChunkB.pdc().get(key, PersistentDataType.STRING));
     }
 
+    @Test
+    @DisplayName("flushAll persists dirty chunks")
+    void flushAllPersistsDirtyChunks() {
+        TestChunk testChunk = createTestChunk(4, -2);
+
+        NamespacedKey key = new NamespacedKey("test", "batch");
+        this.persister.persist(testChunk.chunk(), key, PersistentDataType.STRING, "queued");
+
+        this.persister.flushAll();
+
+        assertEquals("queued", testChunk.pdc().get(key, PersistentDataType.STRING));
+    }
+
+    @Test
+    @DisplayName("retrieve falls back to persisted data when another key is dirty")
+    void retrieveFallsBackToPersistedDataWhenOtherKeyIsDirty() {
+        TestChunk testChunk = createTestChunk(6, 6);
+
+        NamespacedKey persistedKey = new NamespacedKey("test", "persisted");
+        NamespacedKey dirtyKey = new NamespacedKey("test", "dirty");
+        testChunk.pdc().set(persistedKey, PersistentDataType.STRING, "stored");
+
+        this.persister.persist(testChunk.chunk(), dirtyKey, PersistentDataType.STRING, "pending");
+
+        assertEquals("stored", this.persister.retrieve(testChunk.chunk(), persistedKey, PersistentDataType.STRING));
+    }
+
+    @Test
+    @DisplayName("new dirty writes after a flush are persisted on the next flush")
+    void dirtyWritesAfterFlushArePersistedOnNextFlush() {
+        TestChunk testChunk = createTestChunk(-3, 14);
+
+        NamespacedKey key = new NamespacedKey("test", "version");
+        this.persister.persist(testChunk.chunk(), key, PersistentDataType.STRING, "v1");
+        this.persister.flushAll();
+
+        this.persister.persist(testChunk.chunk(), key, PersistentDataType.STRING, "v2");
+        this.persister.flushAll();
+
+        assertEquals("v2", testChunk.pdc().get(key, PersistentDataType.STRING));
+    }
+
     private TestChunk createTestChunk(int x, int z) {
         Chunk chunk = this.world.getChunkAt(x, z);
         PersistentDataContainer pdc = chunk.getPersistentDataContainer();
         return new TestChunk(chunk, pdc);
     }
 
-    private static Plugin mockPlugin() {
+    private static Plugin mockPlugin(MockWorld world) {
         Plugin plugin = mock(Plugin.class);
         Server server = mock(Server.class);
         PluginManager pluginManager = mock(PluginManager.class);
+        BukkitScheduler scheduler = mock(BukkitScheduler.class);
+        BukkitTask batchTask = mock(BukkitTask.class);
 
         when(plugin.getServer()).thenReturn(server);
         when(server.getPluginManager()).thenReturn(pluginManager);
+        when(server.getScheduler()).thenReturn(scheduler);
+        when(server.getWorld(world.getUID())).thenReturn(world);
+        when(scheduler.runTaskTimer(eq(plugin), any(Runnable.class), anyLong(), anyLong())).thenReturn(batchTask);
         doAnswer(invocation -> {
             assertTrue(invocation.getArgument(0) instanceof Listener);
             return null;

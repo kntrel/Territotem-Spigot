@@ -70,6 +70,11 @@ totem:
   deeds_request_items:
     - WRITABLE_BOOK
 
+chunk_persistence:
+  # How often, in ticks, dirty chunk metadata is batch-persisted while the chunk remains loaded.
+  # Values less than or equal to zero disable the recurring batch task.
+  period_ticks: 200
+
 region:
   min_name_length: 4
   max_name_length: 32

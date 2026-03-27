@@ -21,6 +21,7 @@ public record Config(
         Material directionalSelectorItem,
         ExpansionTable expansionTable,
         Set<Material> allowedDeedsRequestItems,
+        long chunkPersistencePeriodTicks,
         RegionContextConfig regionContextConfig,
         RegionEnterTitleConfig regionEnterTitle,
         RegionFeatureMaterialsConfig regionFeatureMaterials
@@ -54,6 +55,7 @@ public record Config(
                     ExpansionTable.row(Material.NETHERITE_BLOCK, 216.0, 270.0)
             ),
             immutableLinkedSet(List.of(Material.WRITABLE_BOOK)),
+            200L,
             RegionContextConfig.build().withRegionDisplayerFactory(ColoredRegionDisplayer::new).end(),
             new RegionEnterTitleConfig(true, 10, 20, 10),
             new RegionFeatureMaterialsConfig(
@@ -100,6 +102,7 @@ public record Config(
     static Config read(YamlConfiguration yaml) {
         ConfigNode root = ConfigNode.root(yaml, LOGGER);
         ConfigNode totem = root.child("totem");
+        ConfigNode chunkPersistence = root.child("chunk_persistence");
         ConfigNode region = root.child("region");
         ConfigNode cache = region.child("cache");
         ConfigNode playerSampling = region.child("player_sampling");
@@ -111,6 +114,7 @@ public record Config(
                 totem.blockMaterial("directional_selector_item", DEFAULT.directionalSelectorItem()),
                 ExpansionTableParser.read(totem, "expansion", DEFAULT.expansionTable()),
                 totem.materialSet("deeds_request_items", DEFAULT.allowedDeedsRequestItems()),
+                chunkPersistence.longValue("period_ticks", DEFAULT.chunkPersistencePeriodTicks()),
                 new RegionContextConfig(
                         region.intValue("min_name_length", defaultRegionContextConfig.minNameLength),
                         region.intValue("max_name_length", defaultRegionContextConfig.maxNameLength),

@@ -17,6 +17,8 @@ class ConfigTest {
     void readUsesConfiguredExpansionRows() throws InvalidConfigurationException {
         YamlConfiguration yaml = new YamlConfiguration();
         yaml.loadFromString("""
+                chunk_persistence:
+                  period_ticks: 40
                 totem:
                   directional_selector_item: AMETHYST_BLOCK
                   expansion:
@@ -36,11 +38,13 @@ class ConfigTest {
         assertEquals(1.5d, row.expansionMin(), DELTA);
         assertEquals(3.25d, row.expansionMax(), DELTA);
         assertEquals(null, row.nbt());
+        assertEquals(40L, config.chunkPersistencePeriodTicks());
     }
 
     @Test
     void readUsesDefaultExpansionTableWhenMissing() {
         Config config = Config.read(new YamlConfiguration());
+        assertEquals(200L, config.chunkPersistencePeriodTicks());
         assertEquals(4, config.expansionTable().rows().size());
 
         ExpansionTable.Row diamondRow = config.expansionTable().rows().getFirst();

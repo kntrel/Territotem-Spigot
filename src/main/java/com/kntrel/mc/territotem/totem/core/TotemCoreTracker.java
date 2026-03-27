@@ -205,10 +205,14 @@ public class TotemCoreTracker {
 
         int baseX = chunkX << Constants.CHUNK_SHIFT;
         int baseZ = chunkZ << Constants.CHUNK_SHIFT;
-        Chunk chunk = world.getChunkAt(chunkX, chunkZ);
 
         this.coresIn(baseX, baseZ, baseX + Constants.CHUNK_SIZE, baseZ + Constants.CHUNK_SIZE, world.getUID())
-            .thenAccept(l -> {
+            .thenAccept(l -> this.getServer().getScheduler().runTask(this.getPlugin(), () -> {
+                if (!world.isChunkLoaded(chunkX, chunkZ)) {
+                    return;
+                }
+
+                Chunk chunk = world.getChunkAt(chunkX, chunkZ);
                 List<TotemCoreChunkData> serialized = new ArrayList<>();
                 for (TotemCore core : l) {
                     Vec3i pos = core.getCoordinates();
@@ -216,7 +220,7 @@ public class TotemCoreTracker {
                     serialized.add(new TotemCoreChunkData(rel, core.getState(), core.getDirection()));
                 }
                 this.chunkPersister_.persist(chunk, this.coresNSK_, TotemCorePersistentDataType.instance(), serialized);
-            });
+            }));
     }
 
     private CompletableFuture<List<TotemCore>> coresIn(int minX, int minZ, int maxX, int maxZ, UUID world) {

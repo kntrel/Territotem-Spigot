@@ -71,7 +71,7 @@ public final class Territotem extends JavaPlugin {
                 this
         );
 
-        this.chunkPersister_ = new ChunkPersister(this);
+        this.chunkPersister_ = new ChunkPersister(this, config.chunkPersistencePeriodTicks());
         StructureService structureService = new StructureService(this, this.chunkPersister_);
         TotemCoreTracker totemCoreTracker = new TotemCoreTracker(this, this.chunkPersister_, config.directionalSelectorItem());
         TotemService totemService = new TotemService(
@@ -107,7 +107,7 @@ public final class Territotem extends JavaPlugin {
         if (this.chunkPersister_ == null) {
             LOGGER.error("ChunkPersister instance was null on Territotem unload.");
         } else {
-            this.chunkPersister_.flushAll();
+            this.chunkPersister_.shutdown();
         }
     }
 
