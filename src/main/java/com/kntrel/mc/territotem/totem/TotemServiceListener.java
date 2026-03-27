@@ -445,9 +445,9 @@ final class TotemServiceListener implements Listener {
         this.translator_.sendTranslationOrDefault(
                 renamer,
                 "rename.first_person",
-                "Region renamed to '{new_name}'.",
-                Placeholder.of("old_name", coloredOldName),
-                Placeholder.of("new_name", coloredNewName),
+                "Region renamed to '{newName}'.",
+                Placeholder.of("oldName", coloredOldName),
+                Placeholder.of("newName", coloredNewName),
                 RegionPlaceHolder.of(region)
         );
 
@@ -458,8 +458,8 @@ final class TotemServiceListener implements Listener {
             this.translator_.sendTranslation(
                     member,
                     "rename.third_person",
-                    Placeholder.of("old_name", coloredOldName),
-                    Placeholder.of("new_name", coloredNewName),
+                    Placeholder.of("oldName", coloredOldName),
+                    Placeholder.of("newName", coloredNewName),
                     Placeholder.of("renamer", renamer.getName()),
                     RegionPlaceHolder.of(region)
             );

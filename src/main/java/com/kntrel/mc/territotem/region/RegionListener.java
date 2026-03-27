@@ -210,11 +210,11 @@ public class RegionListener implements Listener {
             };
 
             Placeholder[] placeholders = new Placeholder[] {
-                    Placeholder.of("affected_player", affectedPlayer),
-                    Placeholder.of("responsible_player", plan.responsiblePlayer()),
-                    Placeholder.of("group_name", groupName),
-                    Placeholder.of("old_group_name", oldGroupName),
-                    Placeholder.of("new_group_name", newGroupName),
+                    Placeholder.of("affectedPlayer", affectedPlayer),
+                    Placeholder.of("responsiblePlayer", plan.responsiblePlayer()),
+                    Placeholder.of("groupName", groupName),
+                    Placeholder.of("oldGroupName", oldGroupName),
+                    Placeholder.of("newGroupName", newGroupName),
                     RegionPlaceHolder.of(plan.region())
             };
 

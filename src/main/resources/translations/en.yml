@@ -26,8 +26,8 @@ totem:
     undefined_placer: "Unnamed region"
   rename:
     invalid_length: "Name length must be between {min} and {max} characters."
-    first_person: "{old_name} was renamed to '{new_name}'."
-    third_person: "{old_name} was renamed to '{new_name}' by {renamer}."
+    first_person: "{oldName} was renamed to '{newName}'."
+    third_person: "{oldName} was renamed to '{newName}' by {renamer}."
   creation:
     success: "Region created: '{region.colorizedName}'."
     blocked: "Cannot claim here, overlapping with {blockers}."
@@ -64,20 +64,20 @@ hierarchy:
 region:
   permissions:
     add:
-      third_person_third_person: "{affected_player} has been granted with the role of {group_name} at {region.colorizedName} by {responsible_player}"
-      third_person_first_person: "{responsible_player} has granted you with the role of {group_name} at {region.colorizedName}"
-      first_person_third_person: "You've granted {affected_player} with the role of {group_name} at {region.colorizedName}"
-      first_person_first_person: "You've granted yourself with the role of {group_name} at {region.colorizedName}"
+      third_person_third_person: "{affectedPlayer} has been granted with the role of {groupName} at {region.colorizedName} by {responsiblePlayer}"
+      third_person_first_person: "{responsiblePlayer} has granted you with the role of {groupName} at {region.colorizedName}"
+      first_person_third_person: "You've granted {affectedPlayer} with the role of {groupName} at {region.colorizedName}"
+      first_person_first_person: "You've granted yourself with the role of {groupName} at {region.colorizedName}"
     remove:
-      third_person_third_person: "{responsible_player} has taken the role of {group_name} at {region.colorizedName} away from {affected_player}"
-      third_person_first_person: "{responsible_player} has taken the role of {group_name} at {region.colorizedName} away from you"
-      first_person_third_person: "You got rid of {affected_player}'s role of {group_name} at {region.colorizedName}"
-      first_person_first_person: "You took the role of {group_name} at {region.colorizedName} away from yourself"
+      third_person_third_person: "{responsiblePlayer} has taken the role of {groupName} at {region.colorizedName} away from {affectedPlayer}"
+      third_person_first_person: "{responsiblePlayer} has taken the role of {groupName} at {region.colorizedName} away from you"
+      first_person_third_person: "You got rid of {affectedPlayer}'s role of {groupName} at {region.colorizedName}"
+      first_person_first_person: "You took the role of {groupName} at {region.colorizedName} away from yourself"
     change:
-      third_person_third_person: "{responsible_player} has changed the role of {affected_player} at {region.colorizedName} from {old_group_name} to {new_group_name}"
-      third_person_first_person: "{responsible_player} has changed your role at {region.colorizedName} from {old_group_name} to {new_group_name}"
-      first_person_third_person: "You've changed the role of {affected_player} at {region.colorizedName} from {old_group_name} to {new_group_name}"
-      first_person_first_person: "You've has changed your role at {region.colorizedName} from {old_group_name} to {new_group_name}"
+      third_person_third_person: "{responsiblePlayer} has changed the role of {affectedPlayer} at {region.colorizedName} from {oldGroupName} to {newGroupName}"
+      third_person_first_person: "{responsiblePlayer} has changed your role at {region.colorizedName} from {oldGroupName} to {newGroupName}"
+      first_person_third_person: "You've changed the role of {affectedPlayer} at {region.colorizedName} from {oldGroupName} to {newGroupName}"
+      first_person_first_person: "You've has changed your role at {region.colorizedName} from {oldGroupName} to {newGroupName}"
 
 
 not_allowed:
