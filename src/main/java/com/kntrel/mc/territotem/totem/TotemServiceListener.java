@@ -7,7 +7,7 @@ import com.kntrel.mc.regionLib.region.ability.Permission;
 import com.kntrel.mc.regionLib.region.context.RegionContext;
 import com.kntrel.mc.regionLib.region.context.RegionContextConfig;
 import com.kntrel.mc.runical.bukkit.Translator;
-import com.kntrel.mc.runical.core.Placeholder;
+import com.kntrel.mc.runical.core.placeholder.Placeholder;
 import com.kntrel.mc.territotem.region.RegionColor;
 import com.kntrel.mc.territotem.region.RegionColors;
 import com.kntrel.mc.territotem.region.RegionPlaceHolder;
@@ -116,16 +116,15 @@ final class TotemServiceListener implements Listener {
             Region region = result.totem().region();
             region.display(placer);
             Location center = region.getCenter();
-            this.translator_.sendTranslationOrDefault(
+            this.translator_.translate(
                     placer,
                     "creation.success",
-                    "Region created: '{region.colorizedName}'.",
                     RegionPlaceHolder.of(region),
                     Placeholder.of("creator", placer.getName()),
                     Placeholder.of("x", formatMeasure(center.getX())),
                     Placeholder.of("y", formatMeasure(center.getY())),
                     Placeholder.of("z", formatMeasure(center.getZ()))
-            );
+            ).orDefault("Region created: '{region.colorizedName}'.").send();
         }
     }
 
@@ -201,13 +200,12 @@ final class TotemServiceListener implements Listener {
         int length = content.length();
         if (length < conf.minNameLength || length > conf.maxNameLength) {
             e.setCancelled(true);
-            this.translator_.sendTranslationOrDefault(
+            this.translator_.translate(
                     e.getPlayer(),
                     "rename.invalid_length",
-                    "Name length must be {min}-{max} characters.",
                     Placeholder.of("min", Integer.toString(conf.minNameLength)),
                     Placeholder.of("max", Integer.toString(conf.maxNameLength))
-            );
+            ).orDefault("Name length must be {min}-{max} characters.").send();
             return;
         }
 
@@ -270,7 +268,7 @@ final class TotemServiceListener implements Listener {
                 return;
             }
             case DeedsInterpretationResult.NotADeedsBook nadb -> {
-                this.translator_.sendTranslation(player, "deeds.placement_error.not_a_deeds_book");
+                this.translator_.translate(player, "deeds.placement_error.not_a_deeds_book").send();
                 e.setCancelled(true);
                 return;
             }
@@ -279,31 +277,31 @@ final class TotemServiceListener implements Listener {
         }
 
         if (deeds == null) {
-            this.translator_.sendTranslation(player, "deeds.placement_error.generic");
+            this.translator_.translate(player, "deeds.placement_error.generic").send();
             e.setCancelled(true);
             return;
         }
 
         Region region = deeds.region();
         if (!deeds.region().getId().equals(totem.region().getId())) {
-            this.translator_.sendTranslation(
+            this.translator_.translate(
                     player,
                     "deeds.placement_error.region_mismatch",
                     RegionPlaceHolder.of("deedsRegion", region),
                     RegionPlaceHolder.of("totemRegion", totem.region())
-            );
+            ).send();
             e.setCancelled(true);
             return;
         }
 
         if (totem.getDeedsVersion() > deeds.version()) {
-            this.translator_.sendTranslation(
+            this.translator_.translate(
                     player,
                     "deeds.placement_error.old_version",
                     RegionPlaceHolder.of(region),
                     Placeholder.of("deedsVersion", deeds.version()),
                     Placeholder.of("totemDeedsVersion", totem.getDeedsVersion())
-            );
+            ).send();
             e.setCancelled(true);
             return;
         }
@@ -362,11 +360,11 @@ final class TotemServiceListener implements Listener {
         if (rejectingTotem == null) { return; }
 
         e.setCancelled(true);
-        this.translator_.sendTranslation(
+        this.translator_.translate(
                 e.getPlayer(),
                 (isSign) ? "block_place_reject.sign" : "block_place_reject.lectern",
                 RegionPlaceHolder.of(rejectingTotem.region())
-        );
+        ).send();
     }
 
 
@@ -423,117 +421,100 @@ final class TotemServiceListener implements Listener {
     //HELPERS
     private String defaultTotemName(Player placer, Region region) {
         if (placer != null) {
-            return this.translator_.translateOrDefault(
+            return this.translator_.translate(
                     placer,
                     "default_name.player_placed",
-                    "{player}'s lands",
                     Placeholder.of("player", placer.getName())
-            );
+            ).orDefault("{player}'s lands").message();
         }
-        return this.translator_.translateOrDefault(
+        return this.translator_.translate(
                 this.defaultLocale(),
                 "default_name.undefined_placer",
-                "Unnamed region",
                 RegionPlaceHolder.of(region)
-        );
+        ).orDefault("Unnamed region").message();
     }
 
     private void sendRenamedMessage(Region region, Player renamer, String oldName, String newName) {
         String coloredOldName = RegionColors.displayName(region, oldName);
         String coloredNewName = RegionColors.displayName(region, newName);
 
-        this.translator_.sendTranslationOrDefault(
+        this.translator_.translate(
                 renamer,
                 "rename.first_person",
-                "Region renamed to '{newName}'.",
                 Placeholder.of("oldName", coloredOldName),
                 Placeholder.of("newName", coloredNewName),
                 RegionPlaceHolder.of(region)
-        );
+        ).orDefault("Region renamed to '{newName}'.").send();
 
         List<Player> members = region.getOnlineMembers(p -> !p.getUniqueId().equals(renamer.getUniqueId()));
         if (members.isEmpty()) { return; }
 
         for (Player member : members) {
-            this.translator_.sendTranslation(
+            this.translator_.translate(
                     member,
                     "rename.third_person",
                     Placeholder.of("oldName", coloredOldName),
                     Placeholder.of("newName", coloredNewName),
                     Placeholder.of("renamer", renamer.getName()),
                     RegionPlaceHolder.of(region)
-            );
+            ).send();
         }
     }
 
     private void sendPlacementRejectedMessage(Player player, Collection<Region> blockers) {
         String blockerNames = this.formatRegionList(player, blockers);
         if (!blockerNames.isBlank()) {
-            this.translator_.sendTranslationOrDefault(
+            this.translator_.translate(
                     player,
                     "creation.blocked",
-                    "Cannot claim here: {blockers}. Move the totem.",
                     Placeholder.of("blockers", blockerNames)
-            );
+            ).orDefault("Cannot claim here: {blockers}. Move the totem.").send();
             return;
         }
 
-        this.translator_.sendTranslationOrDefault(
-                player,
-                "creation.failed",
-                "Cannot claim here. Move the totem."
-        );
+        this.translator_.translate(player, "creation.failed")
+                .orDefault("Cannot claim here. Move the totem.")
+                .send();
     }
 
     private void sendExpansionFeedback(Player player, Totem totem, TotemCore.Direction direction, ExpansionResult result) {
         Placeholder[] placeholders = this.expansionPlaceholders(player, totem, direction, result);
         if (this.isShifted(result)) {
-            this.translator_.sendTranslationOrDefault(
-                    player,
-                    "expansion.shifted",
-                    "Expanded {direction}; shifted around {blockers}. Size: H {height}, X {x}, Z {z}.",
-                    placeholders
-            );
+            this.translator_.translate(player, "expansion.shifted", placeholders)
+                    .orDefault("Expanded {direction}; shifted around {blockers}. Size: H {height}, X {x}, Z {z}.")
+                    .send();
             return;
         }
 
         if (result.unachievedTotal() > EPSILON) {
-            this.translator_.sendTranslationOrDefault(
-                    player,
-                    "expansion.partial",
-                    "Expanded {direction}; {blockers} blocked the rest. Size: H {height}, X {x}, Z {z}.",
-                    placeholders
-            );
+            this.translator_.translate(player, "expansion.partial", placeholders)
+                    .orDefault("Expanded {direction}; {blockers} blocked the rest. Size: H {height}, X {x}, Z {z}.")
+                    .send();
             return;
         }
 
-        this.translator_.sendTranslationOrDefault(
-                player,
-                "expansion.success",
-                "Expanded {direction}. Size: H {height}, X {x}, Z {z}.",
-                placeholders
-        );
+        this.translator_.translate(player, "expansion.success", placeholders)
+                .orDefault("Expanded {direction}. Size: H {height}, X {x}, Z {z}.")
+                .send();
     }
 
     private void sendExpansionBlockedMessage(Player player, TotemCore.Direction direction, ExpansionResult result) {
         String blockerNames = this.formatRegionList(player, result.blockingRegions());
         if (!blockerNames.isBlank()) {
-            this.translator_.sendTranslationOrDefault(
+            this.translator_.translate(
                     player,
                     "expansion.blocked",
-                    "Cannot expand {direction}: {blockers}.",
                     Placeholder.of("direction", this.translateDirection(player, direction)),
                     Placeholder.of("blockers", blockerNames)
-            );
+            ).orDefault("Cannot expand {direction}: {blockers}.").send();
             return;
         }
 
-        this.translator_.sendTranslationOrDefault(
+        this.translator_.translate(
                 player,
                 "expansion.blocked_generic",
-                "Cannot expand {direction}.",
                 Placeholder.of("direction", this.translateDirection(player, direction))
-        );
+        ).orDefault("Cannot expand {direction}.").send();
     }
 
     private Placeholder[] expansionPlaceholders(Player player, Totem totem, TotemCore.Direction direction, ExpansionResult result) {
@@ -560,9 +541,9 @@ final class TotemServiceListener implements Listener {
         };
 
         if (player != null) {
-            return this.translator_.translateOrDefault(player, key, fallback);
+            return this.translator_.translate(player, key).orDefault(fallback).message();
         }
-        return this.translator_.translateOrDefault(this.defaultLocale(), key, fallback);
+        return this.translator_.translate(this.defaultLocale(), key).orDefault(fallback).message();
     }
 
     private String formatRegionList(Player player, Collection<Region> regions) {
@@ -589,20 +570,18 @@ final class TotemServiceListener implements Listener {
 
         String fallback;
         if (player != null) {
-            fallback = this.translator_.translateOrDefault(
+            fallback = this.translator_.translate(
                     player,
                     "region.unnamed",
-                    "Region #{region.id}",
                     RegionPlaceHolder.of(region)
-            );
+            ).orDefault("Region #{region.id}").message();
         }
         else {
-            fallback = this.translator_.translateOrDefault(
+            fallback = this.translator_.translate(
                 this.defaultLocale(),
                 "region.unnamed",
-                "Region #{region.id}",
                 RegionPlaceHolder.of(region)
-            );
+            ).orDefault("Region #{region.id}").message();
         }
         return RegionColors.displayName(region, fallback);
     }
@@ -725,11 +704,13 @@ final class TotemServiceListener implements Listener {
                 detailPlaceHolders.stream()
         ).toArray(Placeholder[]::new);
 
-        this.translator_.translateAsync(player, key, placeHolders)
+        this.translator_.translate(player, key, placeHolders)
+                .async()
+                .message()
                 .thenCompose(detail -> {
                     Placeholder[] ph = Arrays.copyOf(placeHolders, placeHolders.length + 1);
                     ph[ph.length - 1] = Placeholder.of("details", detail);
-                    return this.translator_.sendTranslation(player, "deeds.formatting_error.message", ph);
+                    return this.translator_.translate(player, "deeds.formatting_error.message", ph).send();
                 });
     }
 

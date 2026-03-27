@@ -6,7 +6,9 @@ import com.kntrel.mc.regionLib.region.context.RegionContext;
 import com.kntrel.mc.regionLib.region.context.RegionContextConfig;
 import com.kntrel.mc.regionLib.region.hierarchy.Hierarchy;
 import com.kntrel.mc.runical.bukkit.Translator;
-import com.kntrel.mc.runical.core.Placeholder;
+import com.kntrel.mc.runical.bukkit.dsl.PlayerTerminalTranslationJob;
+import com.kntrel.mc.runical.bukkit.dsl.PlayerTranslationJob;
+import com.kntrel.mc.runical.core.placeholder.Placeholder;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.Server;
 import org.bukkit.World;
@@ -458,8 +460,15 @@ class DeedsTranspilerTest {
         Map<String, String> translations = new HashMap<>();
         translations.put("hierarchy.1.100.name", "Admins");
         translations.put("hierarchy.1.100.description", "They can do all members can, plus modifying region deeds.");
-        lenient().when(translator.translateOrNull(any(Player.class), anyString(), any(Placeholder[].class)))
-                .thenAnswer(invocation -> translations.get(invocation.getArgument(1, String.class)));
+        lenient().when(translator.translate(any(Player.class), anyString(), any(Placeholder[].class)))
+                .thenAnswer(invocation -> {
+                    String key = invocation.getArgument(1, String.class);
+                    PlayerTranslationJob job = mock(PlayerTranslationJob.class);
+                    PlayerTerminalTranslationJob terminal = mock(PlayerTerminalTranslationJob.class);
+                    when(job.orNull()).thenReturn(terminal);
+                    when(terminal.message()).thenAnswer(ignored -> translations.get(key));
+                    return job;
+                });
 
         return new Fixture(region, new DeedsTranspiler(server, translator), translator, directory, player, translations);
     }

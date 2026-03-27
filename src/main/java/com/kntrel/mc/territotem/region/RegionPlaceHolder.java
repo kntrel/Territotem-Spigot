@@ -1,9 +1,9 @@
 package com.kntrel.mc.territotem.region;
 
 import com.kntrel.mc.regionLib.region.Region;
-import com.kntrel.mc.runical.core.Placeholder;
-import com.kntrel.mc.runical.core.Translatable;
-import com.kntrel.mc.runical.core.TranslationProperty;
+import com.kntrel.mc.runical.core.placeholder.Placeholder;
+import com.kntrel.mc.runical.core.placeholder.Translatable;
+import com.kntrel.mc.runical.core.placeholder.TranslationProperty;
 import java.util.UUID;
 
 @Translatable

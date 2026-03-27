@@ -4,7 +4,7 @@ import com.kntrel.mc.regionLib.region.Region;
 import com.kntrel.mc.regionLib.region.ability.Permission;
 import com.kntrel.mc.regionLib.region.hierarchy.Hierarchy;
 import com.kntrel.mc.runical.bukkit.Translator;
-import com.kntrel.mc.runical.core.Placeholder;
+import com.kntrel.mc.runical.core.placeholder.Placeholder;
 import com.kntrel.mc.territotem.region.RegionPlaceHolder;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.Server;
@@ -132,7 +132,7 @@ class DeedsTranspiler {
 
         List<String> pages = new ArrayList<>();
         if (this.prologueKey_ != null) {
-            String prologue = this.translator_.translateOrNull(player, this.prologueKey_, placeholders);
+            String prologue = this.translator_.translate(player, this.prologueKey_, placeholders).orNull().message();
             if (prologue != null) {
                 pages.addAll(renderCommentPages(prologue));
             }
@@ -251,7 +251,7 @@ class DeedsTranspiler {
                 + group.getLevel()
                 + '.'
                 + field;
-        return Optional.ofNullable(this.translator_.translateOrNull(player, key, placeholders));
+        return Optional.ofNullable(this.translator_.translate(player, key, placeholders).orNull().message());
     }
 
     private static String renderSection(List<String> headerLines, List<String> players) {

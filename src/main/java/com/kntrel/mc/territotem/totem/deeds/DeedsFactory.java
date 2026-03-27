@@ -5,7 +5,7 @@ import com.kntrel.mc.regionLib.region.ability.Permission;
 import com.kntrel.mc.regionLib.region.context.RegionContext;
 import com.kntrel.mc.runical.bukkit.ComponentMarkupCompiler;
 import com.kntrel.mc.runical.bukkit.Translator;
-import com.kntrel.mc.runical.core.Placeholder;
+import com.kntrel.mc.runical.core.placeholder.Placeholder;
 import com.kntrel.mc.territotem.region.RegionPlaceHolder;
 import com.kntrel.mc.territotem.totem.Totem;
 import net.md_5.bungee.api.chat.BaseComponent;
@@ -72,8 +72,8 @@ public class DeedsFactory {
                 Placeholder.of("version", deeds.version())
         };
 
-        String name = this.translator_.translateOrNull(player, "item.name", placeholders);
-        String rawLore = this.translator_.translateOrNull(player, "item.lore", placeholders);
+        String name = this.translator_.translate(player, "item.name", placeholders).orNull().message();
+        String rawLore = this.translator_.translate(player, "item.lore", placeholders).orNull().message();
 
         if (name != null) {
             bookMeta.setItemName(name);

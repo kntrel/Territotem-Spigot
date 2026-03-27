@@ -8,7 +8,7 @@ import com.kntrel.mc.regionLib.region.Region;
 import com.kntrel.mc.regionLib.region.ability.Ability;
 import com.kntrel.mc.regionLib.region.hierarchy.Hierarchy;
 import com.kntrel.mc.runical.bukkit.Translator;
-import com.kntrel.mc.runical.core.Placeholder;
+import com.kntrel.mc.runical.core.placeholder.Placeholder;
 import com.kntrel.mc.territotem.region.RegionEnterTitleConfig;
 import net.md_5.bungee.api.ChatMessageType;
 import net.md_5.bungee.api.chat.TextComponent;
@@ -79,18 +79,23 @@ public class RegionListener implements Listener {
         };
 
 
-        this.deniedAbilityTranslator_.resolveAsync(
-                player,
-                ability.name().toLowerCase(Locale.ROOT),
-                placeholders
-        ).thenCompose(r -> {
-            if (r.found()) {
-                return CompletableFuture.completedFuture(r);
-            }
-            return this.deniedAbilityTranslator_.resolveAsync(player, "default", placeholders);
-        }).thenAccept(r -> {
-            if (!r.found()) { return; }
-            player.spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent.fromLegacyText(r.value()));
+        this.deniedAbilityTranslator_
+                .translate(player, ability.name().toLowerCase(Locale.ROOT), placeholders)
+                .orNull()
+                .async()
+                .message()
+                .thenCompose(message -> {
+                    if (message != null) {
+                        return CompletableFuture.completedFuture(message);
+                    }
+                    return this.deniedAbilityTranslator_
+                            .translate(player, "default", placeholders)
+                            .orNull()
+                            .async()
+                            .message();
+                }).thenAccept(message -> {
+            if (message == null) { return; }
+            player.spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent.fromLegacyText(message));
         });
     }
 
@@ -220,11 +225,9 @@ public class RegionListener implements Listener {
 
             for (Player recipient : recipients) {
                 if (!recipient.isOnline()) { continue; }
-                this.permissionTranslator_.sendTranslation(
-                        recipient,
-                        change.translationKeyFor(recipient.getUniqueId(), plan.updaterId()),
-                        placeholders
-                );
+                this.permissionTranslator_
+                        .translate(recipient, change.translationKeyFor(recipient.getUniqueId(), plan.updaterId()), placeholders)
+                        .send();
             }
         }
     }
