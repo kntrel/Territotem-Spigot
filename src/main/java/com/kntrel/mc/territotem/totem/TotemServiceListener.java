@@ -8,6 +8,8 @@ import com.kntrel.mc.regionLib.region.context.RegionContext;
 import com.kntrel.mc.regionLib.region.context.RegionContextConfig;
 import com.kntrel.mc.runical.bukkit.Translator;
 import com.kntrel.mc.runical.core.Placeholder;
+import com.kntrel.mc.territotem.region.RegionColor;
+import com.kntrel.mc.territotem.region.RegionColors;
 import com.kntrel.mc.territotem.structure.Structure;
 import com.kntrel.mc.territotem.structure.event.StructureChangedEvent;
 import com.kntrel.mc.territotem.structure.event.StructureCompletedEvent;
@@ -25,18 +27,25 @@ import com.kntrel.mc.territotem.totem.region.ExpansionTable;
 import com.kntrel.util.Vec3i;
 import com.kntrel.util.tuple.Pair;
 import org.bukkit.Location;
+import org.bukkit.DyeColor;
 import org.bukkit.Material;
 import org.bukkit.Tag;
 import org.bukkit.block.Block;
 import org.bukkit.block.Lectern;
 import org.bukkit.block.Sign;
+import org.bukkit.block.sign.Side;
 import org.bukkit.entity.Player;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.Action;
 import org.bukkit.event.block.SignChangeEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BookMeta;
+import org.bukkit.plugin.Plugin;
+import org.jspecify.annotations.Nullable;
 import org.bukkit.util.BoundingBox;
 import java.math.BigDecimal;
 import java.util.Arrays;
@@ -50,6 +59,7 @@ final class TotemServiceListener implements Listener {
 
     private static final double EPSILON = 1.0E-9;
 
+    private final Plugin plugin_;
     private final TotemService service_;
     private final RegionContext regionContext_;
     private final Translator translator_;
@@ -63,6 +73,7 @@ final class TotemServiceListener implements Listener {
             ExpansionTable expansionTable,
             Set<Material> allowedDeedsRequestItems
     ) {
+        this.plugin_ = regionContext.getPlugin();
         this.service_ = service;
         this.regionContext_ = regionContext;
         this.translator_ = translator;
@@ -88,6 +99,7 @@ final class TotemServiceListener implements Listener {
                 region.addPermission(placer, region.getHierarchy().getLowestLever());
             }
             region.save();
+            this.syncNameSignColor(result.totem());
         }
 
         if (placer == null) {
@@ -107,7 +119,7 @@ final class TotemServiceListener implements Listener {
                     placer,
                     "creation.success",
                     "Region created: '{region}'.",
-                    Placeholder.of("region_name", region.getName()),
+                    Placeholder.of("region_name", RegionColors.displayName(region)),
                     Placeholder.of("creator", placer.getName()),
                     Placeholder.of("x", formatMeasure(center.getX())),
                     Placeholder.of("y", formatMeasure(center.getY())),
@@ -202,6 +214,34 @@ final class TotemServiceListener implements Listener {
         totem.rename(content);
         Player player = e.getPlayer();
         this.sendRenamedMessage(totem.region(), player, oldName, content);
+        this.scheduleNameSignColorSync(e.getBlock(), totem);
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    void onNameSignDyed(BlockRightClickedEvent e) {
+        if (e.getClickedBlock() == null) {
+            return;
+        }
+
+        DyeColor dyeColor = dyeColorOf(e.getItem());
+        if (dyeColor == null) {
+            return;
+        }
+
+        if (!(e.getClickedBlock().getState() instanceof Sign sign) || sign.isWaxed()) {
+            return;
+        }
+
+        Totem totem = this.service_.ownerOfSign(sign).orElse(null);
+        if (totem == null) {
+            return;
+        }
+
+        Block block = e.getClickedBlock();
+        this.plugin_.getServer().getScheduler().runTask(
+                this.plugin_,
+                () -> this.captureRegionColorFromSign(block, totem)
+        );
     }
 
     @EventHandler
@@ -250,8 +290,8 @@ final class TotemServiceListener implements Listener {
                     "deeds.placement_error.region_mismatch",
                     Placeholder.of("deedsRegionId", region.getId()),
                     Placeholder.of("totemRegionId", totem.region().getId()),
-                    Placeholder.of("deedsRegionName", region.getName()),
-                    Placeholder.of("totemRegionName", totem.region().getName())
+                    Placeholder.of("deedsRegionName", RegionColors.displayName(region)),
+                    Placeholder.of("totemRegionName", RegionColors.displayName(totem.region()))
             );
             e.setCancelled(true);
             return;
@@ -262,7 +302,7 @@ final class TotemServiceListener implements Listener {
                     player,
                     "deeds.placement_error.old_version",
                     Placeholder.of("regionId", region.getId()),
-                    Placeholder.of("regionName", region.getName()),
+                    Placeholder.of("regionName", RegionColors.displayName(region)),
                     Placeholder.of("deedsVersion", deeds.version()),
                     Placeholder.of("totemDeedsVersion", totem.getDeedsVersion())
             );
@@ -327,7 +367,7 @@ final class TotemServiceListener implements Listener {
         this.translator_.sendTranslation(
                 e.getPlayer(),
                 (isSign) ? "block_place_reject.sign" : "block_place_reject.lectern",
-                Placeholder.of("region_name", rejectingTotem.region().getName()),
+                Placeholder.of("region_name", RegionColors.displayName(rejectingTotem.region())),
                 Placeholder.of("region_id", rejectingTotem.region().getId())
         );
     }
@@ -402,13 +442,15 @@ final class TotemServiceListener implements Listener {
     }
 
     private void sendRenamedMessage(Region region, Player renamer, String oldName, String newName) {
+        String coloredOldName = RegionColors.displayName(region, oldName);
+        String coloredNewName = RegionColors.displayName(region, newName);
 
         this.translator_.sendTranslationOrDefault(
                 renamer,
                 "rename.first_person",
                 "Region renamed to '{new_name}'.",
-                Placeholder.of("old_name", oldName),
-                Placeholder.of("new_name", newName),
+                Placeholder.of("old_name", coloredOldName),
+                Placeholder.of("new_name", coloredNewName),
                 Placeholder.of("region_id", region.getId())
         );
 
@@ -419,8 +461,8 @@ final class TotemServiceListener implements Listener {
             this.translator_.sendTranslation(
                     member,
                     "rename.third_person",
-                    Placeholder.of("old_name", oldName),
-                    Placeholder.of("new_name", newName),
+                    Placeholder.of("old_name", coloredOldName),
+                    Placeholder.of("new_name", coloredNewName),
                     Placeholder.of("renamer", renamer.getName()),
                     Placeholder.of("region_id", region.getId())
             );
@@ -545,28 +587,69 @@ final class TotemServiceListener implements Listener {
     private String regionName(Player player, Region region) {
         String name = region.getName();
         if (name != null && !name.isBlank()) {
-            return name;
+            return RegionColors.displayName(region, name);
         }
 
         String id = (region.getId() == null) ? "?" : region.getId().toString();
+        String fallback;
         if (player != null) {
-            return this.translator_.translateOrDefault(
+            fallback = this.translator_.translateOrDefault(
                     player,
                     "region.unnamed",
                     "Region #{id}",
                     Placeholder.of("id", id)
             );
         }
-        return this.translator_.translateOrDefault(
+        else {
+            fallback = this.translator_.translateOrDefault(
                 this.defaultLocale(),
                 "region.unnamed",
                 "Region #{id}",
                 Placeholder.of("id", id)
-        );
+            );
+        }
+        return RegionColors.displayName(region, fallback);
     }
 
     private String defaultLocale() {
         return this.translator_.getRoot().getDefaultLocale();
+    }
+
+    private void captureRegionColorFromSign(Block block, Totem totem) {
+        if (!(block.getState() instanceof Sign sign)) {
+            return;
+        }
+
+        Totem currentOwner = this.service_.ownerOfSign(sign).orElse(null);
+        if (currentOwner == null || !currentOwner.id().equals(totem.id())) {
+            return;
+        }
+
+        RegionColors.set(totem.region(), RegionColor.fromDyeColor(sign.getSide(Side.FRONT).getColor()));
+        totem.region().save();
+    }
+
+    private void syncNameSignColor(Totem totem) {
+        Sign sign = totem.nameSign().orElse(null);
+        if (sign == null || sign.isWaxed()) {
+            return;
+        }
+
+        sign.getSide(Side.FRONT).setColor(RegionColors.getOrDefault(totem.region()).dyeColor());
+        sign.update(true, false);
+    }
+
+    private void scheduleNameSignColorSync(Block block, Totem totem) {
+        this.plugin_.getServer().getScheduler().runTask(this.plugin_, () -> {
+            Totem currentOwner = null;
+            if (block.getState() instanceof Sign sign) {
+                currentOwner = this.service_.ownerOfSign(sign).orElse(null);
+            }
+            if (currentOwner == null || !currentOwner.id().equals(totem.id())) {
+                return;
+            }
+            this.syncNameSignColor(currentOwner);
+        });
     }
 
     private boolean isShifted(ExpansionResult result) {
@@ -592,10 +675,36 @@ final class TotemServiceListener implements Listener {
         return BigDecimal.valueOf(value).stripTrailingZeros().toPlainString();
     }
 
+    private static @Nullable DyeColor dyeColorOf(@Nullable ItemStack item) {
+        if (item == null) {
+            return null;
+        }
+
+        return switch (item.getType()) {
+            case WHITE_DYE -> DyeColor.WHITE;
+            case ORANGE_DYE -> DyeColor.ORANGE;
+            case MAGENTA_DYE -> DyeColor.MAGENTA;
+            case LIGHT_BLUE_DYE -> DyeColor.LIGHT_BLUE;
+            case YELLOW_DYE -> DyeColor.YELLOW;
+            case LIME_DYE -> DyeColor.LIME;
+            case PINK_DYE -> DyeColor.PINK;
+            case GRAY_DYE -> DyeColor.GRAY;
+            case LIGHT_GRAY_DYE -> DyeColor.LIGHT_GRAY;
+            case CYAN_DYE -> DyeColor.CYAN;
+            case PURPLE_DYE -> DyeColor.PURPLE;
+            case BLUE_DYE -> DyeColor.BLUE;
+            case BROWN_DYE -> DyeColor.BROWN;
+            case GREEN_DYE -> DyeColor.GREEN;
+            case RED_DYE -> DyeColor.RED;
+            case BLACK_DYE -> DyeColor.BLACK;
+            default -> null;
+        };
+    }
+
     private void sendDeedsDeTranspileErrorFeedback(Player player, DeedsInterpretationResult.DeTranspileError error) {
 
         List<Placeholder> basePlaceHolders = List.of(
-            Placeholder.of("regionName", error.region().map(Region::getName).orElse(null)),
+            Placeholder.of("regionName", error.region().map(RegionColors::displayName).orElse(null)),
             Placeholder.of("regionId", error.region().map(r -> r.getId().toString()).orElse(null)),
             Placeholder.of("lineNumber", error.lineNumber()),
             Placeholder.of("line", error.line()),

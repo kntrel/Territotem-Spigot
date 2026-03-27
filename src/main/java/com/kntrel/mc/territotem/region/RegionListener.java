@@ -70,7 +70,8 @@ public class RegionListener implements Listener {
         Region region = e.getRegion();
         Location where = e.getLocation();
         Placeholder[] placeholders = new Placeholder[] {
-                Placeholder.of("regionName", region.getName()),
+                Placeholder.of("regionName", RegionColors.displayName(region)),
+                Placeholder.of("regionDisplayName", RegionColors.displayName(region)),
                 Placeholder.of("regionId", region.getId()),
                 Placeholder.of("player", player.getName()),
                 Placeholder.of("abilityName", ability.name()),
@@ -91,7 +92,7 @@ public class RegionListener implements Listener {
             return this.deniedAbilityTranslator_.resolveAsync(player, "default", placeholders);
         }).thenAccept(r -> {
             if (!r.found()) { return; }
-            player.spigot().sendMessage(ChatMessageType.ACTION_BAR, new TextComponent(r.value()));
+            player.spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent.fromLegacyText(r.value()));
         });
     }
 
@@ -125,7 +126,7 @@ public class RegionListener implements Listener {
             return;
         }
         e.getPlayer().sendTitle(
-                e.getRegion().getName(),
+                RegionColors.displayNameBold(e.getRegion()),
                 "",
                 this.regionEnterTitleConfig_.fadeIn(),
                 this.regionEnterTitleConfig_.stay(),
@@ -157,6 +158,7 @@ public class RegionListener implements Listener {
 
         return new PermissionNotificationSeed(
                 e.getCurrentState().name(),
+                RegionColors.displayName(e.getRegion()),
                 groupNames,
                 updaterId,
                 responsiblePlayer,
@@ -178,6 +180,7 @@ public class RegionListener implements Listener {
 
         return new PermissionNotificationPlan(
                 seed.regionName(),
+                seed.regionDisplayName(),
                 seed.groupNames(),
                 seed.updaterId(),
                 seed.responsiblePlayer(),
@@ -212,10 +215,10 @@ public class RegionListener implements Listener {
             Placeholder[] placeholders = new Placeholder[] {
                     Placeholder.of("affected_player", affectedPlayer),
                     Placeholder.of("responsible_player", plan.responsiblePlayer()),
-                    Placeholder.of("group_name", groupName),
-                    Placeholder.of("old_group_name", oldGroupName),
-                    Placeholder.of("new_group_name", newGroupName),
-                    Placeholder.of("region_name", plan.regionName())
+                Placeholder.of("group_name", groupName),
+                Placeholder.of("old_group_name", oldGroupName),
+                Placeholder.of("new_group_name", newGroupName),
+                Placeholder.of("region_name", plan.regionDisplayName())
             };
 
             for (Player recipient : recipients) {
@@ -329,6 +332,7 @@ public class RegionListener implements Listener {
 
     record PermissionNotificationSeed(
             String regionName,
+            String regionDisplayName,
             Map<Integer, String> groupNames,
             UUID updaterId,
             String responsiblePlayer,
@@ -338,6 +342,7 @@ public class RegionListener implements Listener {
 
     record PermissionNotificationPlan(
             String regionName,
+            String regionDisplayName,
             Map<Integer, String> groupNames,
             UUID updaterId,
             String responsiblePlayer,

@@ -2,6 +2,7 @@ package com.kntrel.mc.territotem.config;
 
 import com.kntrel.mc.regionLib.region.ability.Permission;
 import com.kntrel.mc.regionLib.region.context.RegionContextConfig;
+import com.kntrel.mc.territotem.region.ColoredRegionDisplayer;
 import com.kntrel.mc.territotem.region.RegionEnterTitleConfig;
 import com.kntrel.mc.territotem.region.RegionFeatureMaterialsConfig;
 import com.kntrel.mc.territotem.totem.region.ExpansionTable;
@@ -53,7 +54,7 @@ public record Config(
                     ExpansionTable.row(Material.NETHERITE_BLOCK, 216.0, 270.0)
             ),
             immutableLinkedSet(List.of(Material.WRITABLE_BOOK)),
-            RegionContextConfig.defaultConfig(),
+            RegionContextConfig.build().withRegionDisplayerFactory(ColoredRegionDisplayer::new).end(),
             new RegionEnterTitleConfig(true, 10, 20, 10),
             new RegionFeatureMaterialsConfig(
                     immutableLinkedSet(List.of(
@@ -128,7 +129,8 @@ public record Config(
                         playerSampling.doubleValue(
                                 "movement_tolerance",
                                 defaultRegionContextConfig.playerMovementTolerance
-                        )
+                        ),
+                        ColoredRegionDisplayer::new
                 ),
                 new RegionEnterTitleConfig(
                         enterTitle.booleanValue("enabled", DEFAULT.regionEnterTitle().enabled()),
