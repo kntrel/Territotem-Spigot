@@ -8,8 +8,8 @@ import com.kntrel.mc.regionLib.region.Region;
 import com.kntrel.mc.regionLib.region.ability.Ability;
 import com.kntrel.mc.regionLib.region.hierarchy.Hierarchy;
 import com.kntrel.mc.runical.bukkit.Translator;
-import com.kntrel.mc.runical.core.placeholder.Placeholder;
-import com.kntrel.mc.territotem.region.RegionEnterTitleConfig;
+import com.kntrel.mc.runical.core.argument.Argument;
+import com.kntrel.mc.runical.core.argument.Argument;
 import net.md_5.bungee.api.ChatMessageType;
 import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.Location;
@@ -69,34 +69,36 @@ public class RegionListener implements Listener {
         Ability ability = e.getAbility();
         Region region = e.getRegion();
         Location where = e.getLocation();
-        Placeholder[] placeholders = new Placeholder[] {
-                RegionPlaceHolder.of(region),
-                Placeholder.of("player", player.getName()),
-                Placeholder.of("abilityName", ability.name()),
-                Placeholder.of("x", where.getX()),
-                Placeholder.of("y", where.getY()),
-                Placeholder.of("z", where.getZ())
+        Argument[] arguments = new Argument[] {
+                RegionArgument.of(region),
+                Argument.of("player", player.getName()),
+                Argument.of("abilityName", ability.name()),
+                Argument.of("x", where.getX()),
+                Argument.of("y", where.getY()),
+                Argument.of("z", where.getZ())
         };
 
 
         this.deniedAbilityTranslator_
-                .translate(player, ability.name().toLowerCase(Locale.ROOT), placeholders)
+                .translate(player, ability.name().toLowerCase(Locale.ROOT))
+                .arguments(arguments)
                 .orNull()
                 .async()
-                .message()
-                .thenCompose(message -> {
-                    if (message != null) {
-                        return CompletableFuture.completedFuture(message);
+                .component()
+                .thenCompose(cmp -> {
+                    if (cmp != null) {
+                        return CompletableFuture.completedFuture(cmp);
                     }
                     return this.deniedAbilityTranslator_
-                            .translate(player, "default", placeholders)
+                            .translate(player, "default")
+                            .arguments(arguments)
                             .orNull()
                             .async()
-                            .message();
-                }).thenAccept(message -> {
-            if (message == null) { return; }
-            player.spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent.fromLegacyText(message));
-        });
+                            .component();
+                }).thenAccept(cmp -> {
+                    if (cmp == null) { return; }
+                    player.spigot().sendMessage(ChatMessageType.ACTION_BAR, cmp);
+                });
     }
 
     @EventHandler
@@ -161,7 +163,7 @@ public class RegionListener implements Listener {
                 .orElse(UNKNOWN_RESPONSIBLE_PLAYER);
 
         return new PermissionNotificationSeed(
-                RegionPlaceHolder.from(region),
+                RegionArgument.from(region),
                 groupNames,
                 updaterId,
                 responsiblePlayer,
@@ -209,24 +211,24 @@ public class RegionListener implements Listener {
             String oldGroupName = resolveGroupName(plan.groupNames(), change.oldLevel());
             String newGroupName = resolveGroupName(plan.groupNames(), change.newLevel());
             String groupName = switch (change.type()) {
-                case ADD -> newGroupName;
+                case ADD, CHANGE -> newGroupName;
                 case REMOVE -> oldGroupName;
-                case CHANGE -> newGroupName;
             };
 
-            Placeholder[] placeholders = new Placeholder[] {
-                    Placeholder.of("affectedPlayer", affectedPlayer),
-                    Placeholder.of("responsiblePlayer", plan.responsiblePlayer()),
-                    Placeholder.of("groupName", groupName),
-                    Placeholder.of("oldGroupName", oldGroupName),
-                    Placeholder.of("newGroupName", newGroupName),
-                    RegionPlaceHolder.of(plan.region())
+            Argument[] arguments = new Argument[] {
+                    Argument.of("affectedPlayer", affectedPlayer),
+                    Argument.of("responsiblePlayer", plan.responsiblePlayer()),
+                    Argument.of("groupName", groupName),
+                    Argument.of("oldGroupName", oldGroupName),
+                    Argument.of("newGroupName", newGroupName),
+                    RegionArgument.of(plan.region())
             };
 
             for (Player recipient : recipients) {
                 if (!recipient.isOnline()) { continue; }
                 this.permissionTranslator_
-                        .translate(recipient, change.translationKeyFor(recipient.getUniqueId(), plan.updaterId()), placeholders)
+                        .translate(recipient, change.translationKeyFor(recipient.getUniqueId(), plan.updaterId()))
+                        .arguments(arguments)
                         .send();
             }
         }
@@ -331,7 +333,7 @@ public class RegionListener implements Listener {
     }
 
     record PermissionNotificationSeed(
-            RegionPlaceHolder region,
+            RegionArgument region,
             Map<Integer, String> groupNames,
             UUID updaterId,
             String responsiblePlayer,
@@ -340,7 +342,7 @@ public class RegionListener implements Listener {
     ) {}
 
     record PermissionNotificationPlan(
-            RegionPlaceHolder region,
+            RegionArgument region,
             Map<Integer, String> groupNames,
             UUID updaterId,
             String responsiblePlayer,

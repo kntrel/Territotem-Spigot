@@ -1,13 +1,13 @@
 package com.kntrel.mc.territotem.region;
 
 import com.kntrel.mc.regionLib.region.Region;
-import com.kntrel.mc.runical.core.placeholder.Placeholder;
-import com.kntrel.mc.runical.core.placeholder.Translatable;
-import com.kntrel.mc.runical.core.placeholder.TranslationProperty;
+import com.kntrel.mc.runical.core.argument.Argument;
+import com.kntrel.mc.runical.core.argument.Translatable;
+import com.kntrel.mc.runical.core.argument.TranslationProperty;
 import java.util.UUID;
 
 @Translatable
-public record RegionPlaceHolder(
+public record RegionArgument(
         Long id,
         @TranslationProperty String name,
         @TranslationProperty double minX,
@@ -24,8 +24,8 @@ public record RegionPlaceHolder(
         @TranslationProperty RegionColor color
 ) {
 
-    public static RegionPlaceHolder from(Region region) {
-        return new RegionPlaceHolder(
+    public static RegionArgument from(Region region) {
+        return new RegionArgument(
                 region.getId(),
                 region.getName(),
                 region.getMinX(),
@@ -43,19 +43,19 @@ public record RegionPlaceHolder(
         );
     }
 
-    public static Placeholder of(String rootKey, RegionPlaceHolder region) {
-        return Placeholder.of(rootKey, region);
+    public static Argument of(String rootKey, RegionArgument region) {
+        return Argument.of(rootKey, region);
     }
 
-    public static Placeholder of(RegionPlaceHolder region) {
+    public static Argument of(RegionArgument region) {
         return of("region", region);
     }
 
-    public static Placeholder of(String rootKey, Region region) {
+    public static Argument of(String rootKey, Region region) {
         return of(rootKey, from(region));
     }
 
-    public static Placeholder of(Region region) {
+    public static Argument of(Region region) {
         return of("region", region);
     }
 

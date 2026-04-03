@@ -1,7 +1,7 @@
 package com.kntrel.mc.territotem.region;
 
-import com.kntrel.mc.runical.core.placeholder.Translatable;
-import com.kntrel.mc.runical.core.placeholder.TranslationProperty;
+import com.kntrel.mc.runical.core.argument.Translatable;
+import com.kntrel.mc.runical.core.argument.TranslationProperty;
 import org.bukkit.Color;
 import org.bukkit.DyeColor;
 import java.util.List;

@@ -5,8 +5,8 @@ import com.kntrel.mc.regionLib.region.ability.Permission;
 import com.kntrel.mc.regionLib.region.context.RegionContext;
 import com.kntrel.mc.runical.bukkit.ComponentMarkupCompiler;
 import com.kntrel.mc.runical.bukkit.Translator;
-import com.kntrel.mc.runical.core.placeholder.Placeholder;
-import com.kntrel.mc.territotem.region.RegionPlaceHolder;
+import com.kntrel.mc.runical.core.argument.Argument;
+import com.kntrel.mc.territotem.region.RegionArgument;
 import com.kntrel.mc.territotem.totem.Totem;
 import net.md_5.bungee.api.chat.BaseComponent;
 import org.bukkit.NamespacedKey;
@@ -66,14 +66,14 @@ public class DeedsFactory {
                 .toList();
         bookMeta.spigot().setPages(pages);
 
-        Placeholder[] placeholders = new Placeholder[] {
-                RegionPlaceHolder.of(region),
-                Placeholder.of("playerName", player.getName()),
-                Placeholder.of("version", deeds.version())
+        Argument[] arguments = new Argument[] {
+                RegionArgument.of(region),
+                Argument.of("playerName", player.getName()),
+                Argument.of("version", deeds.version())
         };
 
-        String name = this.translator_.translate(player, "item.name", placeholders).orNull().message();
-        String rawLore = this.translator_.translate(player, "item.lore", placeholders).orNull().message();
+        String name = this.translator_.translate(player, "item.name").arguments(arguments).orNull().message();
+        String rawLore = this.translator_.translate(player, "item.lore").arguments(arguments).orNull().message();
 
         if (name != null) {
             bookMeta.setItemName(name);

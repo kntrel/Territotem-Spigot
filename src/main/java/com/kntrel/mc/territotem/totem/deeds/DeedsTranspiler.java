@@ -4,8 +4,8 @@ import com.kntrel.mc.regionLib.region.Region;
 import com.kntrel.mc.regionLib.region.ability.Permission;
 import com.kntrel.mc.regionLib.region.hierarchy.Hierarchy;
 import com.kntrel.mc.runical.bukkit.Translator;
-import com.kntrel.mc.runical.core.placeholder.Placeholder;
-import com.kntrel.mc.territotem.region.RegionPlaceHolder;
+import com.kntrel.mc.runical.core.argument.Argument;
+import com.kntrel.mc.territotem.region.RegionArgument;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.Server;
 import org.bukkit.entity.Player;
@@ -124,15 +124,15 @@ class DeedsTranspiler {
                     .add(name);
         }
 
-        Placeholder[] placeholders = new Placeholder[]{
-                RegionPlaceHolder.of(region),
-                Placeholder.of("version", deeds.version()),
-                Placeholder.of("player", player.getName())
+        Argument[] arguments = new Argument[]{
+                RegionArgument.of(region),
+                Argument.of("version", deeds.version()),
+                Argument.of("player", player.getName())
         };
 
         List<String> pages = new ArrayList<>();
         if (this.prologueKey_ != null) {
-            String prologue = this.translator_.translate(player, this.prologueKey_, placeholders).orNull().message();
+            String prologue = this.translator_.translate(player, this.prologueKey_).arguments(arguments).orNull().message();
             if (prologue != null) {
                 pages.addAll(renderCommentPages(prologue));
             }
@@ -237,12 +237,12 @@ class DeedsTranspiler {
     }
 
     private Optional<String> resolveGroupTranslation(Player player, Region region, Hierarchy.Group group, String field) {
-        Placeholder[] placeholders = new Placeholder[] {
-                Placeholder.of("groupLevel", group.getLevel()),
-                Placeholder.of("groupName", group.getName()),
-                Placeholder.of("hierarchyId", region.getHierarchy().getId()),
-                Placeholder.of("hierarchyName", region.getHierarchy().getName()),
-                RegionPlaceHolder.of(region)
+        Argument[] arguments = new Argument[] {
+                Argument.of("groupLevel", group.getLevel()),
+                Argument.of("groupName", group.getName()),
+                Argument.of("hierarchyId", region.getHierarchy().getId()),
+                Argument.of("hierarchyName", region.getHierarchy().getName()),
+                RegionArgument.of(region)
         };
         String key = HIERARCHY_TRANSLATION_ROOT
                 + '.'
@@ -251,7 +251,7 @@ class DeedsTranspiler {
                 + group.getLevel()
                 + '.'
                 + field;
-        return Optional.ofNullable(this.translator_.translate(player, key, placeholders).orNull().message());
+        return Optional.ofNullable(this.translator_.translate(player, key).arguments(arguments).orNull().message());
     }
 
     private static String renderSection(List<String> headerLines, List<String> players) {
