@@ -119,6 +119,12 @@ class TotemStore {
         return this.getByBlueprint(blueprint.id());
     }
 
+    public List<Totem> getAll() {
+        synchronized (this.mutex_) {
+            return List.copyOf(this.byId_.values());
+        }
+    }
+
     //API - ADD
     public void add(Totem totem) {
         synchronized (this.mutex_) {

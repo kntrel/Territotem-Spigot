@@ -21,6 +21,7 @@ import com.kntrel.mc.territotem.util.ChunkKey;
 import com.kntrel.mc.territotem.util.ItemStackInfo;
 import com.kntrel.util.IntBoundingBox;
 import com.kntrel.util.Vec3i;
+import org.bukkit.SoundCategory;
 import org.bukkit.World;
 import org.bukkit.block.Lectern;
 import org.bukkit.block.Sign;
@@ -71,6 +72,12 @@ public class TotemService {
         this.plugin_.getServer().getPluginManager().registerEvents(
                 new TotemServiceListener(this, regionContext, translator, expansionTable, dropBackRate, allowedDeedsRequestItems),
                 this.plugin_
+        );
+        this.plugin_.getServer().getScheduler().runTaskTimer(
+                this.plugin_,
+                this::emitAmbientSounds,
+                TotemCore.AMBIENT_SOUND_RATE,
+                TotemCore.AMBIENT_SOUND_RATE
         );
     }
 
@@ -229,6 +236,17 @@ public class TotemService {
         totem.discardLatestGrowth();
         totem.save();
         return growth;
+    }
+
+    private void emitAmbientSounds() {
+        for (Totem totem : this.totemStore_.getAll()) {
+            TotemCore core = totem.core();
+            if (core.getState() != TotemCore.State.ACTIVE) {
+                continue;
+            }
+
+            core.getWorld().playSound(core.getCenter(), TotemCore.AMBIENT_SOUND, SoundCategory.BLOCKS, 1, .8f);
+        }
     }
 
 

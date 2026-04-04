@@ -41,6 +41,8 @@ public class TotemCore {
             NULL_TRANSLATION    = new Vector3f(0, 0, 0),
             NULL_SCALE          = new Vector3f(1, 1, 1);
     static final String METADATA_KEY = "totem_core";
+    public static final long
+            AMBIENT_SOUND_RATE  = 40L;
     public static final Sound
             ACTIVATE_SOUND      = Sound.BLOCK_BEACON_ACTIVATE,
             DEACTIVATE_SOUND    = Sound.BLOCK_BEACON_DEACTIVATE,
@@ -207,8 +209,8 @@ public class TotemCore {
             this.world_.dropItemNaturally(this.location(CENTER), new ItemStack(this.directionalSelectorItem_, 1));
         }
 
-        this.setState(State.EMPTY);
         this.kill();
+        emitStateChangeSound(this.state_, State.EMPTY, this.world_, this.location());
     }
     public void kill() {
         kill(this.amethist_);
@@ -379,7 +381,7 @@ public class TotemCore {
         }
 
         for (Sound sound : sounds) {
-            world.playSound(location, sound, SoundCategory.BLOCKS, 100, 1);
+            world.playSound(location, sound, SoundCategory.BLOCKS, 5, 1);
         }
     }
 }
