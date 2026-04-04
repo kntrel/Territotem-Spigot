@@ -104,6 +104,46 @@ final class ConfigNode {
         return defaultValue;
     }
 
+    double unitDouble(String key, double defaultValue) {
+        Object raw = this.raw(key);
+        if (raw == null) {
+            this.logMissing(key, defaultValue);
+            return defaultValue;
+        }
+
+        Double parsed = coerceUnitDouble(raw);
+        if (parsed != null) {
+            return parsed;
+        }
+
+        this.logger_.error(
+                "Invalid decimal between 0 and 1 '{}' for config key '{}'. Using default '{}'.",
+                raw,
+                this.pathOf(key),
+                defaultValue
+        );
+        return defaultValue;
+    }
+
+    @Nullable Double optionalUnitDouble(String key) {
+        Object raw = this.raw(key);
+        if (raw == null) {
+            return null;
+        }
+
+        Double parsed = coerceUnitDouble(raw);
+        if (parsed != null) {
+            return parsed;
+        }
+
+        this.logger_.error(
+                "Invalid decimal between 0 and 1 '{}' for config key '{}'. Ignoring row.",
+                raw,
+                this.pathOf(key)
+        );
+        return null;
+    }
+
     boolean booleanValue(String key, boolean defaultValue) {
         Object raw = this.raw(key);
         if (raw == null) {
@@ -447,5 +487,13 @@ final class ConfigNode {
             }
         }
         return null;
+    }
+
+    private static @Nullable Double coerceUnitDouble(Object raw) {
+        Double parsed = coerceDouble(raw);
+        if (parsed == null || !Double.isFinite(parsed) || parsed < 0d || parsed > 1d) {
+            return null;
+        }
+        return parsed;
     }
 }

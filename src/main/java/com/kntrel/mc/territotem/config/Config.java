@@ -19,6 +19,7 @@ import java.util.Set;
 
 public record Config(
         Material directionalSelectorItem,
+        double dropBackRate,
         ExpansionTable expansionTable,
         Set<Material> allowedDeedsRequestItems,
         long chunkPersistencePeriodTicks,
@@ -31,6 +32,7 @@ public record Config(
 
     private static final Config DEFAULT = new Config(
             Material.AMETHYST_BLOCK,
+            0.5d,
             ExpansionTable.of(
                     /* =============== Farmable by default; enable manually if desired. ===============
                     ExpansionTable.row(Material.RAW_COPPER, 0.15, 0.25),
@@ -112,6 +114,7 @@ public record Config(
 
         return new Config(
                 totem.blockMaterial("directional_selector_item", DEFAULT.directionalSelectorItem()),
+                totem.unitDouble("drop_back_rate", DEFAULT.dropBackRate()),
                 ExpansionTableParser.read(totem, "expansion", DEFAULT.expansionTable()),
                 totem.materialSet("deeds_request_items", DEFAULT.allowedDeedsRequestItems()),
                 chunkPersistence.longValue("period_ticks", DEFAULT.chunkPersistencePeriodTicks()),

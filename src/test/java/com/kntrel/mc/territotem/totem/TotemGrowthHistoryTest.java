@@ -1,12 +1,16 @@
 package com.kntrel.mc.territotem.totem;
 
+import com.google.gson.JsonParser;
 import com.kntrel.mc.regionLib.region.Region;
 import com.kntrel.mc.regionLib.region.context.RegionContext;
 import com.kntrel.mc.regionLib.region.context.RegionContextConfig;
+import com.kntrel.mc.regionLib.region.dataContainer.RegionData;
 import com.kntrel.mc.regionLib.region.hierarchy.Hierarchy;
 import com.kntrel.mc.regionLib.region.repository.Query;
 import com.kntrel.mc.regionLib.region.repository.RegionRepository;
 import com.kntrel.mc.territotem.totem.region.Expansion;
+import com.kntrel.mc.territotem.util.ItemStackInfo;
+import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.util.BoundingBox;
 import org.junit.jupiter.api.Test;
@@ -33,8 +37,12 @@ class TotemGrowthHistoryTest {
         TotemGrowthHistory.State expected = new TotemGrowthHistory.State(
                 new BoundingBox(1, 2, 3, 8, 9, 10),
                 List.of(
-                        new Expansion(1, 0, 0, 0, 0, 0),
-                        new Expansion(0, 0.5, 0, 0.25, 0, 0.75)
+                        TotemGrowthEntry.nonRefundable(new Expansion(1, 0, 0, 0, 0, 0)),
+                        new TotemGrowthEntry(
+                                new Expansion(0, 0.5, 0, 0.25, 0, 0.75),
+                                new ItemStackInfo(Material.IRON_INGOT, 9, null),
+                                0.35d
+                        )
                 )
         );
 
@@ -49,6 +57,45 @@ class TotemGrowthHistoryTest {
         assertEquals(expected.baseBounds().getMaxX(), restored.baseBounds().getMaxX(), DELTA);
         assertEquals(expected.baseBounds().getMaxY(), restored.baseBounds().getMaxY(), DELTA);
         assertEquals(expected.baseBounds().getMaxZ(), restored.baseBounds().getMaxZ(), DELTA);
+    }
+
+    @Test
+    void readAcceptsLegacyExpansionOnlyHistoryEntriesAsNonRefundable() {
+        Fixture fixture = fixture();
+        World world = mock(World.class);
+        Region region = fixture.region(2L, world, new BoundingBox(0, 0, 0, 10, 10, 10));
+        region.getDataContainer().add(new RegionData(
+                TotemGrowthHistory.DATA_KEY,
+                JsonParser.parseString("""
+                        {
+                          "base_bounds": {
+                            "min_x": 0.0,
+                            "min_y": 0.0,
+                            "min_z": 0.0,
+                            "max_x": 5.0,
+                            "max_y": 5.0,
+                            "max_z": 5.0
+                          },
+                          "history": [
+                            {
+                              "up": 1.0,
+                              "down": 0.0,
+                              "north": 0.0,
+                              "south": 0.0,
+                              "east": 0.0,
+                              "west": 0.0
+                            }
+                          ]
+                        }
+                        """)
+        ));
+
+        TotemGrowthHistory.State restored = TotemGrowthHistory.read(region);
+        assertNotNull(restored);
+        assertEquals(1, restored.history().size());
+        assertEquals(new Expansion(1, 0, 0, 0, 0, 0), restored.history().getFirst().expansion());
+        assertEquals(null, restored.history().getFirst().refundStack());
+        assertEquals(0d, restored.history().getFirst().dropBackRate(), DELTA);
     }
 
     private static Fixture fixture() {

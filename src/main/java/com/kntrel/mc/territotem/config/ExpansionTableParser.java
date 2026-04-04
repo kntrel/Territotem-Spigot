@@ -61,7 +61,15 @@ final class ExpansionTableParser {
                 }
             }
 
-            rows.add(new ExpansionTable.Row(item, consume, nbt, min, max));
+            Double dropBackRate = null;
+            if (row.has("drop_back_rate")) {
+                dropBackRate = row.optionalUnitDouble("drop_back_rate");
+                if (dropBackRate == null) {
+                    continue;
+                }
+            }
+
+            rows.add(new ExpansionTable.Row(item, consume, nbt, min, max, dropBackRate));
         }
 
         return new ExpansionTable(rows);

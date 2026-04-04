@@ -7,6 +7,7 @@ import com.kntrel.mc.regionLib.region.Region;
 import com.kntrel.mc.regionLib.region.dataContainer.RegionData;
 import com.kntrel.mc.regionLib.region.dataContainer.RegionDataContainer;
 import com.kntrel.mc.territotem.totem.region.Expansion;
+import com.kntrel.mc.territotem.util.ItemStackInfo;
 import org.bukkit.util.BoundingBox;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
@@ -25,7 +26,7 @@ final class TotemGrowthHistory {
     private TotemGrowthHistory() {}
 
     static State of(Totem totem) {
-        return new State(totem.baseBounds(), totem.expansionHistory());
+        return new State(totem.baseBounds(), totem.growthHistory());
     }
 
     static @Nullable State read(Region region) {
@@ -78,7 +79,7 @@ final class TotemGrowthHistory {
         if (seeded.isZero()) {
             return new State(baseBounds, List.of());
         }
-        return new State(baseBounds, List.of(seeded));
+        return new State(baseBounds, List.of(TotemGrowthEntry.nonRefundable(seeded)));
     }
 
     private static JsonObject serialize(State state) {
@@ -86,11 +87,11 @@ final class TotemGrowthHistory {
         out.add("base_bounds", serializeBounds(state.baseBounds()));
 
         JsonArray history = new JsonArray();
-        for (Expansion expansion : state.history()) {
-            if (expansion.isZero()) {
+        for (TotemGrowthEntry growth : state.history()) {
+            if (growth.expansion().isZero()) {
                 continue;
             }
-            history.add(serializeExpansion(expansion));
+            history.add(serializeGrowthEntry(growth));
         }
         out.add("history", history);
         return out;
@@ -112,15 +113,15 @@ final class TotemGrowthHistory {
             return null;
         }
 
-        List<Expansion> history = new ArrayList<>();
+        List<TotemGrowthEntry> history = new ArrayList<>();
         if (historyElement != null) {
             for (JsonElement entry : historyElement.getAsJsonArray()) {
-                Expansion expansion = deserializeExpansion(entry);
-                if (expansion == null) {
+                TotemGrowthEntry growth = deserializeGrowthEntry(entry);
+                if (growth == null) {
                     return null;
                 }
-                if (!expansion.isZero()) {
-                    history.add(expansion);
+                if (!growth.expansion().isZero()) {
+                    history.add(growth);
                 }
             }
         }
@@ -189,6 +190,46 @@ final class TotemGrowthHistory {
         return new Expansion(up, down, north, south, east, west);
     }
 
+    private static JsonObject serializeGrowthEntry(TotemGrowthEntry growth) {
+        JsonObject out = new JsonObject();
+        out.add("expansion", serializeExpansion(growth.expansion()));
+
+        ItemStackInfo refundStack = growth.refundStack();
+        if (refundStack != null) {
+            out.add("refund_stack", serializeRefundStack(refundStack));
+        }
+        out.addProperty("drop_back_rate", growth.dropBackRate());
+        return out;
+    }
+
+    private static @Nullable TotemGrowthEntry deserializeGrowthEntry(JsonElement element) {
+        if (!element.isJsonObject()) {
+            return null;
+        }
+
+        JsonObject object = element.getAsJsonObject();
+        if (!object.has("expansion")) {
+            Expansion legacyExpansion = deserializeExpansion(element);
+            return (legacyExpansion == null) ? null : TotemGrowthEntry.nonRefundable(legacyExpansion);
+        }
+
+        Expansion expansion = deserializeExpansion(object.get("expansion"));
+        if (expansion == null) {
+            return null;
+        }
+
+        ItemStackInfo refundStack = deserializeRefundStack(object.get("refund_stack"));
+        Double rawDropBackRate = readDouble(object, "drop_back_rate");
+        double dropBackRate = (rawDropBackRate == null) ? 0d : rawDropBackRate;
+        if (dropBackRate < 0d || dropBackRate > 1d) {
+            return null;
+        }
+        if (refundStack == null && dropBackRate > 0d) {
+            return null;
+        }
+        return new TotemGrowthEntry(expansion, refundStack, dropBackRate);
+    }
+
     private static @Nullable Double readDouble(JsonObject object, String key) {
         JsonElement value = object.get(key);
         if (value == null || !value.isJsonPrimitive() || !value.getAsJsonPrimitive().isNumber()) {
@@ -200,6 +241,67 @@ final class TotemGrowthHistory {
             return null;
         }
         return parsed;
+    }
+
+    private static JsonObject serializeRefundStack(ItemStackInfo refundStack) {
+        JsonObject out = new JsonObject();
+        out.addProperty("material", refundStack.material().name());
+        out.addProperty("amount", refundStack.amount());
+        if (refundStack.itemSnbt() != null) {
+            out.addProperty("item_snbt", refundStack.itemSnbt());
+        }
+        return out;
+    }
+
+    private static @Nullable ItemStackInfo deserializeRefundStack(@Nullable JsonElement element) {
+        if (element == null || element.isJsonNull()) {
+            return null;
+        }
+        if (!element.isJsonObject()) {
+            return null;
+        }
+
+        JsonObject object = element.getAsJsonObject();
+        JsonElement materialElement = object.get("material");
+        if (materialElement == null || !materialElement.isJsonPrimitive() || !materialElement.getAsJsonPrimitive().isString()) {
+            return null;
+        }
+
+        org.bukkit.Material material;
+        try {
+            material = org.bukkit.Material.valueOf(materialElement.getAsString());
+        } catch (IllegalArgumentException ex) {
+            return null;
+        }
+
+        Integer amount = readInt(object, "amount");
+        if (amount == null || amount < 1) {
+            return null;
+        }
+
+        JsonElement snbtElement = object.get("item_snbt");
+        String itemSnbt = null;
+        if (snbtElement != null && !snbtElement.isJsonNull()) {
+            if (!snbtElement.isJsonPrimitive() || !snbtElement.getAsJsonPrimitive().isString()) {
+                return null;
+            }
+            itemSnbt = snbtElement.getAsString();
+        }
+
+        return new ItemStackInfo(material, amount, itemSnbt);
+    }
+
+    private static @Nullable Integer readInt(JsonObject object, String key) {
+        JsonElement value = object.get(key);
+        if (value == null || !value.isJsonPrimitive() || !value.getAsJsonPrimitive().isNumber()) {
+            return null;
+        }
+
+        double parsed = value.getAsDouble();
+        if (!Double.isFinite(parsed) || parsed != Math.rint(parsed)) {
+            return null;
+        }
+        return (int) parsed;
     }
 
     private static BoundingBox clipToContainedBounds(BoundingBox current, BoundingBox candidate) {
@@ -241,7 +343,7 @@ final class TotemGrowthHistory {
         );
     }
 
-    record State(BoundingBox baseBounds, List<Expansion> history) {
+    record State(BoundingBox baseBounds, List<TotemGrowthEntry> history) {
         State {
             Objects.requireNonNull(baseBounds, "baseBounds");
             baseBounds = baseBounds.clone();
@@ -254,7 +356,7 @@ final class TotemGrowthHistory {
         }
 
         @Override
-        public List<Expansion> history() {
+        public List<TotemGrowthEntry> history() {
             return List.copyOf(this.history);
         }
     }

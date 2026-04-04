@@ -25,6 +25,7 @@ import com.kntrel.mc.territotem.totem.event.TotemCoreRightClickedEvent;
 import com.kntrel.mc.territotem.totem.region.Expansion;
 import com.kntrel.mc.territotem.totem.region.ExpansionResult;
 import com.kntrel.mc.territotem.totem.region.ExpansionTable;
+import com.kntrel.mc.territotem.util.ItemStackInfo;
 import com.kntrel.util.Vec3i;
 import com.kntrel.util.tuple.Pair;
 import org.bukkit.Location;
@@ -47,11 +48,13 @@ import org.bukkit.plugin.Plugin;
 import org.jspecify.annotations.Nullable;
 import org.bukkit.util.BoundingBox;
 import java.math.BigDecimal;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.DoubleSupplier;
 import java.util.stream.Stream;
 
 final class TotemServiceListener implements Listener {
@@ -63,6 +66,7 @@ final class TotemServiceListener implements Listener {
     private final RegionContext regionContext_;
     private final Translator translator_;
     private final ExpansionTable expansionTable_;
+    private final double defaultDropBackRate_;
     private final Set<Material> allowedDeedsRequestItems_;
 
     TotemServiceListener(
@@ -70,6 +74,7 @@ final class TotemServiceListener implements Listener {
             RegionContext regionContext,
             Translator translator,
             ExpansionTable expansionTable,
+            double defaultDropBackRate,
             Set<Material> allowedDeedsRequestItems
     ) {
         this.plugin_ = regionContext.getPlugin();
@@ -77,6 +82,7 @@ final class TotemServiceListener implements Listener {
         this.regionContext_ = regionContext;
         this.translator_ = translator;
         this.expansionTable_ = expansionTable;
+        this.defaultDropBackRate_ = defaultDropBackRate;
         this.allowedDeedsRequestItems_ = Set.copyOf(allowedDeedsRequestItems);
     }
 
@@ -164,8 +170,10 @@ final class TotemServiceListener implements Listener {
 
         Totem totem = this.service_.totemOfCore(e.getCore()).orElse(null);
         if (totem == null) { return; }
-        if (!this.service_.rollbackLastExpansion(totem)) { return; }
+        TotemGrowthEntry growth = this.service_.rollbackLastGrowth(totem);
+        if (growth == null) { return; }
 
+        this.dropBackItems(e.getCore(), growth);
         this.regionContext_.displayRegion(totem.region(), e.getPlayer());
         e.setCancelled(true);
     }
@@ -372,7 +380,11 @@ final class TotemServiceListener implements Listener {
 
         TotemCore.Direction direction = e.getCore().getDirection();
         double scalar = row.pickExpansionScalar();
-        ExpansionResult result = totem.expand(expansionFor(direction, scalar));
+        ExpansionResult result = totem.expand(
+                expansionFor(direction, scalar),
+                refundStackData(itemStack, row.consumption()),
+                row.dropBackRateOr(this.defaultDropBackRate_)
+        );
         Player player = e.getPlayer();
         if (!result.hasGrowth()) {
             this.sendExpansionBlockedMessage(player, direction, result);
@@ -725,6 +737,23 @@ final class TotemServiceListener implements Listener {
         return Expansion.forDirection(direction, amount);
     }
 
+    static int rollDropBackCount(int attempts, double dropBackRate, DoubleSupplier random) {
+        if (attempts <= 0 || dropBackRate <= 0d) {
+            return 0;
+        }
+        if (dropBackRate >= 1d) {
+            return attempts;
+        }
+
+        int refunded = 0;
+        for (int i = 0; i < attempts; i++) {
+            if (random.getAsDouble() <= dropBackRate) {
+                refunded++;
+            }
+        }
+        return refunded;
+    }
+
     private static void consumeItems(Player player, EquipmentSlot hand, ItemStack stack, int amount) {
         if (stack.getAmount() <= amount) {
             stack = new ItemStack(Material.AIR);
@@ -757,5 +786,33 @@ final class TotemServiceListener implements Listener {
 
     private static boolean same(double a, double b) {
         return Math.abs(a - b) <= EPSILON;
+    }
+
+    private void dropBackItems(TotemCore core, TotemGrowthEntry growth) {
+        ItemStackInfo refundStack = growth.refundStack();
+        if (refundStack == null) {
+            return;
+        }
+
+        ItemStack template = refundStack.toItemStack();
+        int refunded = rollDropBackCount(growth.refundQuantity(), growth.dropBackRate(), ThreadLocalRandom.current()::nextDouble);
+        if (refunded <= 0) {
+            return;
+        }
+
+        int maxStackSize = Math.max(1, template.getMaxStackSize());
+        while (refunded > 0) {
+            int batch = Math.min(refunded, maxStackSize);
+            ItemStack drop = template.clone();
+            drop.setAmount(batch);
+            core.getWorld().dropItemNaturally(core.getCenter(), drop);
+            refunded -= batch;
+        }
+    }
+
+    private static ItemStackInfo refundStackData(ItemStack source, int amount) {
+        ItemStack refund = source.clone();
+        refund.setAmount(amount);
+        return ItemStackInfo.fromItemStack(refund);
     }
 }

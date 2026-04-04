@@ -1,7 +1,6 @@
 package com.kntrel.mc.territotem.totem;
 
 import com.kntrel.mc.regionLib.region.Region;
-import com.kntrel.mc.regionLib.region.dataContainer.RegionData;
 import com.kntrel.mc.territotem.structure.Structure;
 import com.kntrel.mc.territotem.structure.blueprint.InvalidBlueprintException;
 import com.kntrel.mc.territotem.structure.worldTile.WorldTile;
@@ -10,13 +9,12 @@ import com.kntrel.mc.territotem.totem.piece.TotemNameSignPiece;
 import com.kntrel.mc.territotem.totem.piece.TotemTile;
 import com.kntrel.mc.territotem.totem.region.Expansion;
 import com.kntrel.mc.territotem.totem.region.ExpansionResult;
+import com.kntrel.mc.territotem.util.ItemStackInfo;
 import com.kntrel.util.Vec3i;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.Lectern;
 import org.bukkit.block.Sign;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.bukkit.util.BoundingBox;
 
 import java.util.ArrayDeque;
@@ -27,14 +25,11 @@ import java.util.UUID;
 
 public class Totem {
 
-    //CONSTANTS
-    private static final Logger LOGGER = LoggerFactory.getLogger(Totem.class);
-
     //FIELDS
     private final TotemService provenance_;
     private final Structure structure_;
     private final Region region_;
-    private final Deque<Expansion> expansionHistory_;
+    private final Deque<TotemGrowthEntry> growthHistory_;
     private BoundingBox baseBounds_;
     private int deedsVersion_;
 
@@ -49,7 +44,7 @@ public class Totem {
         this.provenance_ = provenance;
         this.structure_ = structure;
         this.region_ = region;
-        this.expansionHistory_ = new ArrayDeque<>();
+        this.growthHistory_ = new ArrayDeque<>();
         this.baseBounds_ = region.getBoundingBox();
         this.deedsVersion_ = 0;
     }
@@ -74,11 +69,11 @@ public class Totem {
     public BoundingBox baseBounds() {
         return this.baseBounds_.clone();
     }
-    public List<Expansion> expansionHistory() {
-        return List.copyOf(this.expansionHistory_);
+    public List<TotemGrowthEntry> growthHistory() {
+        return List.copyOf(this.growthHistory_);
     }
-    public ExpansionResult expand(Expansion expansion) {
-        return this.provenance_.expand(this, expansion);
+    public ExpansionResult expand(Expansion expansion, ItemStackInfo refundStack, double dropBackRate) {
+        return this.provenance_.expand(this, expansion, refundStack, dropBackRate);
     }
     public World world() {
         return this.structure_.world();
@@ -92,30 +87,30 @@ public class Totem {
     public int incrementAndGetDeedsVersion() {
         return ++this.deedsVersion_;
     }
-    public void loadGrowthState(BoundingBox baseBounds, Iterable<Expansion> history) {
+    public void loadGrowthState(BoundingBox baseBounds, Iterable<TotemGrowthEntry> history) {
         this.baseBounds_ = baseBounds.clone();
-        this.expansionHistory_.clear();
+        this.growthHistory_.clear();
         if (history == null) {
             return;
         }
-        for (Expansion expansion : history) {
-            if (expansion == null || expansion.isZero()) {
+        for (TotemGrowthEntry growth : history) {
+            if (growth == null || growth.expansion().isZero()) {
                 continue;
             }
-            this.expansionHistory_.addLast(expansion);
+            this.growthHistory_.addLast(growth);
         }
     }
-    public void recordExpansion(Expansion expansion) {
-        if (expansion == null || expansion.isZero()) {
+    public void recordGrowth(TotemGrowthEntry growth) {
+        if (growth == null || growth.expansion().isZero()) {
             return;
         }
-        this.expansionHistory_.addLast(expansion);
+        this.growthHistory_.addLast(growth);
     }
-    public Expansion latestExpansion() {
-        return this.expansionHistory_.peekLast();
+    public TotemGrowthEntry latestGrowth() {
+        return this.growthHistory_.peekLast();
     }
-    public Expansion discardLatestExpansion() {
-        return this.expansionHistory_.pollLast();
+    public TotemGrowthEntry discardLatestGrowth() {
+        return this.growthHistory_.pollLast();
     }
     public Optional<Sign> nameSign() {
         World world = this.world();

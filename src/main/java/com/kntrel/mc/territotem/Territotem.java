@@ -78,6 +78,7 @@ public final class Territotem extends JavaPlugin {
                 regionContext,
                 totemTranslator,
                 config.expansionTable(),
+                config.dropBackRate(),
                 config.allowedDeedsRequestItems()
         );
         new TerritotemRegionFeatures(

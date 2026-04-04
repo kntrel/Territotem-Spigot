@@ -17,6 +17,7 @@ import com.kntrel.mc.territotem.totem.region.ExpansionTable;
 import com.kntrel.mc.territotem.totem.region.RegionAllocator;
 import com.kntrel.mc.territotem.totem.region.RegionPlaceResult;
 import com.kntrel.mc.territotem.util.ChunkKey;
+import com.kntrel.mc.territotem.util.ItemStackInfo;
 import com.kntrel.util.IntBoundingBox;
 import com.kntrel.util.Vec3i;
 import org.bukkit.World;
@@ -25,6 +26,7 @@ import org.bukkit.block.Sign;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.util.Collection;
@@ -52,6 +54,7 @@ public class TotemService {
             RegionContext regionContext,
             Translator translator,
             ExpansionTable expansionTable,
+            double dropBackRate,
             Set<org.bukkit.Material> allowedDeedsRequestItems
     ) {
         this.plugin_ = regionContext.getPlugin();
@@ -62,7 +65,7 @@ public class TotemService {
 
         this.assembler_.consume((s, r, c) -> this.loadTotem(s, r, c.deedsVersion(), true));
         this.plugin_.getServer().getPluginManager().registerEvents(
-                new TotemServiceListener(this, regionContext, translator, expansionTable, allowedDeedsRequestItems),
+                new TotemServiceListener(this, regionContext, translator, expansionTable, dropBackRate, allowedDeedsRequestItems),
                 this.plugin_
         );
     }
@@ -203,25 +206,25 @@ public class TotemService {
         totem.setEnabled(false);
     }
 
-    ExpansionResult expand(Totem totem, Expansion expansion) {
+    ExpansionResult expand(Totem totem, Expansion expansion, @Nullable ItemStackInfo refundStack, double dropBackRate) {
         ExpansionResult result = this.regionAllocator_.expand(totem.region(), expansion);
         if (result.hasGrowth()) {
-            totem.recordExpansion(result.accomplished());
+            totem.recordGrowth(new TotemGrowthEntry(result.accomplished(), refundStack, dropBackRate));
             totem.save();
         }
         return result;
     }
 
-    boolean rollbackLastExpansion(Totem totem) {
-        Expansion expansion = totem.latestExpansion();
-        if (expansion == null) {
-            return false;
+    @Nullable TotemGrowthEntry rollbackLastGrowth(Totem totem) {
+        TotemGrowthEntry growth = totem.latestGrowth();
+        if (growth == null) {
+            return null;
         }
 
-        this.regionAllocator_.contract(totem.region(), expansion);
-        totem.discardLatestExpansion();
+        this.regionAllocator_.contract(totem.region(), growth.expansion());
+        totem.discardLatestGrowth();
         totem.save();
-        return true;
+        return growth;
     }
 
 

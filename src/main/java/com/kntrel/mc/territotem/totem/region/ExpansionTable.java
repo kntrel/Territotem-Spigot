@@ -26,11 +26,21 @@ public final class ExpansionTable {
     public static ExpansionTable of(Row... rows) {
         return new ExpansionTable(rows);
     }
+    public static Row row(
+            Material item,
+            int consumption,
+            @Nullable NBTCompound nbt,
+            double expansionMin,
+            double expansionMax,
+            @Nullable Double dropBackRate
+    ) {
+        return new Row(item, consumption, nbt, expansionMin, expansionMax, dropBackRate);
+    }
     public static Row row(Material item, int consumption, @Nullable NBTCompound nbt, double expansionMin, double expansionMax) {
-        return new Row(item, consumption, nbt, expansionMin, expansionMax);
+        return new Row(item, consumption, nbt, expansionMin, expansionMax, null);
     }
     public static Row row(Material item, double expansionMin, double expansionMax) {
-        return new Row(item, 1, null, expansionMin, expansionMax);
+        return new Row(item, 1, null, expansionMin, expansionMax, null);
     }
 
 
@@ -72,7 +82,8 @@ public final class ExpansionTable {
             int consumption,
             @Nullable NBTCompound nbt,
             double expansionMin,
-            double expansionMax
+            double expansionMax,
+            @Nullable Double dropBackRate
     ) {
 
         public Row {
@@ -84,6 +95,9 @@ public final class ExpansionTable {
             validateExpansion("expansionMax", expansionMax);
             if (expansionMin > expansionMax) {
                 throw new IllegalArgumentException("expansionMin must be <= expansionMax");
+            }
+            if (dropBackRate != null && (!Double.isFinite(dropBackRate) || dropBackRate < 0d || dropBackRate > 1d)) {
+                throw new IllegalArgumentException("dropBackRate must be between 0 and 1");
             }
         }
 
@@ -117,6 +131,10 @@ public final class ExpansionTable {
                 return this.expansionMin;
             }
             return this.expansionMin + (ThreadLocalRandom.current().nextDouble() * (this.expansionMax - this.expansionMin));
+        }
+
+        public double dropBackRateOr(double fallback) {
+            return (this.dropBackRate != null) ? this.dropBackRate : fallback;
         }
 
         private static void validateExpansion(String name, double value) {

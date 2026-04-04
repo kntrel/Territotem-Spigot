@@ -1,56 +1,60 @@
 totem:
   directional_selector_item: AMETHYST_BLOCK
+  # Default refund chance applied per consumed item when shrinking the totem back.
+  # Individual expansion rows may override this with their own drop_back_rate.
+  drop_back_rate: 0.5
   expansion:
-    # Farmable. Not recommended unless farming of these is disabled.
-    # - item: RAW_COPPER
-    #   consume: 1
-    #   min: 0.15
-    #   max: 0.25
-    # - item: COPPER_NUGGET
-    #   consume: 9
-    #   min: 0.20
-    #   max: 0.30
-    # - item: COPPER_INGOT
-    #   consume: 1
-    #   min: 0.20
-    #   max: 0.30
-    # - item: COPPER_BLOCK
-    #   consume: 1
-    #   min: 2.0
-    #   max: 3.0
-    # - item: RAW_IRON
-    #   consume: 1
-    #   min: 0.30
-    #   max: 0.45
-    # - item: IRON_NUGGET
-    #   consume: 9
-    #   min: 0.35
-    #   max: 0.50
-    # - item: IRON_INGOT
-    #   consume: 1
-    #   min: 0.35
-    #   max: 0.50
-    # - item: IRON_BLOCK
-    #   consume: 1
-    #   min: 3.5
-    #   max: 5.0
-    #
-    # - item: RAW_GOLD
-    #   consume: 1
-    #   min: 0.40
-    #   max: 0.60
-    # - item: GOLD_NUGGET
-    #   consume: 9
-    #   min: 0.50
-    #   max: 0.70
-    # - item: GOLD_INGOT
-    #   consume: 1
-    #   min: 0.50
-    #   max: 0.70
-    # - item: GOLD_BLOCK
-    #   consume: 1
-    #   min: 5.0
-    #   max: 7.0
+  # Farmable. Not recommended unless farming of these is disabled.
+  # - item: RAW_COPPER
+  #   consume: 1
+  #   min: 0.15
+  #   max: 0.25
+  #   drop_back_rate: 0.1
+  # - item: COPPER_NUGGET
+  #   consume: 9
+  #   min: 0.20
+  #   max: 0.30
+  # - item: COPPER_INGOT
+  #   consume: 1
+  #   min: 0.20
+  #   max: 0.30
+  # - item: COPPER_BLOCK
+  #   consume: 1
+  #   min: 2.0
+  #   max: 3.0
+  # - item: RAW_IRON
+  #   consume: 1
+  #   min: 0.30
+  #   max: 0.45
+  # - item: IRON_NUGGET
+  #   consume: 9
+  #   min: 0.35
+  #   max: 0.50
+  # - item: IRON_INGOT
+  #   consume: 1
+  #   min: 0.35
+  #   max: 0.50
+  # - item: IRON_BLOCK
+  #   consume: 1
+  #   min: 3.5
+  #   max: 5.0
+  #
+  # - item: RAW_GOLD
+  #   consume: 1
+  #   min: 0.40
+  #   max: 0.60
+  # - item: GOLD_NUGGET
+  #   consume: 9
+  #   min: 0.50
+  #   max: 0.70
+  # - item: GOLD_INGOT
+  #   consume: 1
+  #   min: 0.50
+  #   max: 0.70
+  # - item: GOLD_BLOCK
+  #   consume: 1
+  #   min: 5.0
+  #   max: 7.0
     - item: DIAMOND
       consume: 1
       min: 6.0
@@ -59,6 +63,7 @@ totem:
       consume: 1
       min: 54.0
       max: 60.0
+      drop_back_rate: 0.4
     - item: NETHERITE_INGOT
       consume: 1
       min: 24.0
