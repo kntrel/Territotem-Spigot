@@ -12,12 +12,12 @@ import com.kntrel.mc.territotem.totem.region.Expansion;
 import com.kntrel.mc.territotem.totem.region.ExpansionResult;
 import com.kntrel.mc.territotem.util.ItemStackInfo;
 import com.kntrel.util.Vec3i;
+import org.bukkit.Sound;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.Lectern;
 import org.bukkit.block.Sign;
 import org.bukkit.util.BoundingBox;
-
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.List;
@@ -25,6 +25,15 @@ import java.util.Optional;
 import java.util.UUID;
 
 public class Totem {
+
+    //CONSTANTS
+    public static final long
+            AMBIENT_SOUND_RATE  = 80L;
+    public static final Sound
+            AMBIENT_SOUND       = Sound.BLOCK_BEACON_AMBIENT,
+            FEED_SOUND          = Sound.BLOCK_RESPAWN_ANCHOR_CHARGE,
+            HIT_SOUND           = Sound.ENTITY_BLAZE_HURT;
+
 
     //FIELDS
     private final TotemService provenance_;

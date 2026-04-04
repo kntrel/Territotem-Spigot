@@ -41,15 +41,15 @@ public class TotemCore {
             NULL_TRANSLATION    = new Vector3f(0, 0, 0),
             NULL_SCALE          = new Vector3f(1, 1, 1);
     static final String METADATA_KEY = "totem_core";
-    public static final long
-            AMBIENT_SOUND_RATE  = 40L;
     public static final Sound
             ACTIVATE_SOUND      = Sound.BLOCK_BEACON_ACTIVATE,
             DEACTIVATE_SOUND    = Sound.BLOCK_BEACON_DEACTIVATE,
-            AMBIENT_SOUND       = Sound.BLOCK_BEACON_AMBIENT,
             AMETHIST_SOUND      = Sound.BLOCK_AMETHYST_BLOCK_PLACE,
             ENDER_EYE_SOUND     = Sound.BLOCK_END_PORTAL_FRAME_FILL,
-            GLASS_BREAK_SOUND   = Sound.BLOCK_GLASS_BREAK;
+            GLASS_BREAK_SOUND   = Sound.BLOCK_GLASS_BREAK,
+            DIRECTIONAL_PLACED_SOUND = Sound.BLOCK_IRON_BREAK,
+            DIRECTIONAL_REMOVE_SOUND = Sound.BLOCK_IRON_BREAK,
+            DIRECTIONAL_SWAP_SOUND   = Sound.BLOCK_SHELF_MULTI_SWAP;
 
 
     //ENUMS
@@ -126,7 +126,10 @@ public class TotemCore {
         return this.direction_;
     }
     public Location getCenter() {
-        return this.location(CENTER);
+        return this.getLocation(CENTER);
+    }
+    public Location getLocation() {
+        return this.getLocation(ZEROES);
     }
 
 
@@ -140,7 +143,7 @@ public class TotemCore {
         if (state == State.EMPTY) {
             this.kill();
             this.refinishBlock();
-            emitStateChangeSound(old, this.state_, this.world_, this.location());
+            emitStateChangeSound(old, this.state_, this.world_, this.getLocation());
             return;
         }
 
@@ -176,11 +179,12 @@ public class TotemCore {
         }
 
         this.refinishBlock();
-        emitStateChangeSound(old, this.state_, this.world_, this.location());
+        emitStateChangeSound(old, this.state_, this.world_, this.getLocation());
     }
     public void setDirection(@NonNull Direction direction) {
         Objects.requireNonNull(direction);
         if (direction == this.direction_) { return; }
+        Direction old = this.direction_;
         this.direction_ = direction;
 
         if (direction == Direction.ALL) {
@@ -191,26 +195,27 @@ public class TotemCore {
         }
         this.refinishDirectional();
         this.refinishDirectionalEnderEye();
+        emitDirectionChangeSound(old, this.direction_, this.world_, this.getLocation());
     }
     public void breakDown() {
         Block b = this.world_.getBlockAt(this.coordinates_.x(), this.coordinates_.y(), this.coordinates_.z());
         b.setType(Material.AIR, false);
 
         if (this.state_ != State.ACTIVE) {
-            this.world_.dropItemNaturally(this.location(CENTER), new ItemStack(Material.TINTED_GLASS, 1));
+            this.world_.dropItemNaturally(this.getLocation(CENTER), new ItemStack(Material.TINTED_GLASS, 1));
         }
         if (this.state_ == State.END_EYE || this.state_ == State.FULL || this.state_ == State.ACTIVE) {
-            this.world_.dropItemNaturally(this.location(CENTER), new ItemStack(Material.ENDER_EYE, 1));
+            this.world_.dropItemNaturally(this.getLocation(CENTER), new ItemStack(Material.ENDER_EYE, 1));
         }
         if (this.state_ != State.END_EYE) {
-            this.world_.dropItemNaturally(this.location(CENTER), new ItemStack(Material.AMETHYST_SHARD, 1));
+            this.world_.dropItemNaturally(this.getLocation(CENTER), new ItemStack(Material.AMETHYST_SHARD, 1));
         }
         if (this.state_ == State.ACTIVE && this.direction_ != Direction.ALL) {
-            this.world_.dropItemNaturally(this.location(CENTER), new ItemStack(this.directionalSelectorItem_, 1));
+            this.world_.dropItemNaturally(this.getLocation(CENTER), new ItemStack(this.directionalSelectorItem_, 1));
         }
 
         this.kill();
-        emitStateChangeSound(this.state_, State.EMPTY, this.world_, this.location());
+        emitStateChangeSound(this.state_, State.EMPTY, this.world_, this.getLocation());
     }
     public void kill() {
         kill(this.amethist_);
@@ -225,14 +230,14 @@ public class TotemCore {
     public void removeDirection() {
         if (this.direction_ == Direction.ALL) { return; }
 
-        this.world_.dropItemNaturally(this.location(CENTER), new ItemStack(this.directionalSelectorItem_, 1));
+        this.world_.dropItemNaturally(this.getLocation(CENTER), new ItemStack(this.directionalSelectorItem_, 1));
         this.setDirection(Direction.ALL);
     }
 
 
 
     //HELPERS
-    private Location location(Vector offset) {
+    private Location getLocation(Vector offset) {
         return new Location(
                 this.world_,
                 this.coordinates_.x() + offset.getX(),
@@ -240,15 +245,12 @@ public class TotemCore {
                 this.coordinates_.z() + offset.getZ()
         );
     }
-    private Location location() {
-        return this.location(ZEROES);
-    }
     private void refinishAmethist() {
         if (this.amethist_ == null) { return; }
 
         this.amethist_.setBlock(Material.MEDIUM_AMETHYST_BUD.createBlockData());
         this.amethist_.setBrightness(ACTIVE_BRIGHTNESS);
-        this.amethist_.teleport(this.location());
+        this.amethist_.teleport(this.getLocation());
     }
     private void refinishEndEye() {
         if (this.enderEye_ == null) { return; }
@@ -274,7 +276,7 @@ public class TotemCore {
 
         this.enderEye_.setBrightness(brightness);
         this.enderEye_.setTransformation(new Transformation(NULL_TRANSLATION, NULL_ROTATION, scale, NULL_ROTATION));
-        this.enderEye_.teleport(this.location(offset));
+        this.enderEye_.teleport(this.getLocation(offset));
     }
     private void refinishBlock() {
         Block b = this.world_.getBlockAt(this.coordinates_.x(), this.coordinates_.y(), this.coordinates_.z());
@@ -289,7 +291,7 @@ public class TotemCore {
         this.hitBox_.setMetadata(METADATA_KEY, new FixedMetadataValue(this.plugin_, this.id_.toString()));
         this.hitBox_.setInteractionHeight(1.4f);
         this.hitBox_.setInteractionWidth(1.3f);
-        this.hitBox_.teleport(this.location(CENTER_BOTTOM));
+        this.hitBox_.teleport(this.getLocation(CENTER_BOTTOM));
     }
     public void refinishDirectional() {
         if (this.directional_ == null) { return; }
@@ -297,7 +299,7 @@ public class TotemCore {
 
         this.directional_.setBlock(this.directionalSelectorItem_.createBlockData());
         this.directional_.setBrightness(ACTIVE_BRIGHTNESS);
-        this.directional_.teleport(this.location());
+        this.directional_.teleport(this.getLocation());
 
         Vector3f scale = new Vector3f(
             this.direction_.isOnX() ? .25f : .2f,
@@ -329,20 +331,20 @@ public class TotemCore {
         Transformation transformation = new Transformation(NULL_TRANSLATION, NULL_ROTATION, scale, NULL_ROTATION);
 
         this.enderEye_.setTransformation(transformation);
-        this.enderEye_.teleport(this.location(correction.add(ENDER_EYE_OFFSET)));
+        this.enderEye_.teleport(this.getLocation(correction.add(ENDER_EYE_OFFSET)));
     }
     private BlockDisplay spawnBlockDisplay() {
-        BlockDisplay out = (BlockDisplay) this.world_.spawnEntity(this.location(), EntityType.BLOCK_DISPLAY);
+        BlockDisplay out = (BlockDisplay) this.world_.spawnEntity(this.getLocation(), EntityType.BLOCK_DISPLAY);
         tweakEntity(out);
         return out;
     }
     private ItemDisplay spawnItemDisplay() {
-        ItemDisplay out = (ItemDisplay) this.world_.spawnEntity(this.location(), EntityType.ITEM_DISPLAY);
+        ItemDisplay out = (ItemDisplay) this.world_.spawnEntity(this.getLocation(), EntityType.ITEM_DISPLAY);
         tweakEntity(out);
         return out;
     }
     private Interaction spawnInteraction() {
-        Interaction out = (Interaction) this.world_.spawnEntity(this.location(), EntityType.INTERACTION);
+        Interaction out = (Interaction) this.world_.spawnEntity(this.getLocation(), EntityType.INTERACTION);
         tweakEntity(out);
         return out;
     }
@@ -383,5 +385,19 @@ public class TotemCore {
         for (Sound sound : sounds) {
             world.playSound(location, sound, SoundCategory.BLOCKS, 5, 1);
         }
+    }
+    private static void emitDirectionChangeSound(Direction old, Direction current, World world, Location location) {
+        if (old == current) { return; }
+
+        Sound sound;
+        if (old == Direction.ALL) {
+            sound = DIRECTIONAL_REMOVE_SOUND;
+        } else if (current == Direction.ALL) {
+            sound = DIRECTIONAL_PLACED_SOUND;
+        } else {
+            sound = DIRECTIONAL_SWAP_SOUND;
+        }
+
+        world.playSound(location, sound, 1, 1);
     }
 }

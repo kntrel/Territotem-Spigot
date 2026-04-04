@@ -163,18 +163,21 @@ final class TotemServiceListener implements Listener {
         this.service_.destroyTotem(totem);
     }
 
-    @EventHandler
+    @EventHandler(ignoreCancelled = true)
     void onCoreHit(TotemCoreHitEvent e) {
-        if (e.isCancelled()) { return; }
         if (e.getCore().getDirection() != TotemCore.Direction.ALL) { return; }
 
         Totem totem = this.service_.totemOfCore(e.getCore()).orElse(null);
         if (totem == null) { return; }
         TotemGrowthEntry growth = this.service_.rollbackLastGrowth(totem);
-        if (growth == null) { return; }
+        if (growth == null) {
+            this.regionContext_.stopDisplayRegion(totem.region());
+            return;
+        }
 
         this.dropBackItems(e.getCore(), growth);
         this.regionContext_.displayRegion(totem.region(), e.getPlayer());
+        totem.world().playSound(totem.core().getLocation(), Totem.HIT_SOUND, 5, .8f);
         e.setCancelled(true);
     }
 
@@ -394,6 +397,7 @@ final class TotemServiceListener implements Listener {
         consumeItems(player, e.getHand(), itemStack, row.consumption());
         swingHand(player, e.getHand());
         totem.region().display(player);
+        totem.world().playSound(totem.core().getLocation(), Totem.FEED_SOUND, 5, 1.5f);
         this.sendExpansionFeedback(player, totem, direction, result);
         e.setCancelled(true);
     }

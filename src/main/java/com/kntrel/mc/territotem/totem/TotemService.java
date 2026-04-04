@@ -76,8 +76,8 @@ public class TotemService {
         this.plugin_.getServer().getScheduler().runTaskTimer(
                 this.plugin_,
                 this::emitAmbientSounds,
-                TotemCore.AMBIENT_SOUND_RATE,
-                TotemCore.AMBIENT_SOUND_RATE
+                Totem.AMBIENT_SOUND_RATE,
+                Totem.AMBIENT_SOUND_RATE
         );
     }
 
@@ -245,7 +245,7 @@ public class TotemService {
                 continue;
             }
 
-            core.getWorld().playSound(core.getCenter(), TotemCore.AMBIENT_SOUND, SoundCategory.BLOCKS, 1, .8f);
+            core.getWorld().playSound(core.getCenter(), Totem.AMBIENT_SOUND, SoundCategory.BLOCKS, 1, .8f);
         }
     }
 
