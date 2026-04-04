@@ -1,10 +1,23 @@
 totem:
+  #The block item to right-click a totem core with in order to lock its next expansion to one direction.
+  #Right-clicking from another angle changes the direction, and hitting the core drops this item back and restores
+  #expansion in all directions.
+  #Must be defined as a Spigot Material enum value, and it must be a block.
   directional_selector_item: AMETHYST_BLOCK
-  # Default refund chance applied per consumed item when shrinking the totem back.
-  # Individual expansion rows may override this with their own drop_back_rate.
+
+  #Value between 0 and 1 that corresponds to the per-item refund chance when shrinking the totem back after damage.
+  #Individual expansion rows may override this with their own drop_back_rate.
   drop_back_rate: 0.5
+
+  #Defines the items that can feed a totem and how much territory each one can add.
+  #Each row consumes `consume` matching items and picks a random growth amount between `min` and `max`.
+  #If the totem is set to expand in all directions, that amount is split evenly across all six sides.
+  #Optional fields:
+  # - nbt: Further restricts the match to items with matching NBT data.
+  # - drop_back_rate: Overrides the global refund chance for this row only.
+  #Must be filled with Spigot Material enum values. https://hub.spigotmc.org/javadocs/bukkit/org/bukkit/Material.html
   expansion:
-  # Farmable. Not recommended unless farming of these is disabled.
+  #Farmable. Not recommended unless farming of these is disabled.
   # - item: RAW_COPPER
   #   consume: 1
   #   min: 0.15
@@ -72,38 +85,75 @@ totem:
       consume: 1
       min: 216.0
       max: 270.0
+
+  #Determines which items you may right-click a totem core with in order to obtain its deeds.
+  #(Deeds are books, so leaving WRITABLE_BOOK here is recommended.)
+  #Must be filled with Spigot Material enum values. https://hub.spigotmc.org/javadocs/bukkit/org/bukkit/Material.html
   deeds_request_items:
     - WRITABLE_BOOK
 
 chunk_persistence:
-  # How often, in ticks, dirty chunk metadata is batch-persisted while the chunk remains loaded.
-  # Values less than or equal to zero disable the recurring batch task.
+  #How often, in ticks, dirty chunk metadata is batch-persisted while the chunk remains loaded.
+  #Any value less than or equal to 0 disables the recurring batch task.
   period_ticks: 200
 
 region:
+  #The minimum and maximum length a region name may have.
   min_name_length: 4
   max_name_length: 32
+
+  #Defines what happens when the player does not have the same permissions in overlapping regions.
+  # - ALL: The player must have permission in all of them.
+  # - ANY: The player must have permission in any of them.
+  # - OLDEST: The permissions of the oldest region take priority.
+  # - NEWEST: The permissions of the newest region take priority.
   permissions_overlap_mode: OLDEST
+
+  #How long, in seconds, temporary region displays remain visible after the plugin shows them to a player.
   display_duration_seconds: 10
 
   cache:
+    #The spatial cache cell size used for region lookups.
+    #Higher values use fewer, larger cells; lower values use more, smaller cells.
+    #Must be a power of two (32, 64, 128...)
     cell_size: 32
+
+    #How many cache cells may be kept in memory for region lookups.
     capacity: 1024
 
   player_sampling:
-    period_ticks: 1
-    movement_tolerance: 0.0
+    #Value in ticks that determines how often the game checks players' locations to detect region enter and leave events.
+    #Affects anything relying on player entering and leaving regions detection. Has no effect on abilities.
+    #Any value less than or equal to 0 disables player sampling.
+    period_ticks: 8
+
+    #Minimum movement distance required before a new sample is treated as movement for enter and leave checks.
+    #Use 0.0 to evaluate every sample.
+    movement_tolerance: 0.1
 
   enter_title:
+    #Configures the titles to display whenever a player enters a region.
     enabled: true
+
+    #The duration in ticks of the fade-in transition.
     fade_in: 10
+
+    #The duration in ticks the title will stay on screen.
     stay: 20
+
+    #The duration in ticks of the fade-out transition.
     fade_out: 10
 
+  #The buttons the plugin will consider as "enforced", affected by the press_enforced_buttons ability.
+  #This allows having stronger buttons that only certain group members can press.
+  #Must be filled with Spigot Material enum values. https://hub.spigotmc.org/javadocs/bukkit/org/bukkit/Material.html
   enforced_buttons:
     - STONE_BUTTON
     - POLISHED_BLACKSTONE_BUTTON
 
+  #A lever is considered "locked" when it is attached to one of these blocks.
+  #Such levers are affected by the pull_locked_levers ability, allowing only certain group members to use them.
+  #Must be filled with Spigot Material enum values. https://hub.spigotmc.org/javadocs/bukkit/org/bukkit/Material.html
   lever_locker_blocks:
     - COPPER_BLOCK
     - CUT_COPPER
