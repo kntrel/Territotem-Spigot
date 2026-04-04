@@ -9,6 +9,7 @@ import com.kntrel.mc.territotem.structure.Structure;
 import com.kntrel.mc.territotem.structure.piece.Tile;
 import com.kntrel.mc.territotem.structure.worldTile.WorldTile;
 import com.kntrel.mc.territotem.totem.core.TotemCore;
+import com.kntrel.mc.territotem.totem.core.TotemCoreTracker;
 import com.kntrel.mc.territotem.totem.deeds.DeedsFactory;
 import com.kntrel.mc.territotem.totem.piece.TotemCorePiece;
 import com.kntrel.mc.territotem.totem.region.Expansion;
@@ -43,6 +44,7 @@ public class TotemService {
 
     //FIELDS
     private final Plugin plugin_;
+    private final TotemCoreTracker coreTracker_;
     private final TotemAssembler assembler_;
     private final DeedsFactory deedsFactory_;
     private final RegionAllocator regionAllocator_;
@@ -54,10 +56,12 @@ public class TotemService {
             RegionContext regionContext,
             Translator translator,
             ExpansionTable expansionTable,
+            TotemCoreTracker coreTracker,
             double dropBackRate,
             Set<org.bukkit.Material> allowedDeedsRequestItems
     ) {
         this.plugin_ = regionContext.getPlugin();
+        this.coreTracker_ = coreTracker;
         this.assembler_ = new TotemAssembler(this.plugin_);
         this.deedsFactory_ = new DeedsFactory(regionContext, translator.getChild("deeds"));
         this.regionAllocator_ = new RegionAllocator(regionContext, Condition.hasDataKey(TOTEM_DATA_KEY));
@@ -162,6 +166,7 @@ public class TotemService {
 
         Region region = placed.region();
         totem = this.loadTotem(structure, region, 0, false);
+        totem.core().setState(TotemCore.State.ACTIVE);
         totem.save();
         return NewTotemResult.created(totem);
     }
@@ -179,8 +184,7 @@ public class TotemService {
 
         Totem totem = this.totemStore_.get(structure.id()).orElse(null);
         if (totem == null) {
-            LOGGER.warn("A totem structure update was triggered, but no loaded totem claims the structure. Dropping the structure");
-            structure.drop();
+            LOGGER.debug("A totem structure update was triggered, but no loaded totem claims the structure.");
             return;
         }
 
@@ -230,7 +234,16 @@ public class TotemService {
 
     //HELPERS
     private Totem loadTotem(Structure structure, Region region, int deedsVersion, boolean bootstrapMissingGrowthHistory) {
-        Totem totem = new Totem(this, structure, region);
+        if (!(structure.blueprint() instanceof TotemBlueprint blueprint)) {
+            throw new IllegalArgumentException("not a totem structure");
+        }
+        Tile coreTile = blueprint.core();
+        TotemCore core = this.coreTracker_.getCoreAt(structure.world().getUID(), coreTile.offset().add(structure.origin()));
+        if (core == null) {
+            throw new IllegalStateException("Totem structure has no totem core");
+        }
+
+        Totem totem = new Totem(this, structure, region, core);
         totem.setDeedsVersion(deedsVersion);
         TotemGrowthHistory.State growthState = TotemGrowthHistory.read(region);
         if (growthState == null) {
@@ -269,9 +282,9 @@ public class TotemService {
 
 
     //SUBTYPES
-    record NewTotemResult(Status status, Totem totem, List<Region> blockers) {
+    public record NewTotemResult(Status status, Totem totem, List<Region> blockers) {
 
-        NewTotemResult {
+        public NewTotemResult {
             blockers = (blockers == null) ? List.of() : List.copyOf(blockers);
         }
 

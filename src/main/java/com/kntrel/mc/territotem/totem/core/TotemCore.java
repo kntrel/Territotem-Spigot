@@ -1,9 +1,7 @@
 package com.kntrel.mc.territotem.totem.core;
 
 import com.kntrel.util.Vec3i;
-import org.bukkit.Location;
-import org.bukkit.Material;
-import org.bukkit.World;
+import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.entity.*;
 import org.bukkit.inventory.ItemStack;
@@ -15,31 +13,45 @@ import org.joml.AxisAngle4f;
 import org.joml.Vector3f;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
-import java.util.Map;
-import java.util.Objects;
-import java.util.UUID;
+
+import java.util.*;
 
 public class TotemCore {
 
     //CONSTANTS
-    private static final Vector ZEROES = new Vector(0, 0, 0),
-                                ENDER_EYE_OFFSET = new Vector(.5, .9, .5),
-                                CENTER = new Vector(.5, .5, .5),
-                                CENTER_BOTTOM = new Vector(.5, 0, .5);
-    private static final Display.Brightness BRIGHTNESS = new Display.Brightness(15, 0);
     private static final Map<Direction, Vector3f> TRANSLATIONS = Map.of(
-            Direction.UP, new Vector3f(.4f, 1.2f, .4f),
-            Direction.DOWN, new Vector3f(.4f, .4f, .4f),
-            Direction.EAST, new Vector3f(.9f, .8f, .4f),
-            Direction.WEST, new Vector3f(-.1f, .8f, .4f),
-            Direction.NORTH, new Vector3f(.4f, .8f, -.1f),
-            Direction.SOUTH, new Vector3f(.4f, .8f, .9f)
+            Direction.UP        , new Vector3f(.4f, 1.2f, .4f),
+            Direction.DOWN      , new Vector3f(.4f, .4f, .4f),
+            Direction.EAST      , new Vector3f(.9f, .8f, .4f),
+            Direction.WEST      , new Vector3f(-.1f, .8f, .4f),
+            Direction.NORTH     , new Vector3f(.4f, .8f, -.1f),
+            Direction.SOUTH     , new Vector3f(.4f, .8f, .9f)
     );
+    private static final Vector
+            ZEROES              = new Vector(0, 0, 0),
+            ENDER_EYE_OFFSET    = new Vector(.5, .9, .5),
+            CENTER              = new Vector(.5, .5, .5),
+            CENTER_BOTTOM       = new Vector(.5, 0, .5);
+    private static final Display.Brightness
+            ACTIVE_BRIGHTNESS   = new Display.Brightness(15, 15),
+            INACTIVE_BRIGHTNESS = new Display.Brightness(8, 0);
+    private static final AxisAngle4f
+            NULL_ROTATION       = new AxisAngle4f(0, 0, 0, 1);
+    private static final Vector3f
+            NULL_TRANSLATION    = new Vector3f(0, 0, 0),
+            NULL_SCALE          = new Vector3f(1, 1, 1);
     static final String METADATA_KEY = "totem_core";
+    public static final Sound
+            ACTIVATE_SOUND      = Sound.BLOCK_BEACON_ACTIVATE,
+            DEACTIVATE_SOUND    = Sound.BLOCK_BEACON_DEACTIVATE,
+            AMBIENT_SOUND       = Sound.BLOCK_BEACON_AMBIENT,
+            AMETHIST_SOUND      = Sound.BLOCK_AMETHYST_BLOCK_PLACE,
+            ENDER_EYE_SOUND     = Sound.BLOCK_END_PORTAL_FRAME_FILL,
+            GLASS_BREAK_SOUND   = Sound.BLOCK_GLASS_BREAK;
 
 
     //ENUMS
-    public enum State { EMPTY, AMETHIST, END_EYE, FULL, ACTIVE }
+    public enum State { EMPTY, AMETHIST, END_EYE, FULL, ACTIVE, INACTIVE }
     public enum Direction{
         UP, DOWN, SOUTH, NORTH, EAST, WEST, ALL;
 
@@ -120,22 +132,21 @@ public class TotemCore {
     public void setState(@NonNull State state) {
         Objects.requireNonNull(state);
         if (state == this.state_) { return; }
+        State old = this.state_;
         this.state_ = state;
 
         if (state == State.EMPTY) {
             this.kill();
             this.refinishBlock();
+            emitStateChangeSound(old, this.state_, this.world_, this.location());
             return;
         }
 
-        if (state == State.FULL || state == State.END_EYE || state == State.ACTIVE) {
+        if (state == State.FULL || state == State.END_EYE || state == State.ACTIVE || state == State.INACTIVE) {
             if (this.enderEye_ == null) {
                 this.enderEye_ = this.spawnItemDisplay();
             }
             this.refinishEndEye();
-            this.enderEye_.setBillboard(
-                    (state == State.ACTIVE) ? Display.Billboard.CENTER : Display.Billboard.FIXED
-            );
         } else {
             kill(this.enderEye_);
             this.enderEye_ = null;
@@ -152,7 +163,7 @@ public class TotemCore {
             this.amethist_ = null;
         }
 
-        if (state == State.ACTIVE) {
+        if (state == State.ACTIVE || state == State.INACTIVE) {
             if (this.hitBox_ == null) {
                 this.hitBox_ = this.spawnInteraction();
             }
@@ -163,6 +174,7 @@ public class TotemCore {
         }
 
         this.refinishBlock();
+        emitStateChangeSound(old, this.state_, this.world_, this.location());
     }
     public void setDirection(@NonNull Direction direction) {
         Objects.requireNonNull(direction);
@@ -195,6 +207,7 @@ public class TotemCore {
             this.world_.dropItemNaturally(this.location(CENTER), new ItemStack(this.directionalSelectorItem_, 1));
         }
 
+        this.setState(State.EMPTY);
         this.kill();
     }
     public void kill() {
@@ -232,19 +245,40 @@ public class TotemCore {
         if (this.amethist_ == null) { return; }
 
         this.amethist_.setBlock(Material.MEDIUM_AMETHYST_BUD.createBlockData());
-        this.amethist_.setBrightness(BRIGHTNESS);
+        this.amethist_.setBrightness(ACTIVE_BRIGHTNESS);
         this.amethist_.teleport(this.location());
     }
     private void refinishEndEye() {
         if (this.enderEye_ == null) { return; }
 
         this.enderEye_.setItemStack(new ItemStack(Material.ENDER_EYE));
-        this.enderEye_.teleport(this.location(ENDER_EYE_OFFSET));
-        this.enderEye_.setBrightness(BRIGHTNESS);
+
+        Display.Brightness brightness = ACTIVE_BRIGHTNESS;
+        Vector3f scale = NULL_SCALE;
+        Vector offset = ENDER_EYE_OFFSET;
+        if (this.state_ == State.END_EYE || this.state_ == State.FULL) {
+            offset = offset.clone().subtract(new Vector(0, .2, 0));
+            scale = new Vector3f(.6f, .6f, .6f);
+            this.enderEye_.setBillboard(Display.Billboard.FIXED);
+        }
+        if (this.state_ == State.INACTIVE) {
+            offset = offset.clone().subtract(new Vector(0, .5, 0));
+            brightness = INACTIVE_BRIGHTNESS;
+            this.enderEye_.setBillboard(Display.Billboard.VERTICAL);
+        }
+        if (this.state_ == State.ACTIVE) {
+            this.enderEye_.setBillboard(Display.Billboard.CENTER);
+        }
+
+        this.enderEye_.setBrightness(brightness);
+        this.enderEye_.setTransformation(new Transformation(NULL_TRANSLATION, NULL_ROTATION, scale, NULL_ROTATION));
+        this.enderEye_.teleport(this.location(offset));
     }
     private void refinishBlock() {
         Block b = this.world_.getBlockAt(this.coordinates_.x(), this.coordinates_.y(), this.coordinates_.z());
-        Material type = (this.state_ == State.ACTIVE) ? Material.MEDIUM_AMETHYST_BUD : Material.TINTED_GLASS;
+        Material type = (this.state_ == State.ACTIVE || this.state_ == State.INACTIVE)
+                ? Material.MEDIUM_AMETHYST_BUD
+                : Material.TINTED_GLASS;
         b.setType(type, false);
     }
     private void refinishHitBox() {
@@ -260,7 +294,7 @@ public class TotemCore {
         if (this.direction_ == null || this.direction_ == Direction.ALL) { return; }
 
         this.directional_.setBlock(this.directionalSelectorItem_.createBlockData());
-        this.directional_.setBrightness(BRIGHTNESS);
+        this.directional_.setBrightness(ACTIVE_BRIGHTNESS);
         this.directional_.teleport(this.location());
 
         Vector3f scale = new Vector3f(
@@ -290,13 +324,11 @@ public class TotemCore {
             case ALL -> new Vector(0, 0, 0);
         };
         Vector3f scale = (dir == Direction.ALL) ? new Vector3f(1, 1, 1) : new Vector3f(.9f,.9f,.9f);
-        AxisAngle4f rotation = new AxisAngle4f(0, 0, 0, 1);
-        Transformation transformation = new Transformation(new Vector3f(0, 0, 0), rotation, scale, rotation);
+        Transformation transformation = new Transformation(NULL_TRANSLATION, NULL_ROTATION, scale, NULL_ROTATION);
 
         this.enderEye_.setTransformation(transformation);
         this.enderEye_.teleport(this.location(correction.add(ENDER_EYE_OFFSET)));
     }
-
     private BlockDisplay spawnBlockDisplay() {
         BlockDisplay out = (BlockDisplay) this.world_.spawnEntity(this.location(), EntityType.BLOCK_DISPLAY);
         tweakEntity(out);
@@ -319,5 +351,35 @@ public class TotemCore {
     private static void tweakEntity(Entity entity) {
         entity.setPersistent(false);
         entity.setInvulnerable(true);
+    }
+    private static void emitStateChangeSound(State old, State current, World world, Location location) {
+        if (old == current) { return; }
+
+        List<Sound> sounds = new ArrayList<>(4);
+        if (old == State.ACTIVE) {
+            sounds.add(DEACTIVATE_SOUND);
+        }
+        if (current == State.ACTIVE) {
+            sounds.add(ACTIVATE_SOUND);
+        }
+        if (old != State.INACTIVE && current == State.ACTIVE) {
+            sounds.add(GLASS_BREAK_SOUND);
+        }
+        if (current == State.END_EYE) {
+            sounds.add(ENDER_EYE_SOUND);
+        }
+        if (current == State.FULL && old == State.AMETHIST) {
+            sounds.add(ENDER_EYE_SOUND);
+        }
+        if (current == State.AMETHIST) {
+            sounds.add(AMETHIST_SOUND);
+        }
+        if (current == State.FULL && old == State.END_EYE) {
+            sounds.add(AMETHIST_SOUND);
+        }
+
+        for (Sound sound : sounds) {
+            world.playSound(location, sound, SoundCategory.BLOCKS, 100, 1);
+        }
     }
 }

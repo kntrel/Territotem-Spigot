@@ -78,6 +78,7 @@ public final class Territotem extends JavaPlugin {
                 regionContext,
                 totemTranslator,
                 config.expansionTable(),
+                totemCoreTracker,
                 config.dropBackRate(),
                 config.allowedDeedsRequestItems()
         );
@@ -91,7 +92,7 @@ public final class Territotem extends JavaPlugin {
         structureService.registerBlueprint(createTotemBlueprint(totemCoreTracker, hierarchy))
                 .on(TotemCoreCompletedEvent.class)
                 .when(e -> {
-                    e.getCore().setState(TotemCore.State.ACTIVE);
+                    e.getCore().setState(TotemCore.State.FULL);
                     e.setCancelled(true);
                     return true;
                 })

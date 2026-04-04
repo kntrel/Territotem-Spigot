@@ -23,7 +23,7 @@ public record TotemCorePiece(TotemCoreTracker service) implements TotemPiece {
             return false;
         }
         TotemCore.State state = core.getState();
-        return state == TotemCore.State.FULL || state == TotemCore.State.ACTIVE;
+        return state == TotemCore.State.FULL || state == TotemCore.State.ACTIVE || state == TotemCore.State.INACTIVE;
     }
     @Override public void place(WorldTileWriter tile) {
         this.service.createCore(tile.coordinates(), tile.actualWorld(), TotemCore.State.ACTIVE, TotemCore.Direction.ALL);

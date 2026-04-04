@@ -4,6 +4,7 @@ import com.kntrel.mc.regionLib.region.Region;
 import com.kntrel.mc.territotem.structure.Structure;
 import com.kntrel.mc.territotem.structure.blueprint.InvalidBlueprintException;
 import com.kntrel.mc.territotem.structure.worldTile.WorldTile;
+import com.kntrel.mc.territotem.totem.core.TotemCore;
 import com.kntrel.mc.territotem.totem.piece.TotemLecternPiece;
 import com.kntrel.mc.territotem.totem.piece.TotemNameSignPiece;
 import com.kntrel.mc.territotem.totem.piece.TotemTile;
@@ -29,13 +30,14 @@ public class Totem {
     private final TotemService provenance_;
     private final Structure structure_;
     private final Region region_;
+    private final TotemCore core_;
     private final Deque<TotemGrowthEntry> growthHistory_;
     private BoundingBox baseBounds_;
     private int deedsVersion_;
 
 
     //CONSTRUCTORS
-    Totem(TotemService provenance, Structure structure, Region region) {
+    Totem(TotemService provenance, Structure structure, Region region, TotemCore core) {
         if (!(structure.blueprint() instanceof TotemBlueprint)) {
             throw new InvalidBlueprintException(
                 "A totem must be backed by a totem blueprint. Passed structure's blueprint member is not an instance of TotemBlueprint"
@@ -44,6 +46,7 @@ public class Totem {
         this.provenance_ = provenance;
         this.structure_ = structure;
         this.region_ = region;
+        this.core_ = core;
         this.growthHistory_ = new ArrayDeque<>();
         this.baseBounds_ = region.getBoundingBox();
         this.deedsVersion_ = 0;
@@ -65,6 +68,9 @@ public class Totem {
     }
     public Region region() {
         return this.region_;
+    }
+    public TotemCore core() {
+        return this.core_;
     }
     public BoundingBox baseBounds() {
         return this.baseBounds_.clone();
@@ -143,6 +149,7 @@ public class Totem {
     }
     public void setEnabled(boolean enabled) {
         if (enabled == this.isEnabled()) { return; }
+        this.core().setState(enabled ? TotemCore.State.ACTIVE : TotemCore.State.INACTIVE);
         this.region_.enabled(enabled);
         this.region_.save();
     }
