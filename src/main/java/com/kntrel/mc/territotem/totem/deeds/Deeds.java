@@ -3,6 +3,7 @@ package com.kntrel.mc.territotem.totem.deeds;
 import com.kntrel.mc.regionLib.region.Region;
 import com.kntrel.mc.regionLib.region.ability.Permission;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.Material;
 import org.bukkit.inventory.meta.BookMeta;
 import java.util.List;
 
@@ -36,5 +37,11 @@ public class Deeds {
     }
     public int version() {
         return this.version_;
+    }
+
+    public ItemStack toItemStack() {
+        ItemStack item = new ItemStack(Material.WRITABLE_BOOK, 1);
+        item.setItemMeta(this.book_);
+        return item;
     }
 }

@@ -21,7 +21,6 @@ import com.kntrel.mc.territotem.util.ChunkKey;
 import com.kntrel.mc.territotem.util.ItemStackInfo;
 import com.kntrel.util.IntBoundingBox;
 import com.kntrel.util.Vec3i;
-import org.bukkit.SoundCategory;
 import org.bukkit.World;
 import org.bukkit.block.Lectern;
 import org.bukkit.block.Sign;
@@ -48,6 +47,8 @@ public class TotemService {
     private final TotemCoreTracker coreTracker_;
     private final TotemAssembler assembler_;
     private final DeedsFactory deedsFactory_;
+    private final ExpansionTable expansionTable_;
+    private final double defaultDropBackRate_;
     private final RegionAllocator regionAllocator_;
     private final TotemStore totemStore_;
 
@@ -65,12 +66,14 @@ public class TotemService {
         this.coreTracker_ = coreTracker;
         this.assembler_ = new TotemAssembler(this.plugin_);
         this.deedsFactory_ = new DeedsFactory(regionContext, translator.getChild("deeds"));
+        this.expansionTable_ = (expansionTable == null) ? ExpansionTable.empty() : expansionTable;
+        this.defaultDropBackRate_ = dropBackRate;
         this.regionAllocator_ = new RegionAllocator(regionContext, Condition.hasDataKey(TOTEM_DATA_KEY));
         this.totemStore_ = new TotemStore();
 
         this.assembler_.consume((s, r, c) -> this.loadTotem(s, r, c.deedsVersion(), true));
         this.plugin_.getServer().getPluginManager().registerEvents(
-                new TotemServiceListener(this, regionContext, translator, expansionTable, dropBackRate, allowedDeedsRequestItems),
+                new TotemServiceListener(this, regionContext, translator, allowedDeedsRequestItems),
                 this.plugin_
         );
         this.plugin_.getServer().getScheduler().runTaskTimer(
@@ -240,12 +243,7 @@ public class TotemService {
 
     private void emitAmbientSounds() {
         for (Totem totem : this.totemStore_.getAll()) {
-            TotemCore core = totem.core();
-            if (core.getState() != TotemCore.State.ACTIVE) {
-                continue;
-            }
-
-            core.getWorld().playSound(core.getCenter(), Totem.AMBIENT_SOUND, SoundCategory.BLOCKS, 1, .8f);
+            totem.emitAmbientSound();
         }
     }
 
@@ -261,7 +259,7 @@ public class TotemService {
             throw new IllegalStateException("Totem structure has no totem core");
         }
 
-        Totem totem = new Totem(this, structure, region, core);
+        Totem totem = new Totem(this, structure, region, core, this.expansionTable_, this.defaultDropBackRate_);
         totem.setDeedsVersion(deedsVersion);
         TotemGrowthHistory.State growthState = TotemGrowthHistory.read(region);
         if (growthState == null) {

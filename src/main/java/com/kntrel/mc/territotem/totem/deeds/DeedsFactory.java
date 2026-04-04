@@ -11,6 +11,8 @@ import com.kntrel.mc.territotem.totem.Totem;
 import net.md_5.bungee.api.chat.BaseComponent;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.Material;
 import org.bukkit.inventory.meta.BookMeta;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.jspecify.annotations.NonNull;
@@ -46,7 +48,12 @@ public class DeedsFactory {
 
 
     //API
-    public Deeds generate(@NonNull Player player, @NonNull BookMeta bookMeta, @NonNull Totem totem) {
+    public Deeds generate(@NonNull Player player, @NonNull Totem totem) {
+        ItemStack deedsStack = new ItemStack(Material.WRITABLE_BOOK, 1);
+        if (!(deedsStack.getItemMeta() instanceof BookMeta bookMeta)) {
+            throw new IllegalStateException("Writable books must produce book metadata");
+        }
+
         Region region = totem.region();
         List<Permission> perms = region.getPermissions();
 
@@ -83,7 +90,7 @@ public class DeedsFactory {
         }
         bookMeta.setEnchantmentGlintOverride(true);
 
-        return deeds;
+        return new Deeds(region, bookMeta, perms, data.version());
     }
     public DeedsInterpretationResult interpret(@NonNull BookMeta bookMeta) {
 

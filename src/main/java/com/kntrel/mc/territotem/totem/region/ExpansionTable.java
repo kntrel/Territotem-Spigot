@@ -64,6 +64,21 @@ public final class ExpansionTable {
             return Optional.empty();
         }
 
+        boolean sameMaterialCandidate = false;
+        for (Row row : this.rows_) {
+            if (stack.getType() != row.item()) {
+                continue;
+            }
+            sameMaterialCandidate = true;
+            if (row.nbt() == null || row.nbt().isEmpty()) {
+                return Optional.of(row);
+            }
+            break;
+        }
+        if (!sameMaterialCandidate) {
+            return Optional.empty();
+        }
+
         Object handle = ItemObject.getHandle(stack);
         NBTCompound fullItemNbt = new RTagNBTCompound(ItemObject.save(handle));
         Object rawCustomData = ItemObject.getCustomDataTag(handle);

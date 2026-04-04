@@ -29,7 +29,7 @@ public record ItemStackInfo(Material material, int amount, @Nullable String item
         try {
             Object handle = ItemObject.getHandle(stack);
             itemSnbt = ItemObject.save(handle).toString();
-        } catch (RuntimeException ignored) {}
+        } catch (Throwable ignored) {}
 
         return new ItemStackInfo(stack.getType(), stack.getAmount(), itemSnbt);
     }

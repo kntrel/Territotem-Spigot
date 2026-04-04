@@ -24,8 +24,6 @@ import com.kntrel.mc.territotem.totem.event.TotemCoreHitEvent;
 import com.kntrel.mc.territotem.totem.event.TotemCoreRightClickedEvent;
 import com.kntrel.mc.territotem.totem.region.Expansion;
 import com.kntrel.mc.territotem.totem.region.ExpansionResult;
-import com.kntrel.mc.territotem.totem.region.ExpansionTable;
-import com.kntrel.mc.territotem.util.ItemStackInfo;
 import com.kntrel.util.Vec3i;
 import com.kntrel.util.tuple.Pair;
 import org.bukkit.Location;
@@ -48,13 +46,11 @@ import org.bukkit.plugin.Plugin;
 import org.jspecify.annotations.Nullable;
 import org.bukkit.util.BoundingBox;
 import java.math.BigDecimal;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.function.DoubleSupplier;
 import java.util.stream.Stream;
 
 final class TotemServiceListener implements Listener {
@@ -65,24 +61,18 @@ final class TotemServiceListener implements Listener {
     private final TotemService service_;
     private final RegionContext regionContext_;
     private final Translator translator_;
-    private final ExpansionTable expansionTable_;
-    private final double defaultDropBackRate_;
     private final Set<Material> allowedDeedsRequestItems_;
 
     TotemServiceListener(
             TotemService service,
             RegionContext regionContext,
             Translator translator,
-            ExpansionTable expansionTable,
-            double defaultDropBackRate,
             Set<Material> allowedDeedsRequestItems
     ) {
         this.plugin_ = regionContext.getPlugin();
         this.service_ = service;
         this.regionContext_ = regionContext;
         this.translator_ = translator;
-        this.expansionTable_ = expansionTable;
-        this.defaultDropBackRate_ = defaultDropBackRate;
         this.allowedDeedsRequestItems_ = Set.copyOf(allowedDeedsRequestItems);
     }
 
@@ -141,9 +131,9 @@ final class TotemServiceListener implements Listener {
         Totem totem = this.service_.totemOfCore(e.getCore()).orElse(null);
         if (totem == null) { return; }
 
-        ExpansionTable.Row expansionRow = this.expansionTable_.findMatch(itemStack).orElse(null);
-        if (expansionRow != null) {
-            this.onTotemExpand(totem, e, expansionRow);
+        Totem.FeedResult feedResult = totem.feed(itemStack);
+        if (!feedResult.isIgnored()) {
+            this.onTotemExpand(totem, e, feedResult);
             return;
         }
 
@@ -169,15 +159,13 @@ final class TotemServiceListener implements Listener {
 
         Totem totem = this.service_.totemOfCore(e.getCore()).orElse(null);
         if (totem == null) { return; }
-        TotemGrowthEntry growth = this.service_.rollbackLastGrowth(totem);
+        TotemGrowthEntry growth = totem.takeDamage();
         if (growth == null) {
             this.regionContext_.stopDisplayRegion(totem.region());
             return;
         }
 
-        this.dropBackItems(e.getCore(), growth);
         this.regionContext_.displayRegion(totem.region(), e.getPlayer());
-        totem.world().playSound(totem.core().getLocation(), Totem.HIT_SOUND, 5, .8f);
         e.setCancelled(true);
     }
 
@@ -372,36 +360,29 @@ final class TotemServiceListener implements Listener {
 
 
     //SUB-LISTENERS
-    private void onTotemExpand(Totem totem, TotemCoreRightClickedEvent e, ExpansionTable.Row row) {
-        ItemStack itemStack = e.getItemStack();
-        if (itemStack == null) {
+    private void onTotemExpand(Totem totem, TotemCoreRightClickedEvent e, Totem.FeedResult feedResult) {
+        if (feedResult.status() == Totem.FeedResult.Status.INSUFFICIENT_ITEMS) {
             return;
         }
-        if (itemStack.getAmount() < row.consumption()) {
+        if (feedResult.status() == Totem.FeedResult.Status.BLOCKED) {
+            this.sendExpansionBlockedMessage(e.getPlayer(), feedResult.direction(), feedResult.expansionResult());
             return;
         }
 
-        TotemCore.Direction direction = e.getCore().getDirection();
-        double scalar = row.pickExpansionScalar();
-        ExpansionResult result = totem.expand(
-                expansionFor(direction, scalar),
-                refundStackData(itemStack, row.consumption()),
-                row.dropBackRateOr(this.defaultDropBackRate_)
-        );
+        TotemCore.Direction direction = feedResult.direction();
+        ExpansionResult result = feedResult.expansionResult();
         Player player = e.getPlayer();
-        if (!result.hasGrowth()) {
-            this.sendExpansionBlockedMessage(player, direction, result);
+        if (result == null || !feedResult.hasGrowth()) {
             return;
         }
 
-        consumeItems(player, e.getHand(), itemStack, row.consumption());
+        player.getInventory().setItem(e.getHand(), feedResult.updatedStack());
         swingHand(player, e.getHand());
         totem.region().display(player);
-        totem.world().playSound(totem.core().getLocation(), Totem.FEED_SOUND, 5, 1.5f);
         this.sendExpansionFeedback(player, totem, direction, result);
         e.setCancelled(true);
     }
-    public void onDeedsCreation(Player player, Totem totem, EquipmentSlot hand, ItemStack item) {
+    private void onDeedsCreation(Player player, Totem totem, EquipmentSlot hand, ItemStack item) {
         if (item.getItemMeta() != null && !item.getItemMeta().getEnchants().isEmpty()) {
             return;
         }
@@ -413,14 +394,8 @@ final class TotemServiceListener implements Listener {
             }
         }
 
-        ItemStack deedsStack = new ItemStack(Material.WRITABLE_BOOK, 1);
-        if (!(deedsStack.getItemMeta() instanceof BookMeta bookMeta)) {
-            return;
-        }
-        this.service_.getDeedsFactory().generate(player, bookMeta, totem);
-        deedsStack.setItemMeta(bookMeta);
-        giveDeedsBook(player, hand, item, deedsStack);
-        totem.save();
+        Deeds deeds = totem.createDeedsBook(player);
+        giveDeedsBook(player, hand, item, deeds.toItemStack());
     }
 
 
@@ -734,39 +709,6 @@ final class TotemServiceListener implements Listener {
         };
     }
 
-    private static Expansion expansionFor(TotemCore.Direction direction, double amount) {
-        if (direction == TotemCore.Direction.ALL) {
-            return Expansion.all(amount / 6d);
-        }
-        return Expansion.forDirection(direction, amount);
-    }
-
-    static int rollDropBackCount(int attempts, double dropBackRate, DoubleSupplier random) {
-        if (attempts <= 0 || dropBackRate <= 0d) {
-            return 0;
-        }
-        if (dropBackRate >= 1d) {
-            return attempts;
-        }
-
-        int refunded = 0;
-        for (int i = 0; i < attempts; i++) {
-            if (random.getAsDouble() <= dropBackRate) {
-                refunded++;
-            }
-        }
-        return refunded;
-    }
-
-    private static void consumeItems(Player player, EquipmentSlot hand, ItemStack stack, int amount) {
-        if (stack.getAmount() <= amount) {
-            stack = new ItemStack(Material.AIR);
-        } else {
-            stack.setAmount(stack.getAmount() - amount);
-        }
-        player.getInventory().setItem(hand, stack);
-    }
-
     private static void giveDeedsBook(Player player, EquipmentSlot hand, ItemStack paymentStack, ItemStack deedsStack) {
         if (paymentStack.getAmount() < 2) {
             player.getInventory().setItem(hand, deedsStack);
@@ -792,31 +734,4 @@ final class TotemServiceListener implements Listener {
         return Math.abs(a - b) <= EPSILON;
     }
 
-    private void dropBackItems(TotemCore core, TotemGrowthEntry growth) {
-        ItemStackInfo refundStack = growth.refundStack();
-        if (refundStack == null) {
-            return;
-        }
-
-        ItemStack template = refundStack.toItemStack();
-        int refunded = rollDropBackCount(growth.refundQuantity(), growth.dropBackRate(), ThreadLocalRandom.current()::nextDouble);
-        if (refunded <= 0) {
-            return;
-        }
-
-        int maxStackSize = Math.max(1, template.getMaxStackSize());
-        while (refunded > 0) {
-            int batch = Math.min(refunded, maxStackSize);
-            ItemStack drop = template.clone();
-            drop.setAmount(batch);
-            core.getWorld().dropItemNaturally(core.getCenter(), drop);
-            refunded -= batch;
-        }
-    }
-
-    private static ItemStackInfo refundStackData(ItemStack source, int amount) {
-        ItemStack refund = source.clone();
-        refund.setAmount(amount);
-        return ItemStackInfo.fromItemStack(refund);
-    }
 }

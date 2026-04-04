@@ -41,15 +41,15 @@ public class TotemCore {
             NULL_TRANSLATION    = new Vector3f(0, 0, 0),
             NULL_SCALE          = new Vector3f(1, 1, 1);
     static final String METADATA_KEY = "totem_core";
-    public static final Sound
-            ACTIVATE_SOUND      = Sound.BLOCK_BEACON_ACTIVATE,
-            DEACTIVATE_SOUND    = Sound.BLOCK_BEACON_DEACTIVATE,
-            AMETHIST_SOUND      = Sound.BLOCK_AMETHYST_BLOCK_PLACE,
-            ENDER_EYE_SOUND     = Sound.BLOCK_END_PORTAL_FRAME_FILL,
-            GLASS_BREAK_SOUND   = Sound.BLOCK_GLASS_BREAK,
-            DIRECTIONAL_PLACED_SOUND = Sound.BLOCK_IRON_BREAK,
-            DIRECTIONAL_REMOVE_SOUND = Sound.BLOCK_IRON_BREAK,
-            DIRECTIONAL_SWAP_SOUND   = Sound.BLOCK_SHELF_MULTI_SWAP;
+    public static final String
+            ACTIVATE_SOUND      = "block.beacon.activate",
+            DEACTIVATE_SOUND    = "block.beacon.deactivate",
+            AMETHIST_SOUND      = "block.amethyst_block.place",
+            ENDER_EYE_SOUND     = "block.end_portal_frame.fill",
+            GLASS_BREAK_SOUND   = "block.glass.break",
+            DIRECTIONAL_PLACED_SOUND = "block.iron.break",
+            DIRECTIONAL_REMOVE_SOUND = "block.iron.break",
+            DIRECTIONAL_SWAP_SOUND   = "block.shelf.multi_swap";
 
 
     //ENUMS
@@ -359,7 +359,7 @@ public class TotemCore {
     private static void emitStateChangeSound(State old, State current, World world, Location location) {
         if (old == current) { return; }
 
-        List<Sound> sounds = new ArrayList<>(4);
+        List<String> sounds = new ArrayList<>(4);
         if (old == State.ACTIVE) {
             sounds.add(DEACTIVATE_SOUND);
         }
@@ -382,14 +382,14 @@ public class TotemCore {
             sounds.add(AMETHIST_SOUND);
         }
 
-        for (Sound sound : sounds) {
+        for (String sound : sounds) {
             world.playSound(location, sound, SoundCategory.BLOCKS, 5, 1);
         }
     }
     private static void emitDirectionChangeSound(Direction old, Direction current, World world, Location location) {
         if (old == current) { return; }
 
-        Sound sound;
+        String sound;
         if (old == Direction.ALL) {
             sound = DIRECTIONAL_REMOVE_SOUND;
         } else if (current == Direction.ALL) {
