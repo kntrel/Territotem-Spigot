@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.kntrel</groupId>
+        <artifactId>Territotem-parent</artifactId>
+        <version>main-SNAPSHOT</version>
+        <relativePath>..</relativePath>
+    </parent>
+
+    <artifactId>Territotem-Geyser</artifactId>
+    <packaging>jar</packaging>
+
+    <name>Territotem-Geyser</name>
+    <description>Bedrock compatibility layer module for Territotem.</description>
+</project>

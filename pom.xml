@@ -5,18 +5,23 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.kntrel</groupId>
-    <artifactId>Territotem</artifactId>
+    <artifactId>Territotem-parent</artifactId>
     <version>main-SNAPSHOT</version>
-    <packaging>jar</packaging>
+    <packaging>pom</packaging>
 
     <name>Territotem</name>
+    <description>Parent build for the Territotem plugin family.</description>
 
-    <description>Give your players the ability to claim regions of your word in an interactive and simple way that
-        involves gameplay.
-    </description>
+    <modules>
+        <module>Territotem-spigot</module>
+        <module>Territotem-Geyser</module>
+    </modules>
+
     <properties>
         <java.version>25</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <junit.jupiter.version>5.11.0</junit.jupiter.version>
+        <mockito.version>5.21.0</mockito.version>
     </properties>
 
     <build>
@@ -26,46 +31,29 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.8.1</version>
                 <configuration>
-                    <source>25</source>
-                    <target>25</target>
+                    <source>${java.version}</source>
+                    <target>${java.version}</target>
                 </configuration>
             </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-shade-plugin</artifactId>
-                <version>3.2.4</version>
-                <executions>
-                    <execution>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>shade</goal>
-                        </goals>
-                        <configuration>
-                            <artifactSet>
-                                <includes>
-                                    <include>com.kntrel:RegionsLib-Spigot</include>
-                                    <include>com.kntrel:runical-core</include>
-                                    <include>com.kntrel:runical-bukkit</include>
-                                    <include>com.saicone.rtag:rtag</include>
-                                    <include>com.saicone.rtag:rtag-block</include>
-                                    <include>com.saicone.rtag:rtag-entity</include>
-                                    <include>com.saicone.rtag:rtag-item</include>
-                                    <include>org.slf4j:slf4j-api</include>
-                                    <include>org.slf4j:slf4j-jdk14</include>
-                                </includes>
-                            </artifactSet>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
         </plugins>
-        <resources>
-            <resource>
-                <directory>src/main/resources</directory>
-                <filtering>true</filtering>
-            </resource>
-        </resources>
     </build>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.junit.jupiter</groupId>
+                <artifactId>junit-jupiter</artifactId>
+                <version>${junit.jupiter.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.mockito</groupId>
+                <artifactId>mockito-junit-jupiter</artifactId>
+                <version>${mockito.version}</version>
+                <scope>test</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <repositories>
         <repository>
@@ -77,65 +65,4 @@
             <url>https://hub.spigotmc.org/nexus/content/repositories/snapshots/</url>
         </repository>
     </repositories>
-
-    <dependencies>
-        <dependency>
-            <groupId>org.spigotmc</groupId>
-            <artifactId>spigot-api</artifactId>
-            <version>26.1.1-R0.1-SNAPSHOT</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.kntrel</groupId>
-            <artifactId>RegionsLib-Spigot</artifactId>
-            <version>main-SNAPSHOT</version>
-        </dependency>
-        <dependency>
-            <groupId>com.kntrel</groupId>
-            <artifactId>runical-core</artifactId>
-            <version>0.1.0-SNAPSHOT</version>
-        </dependency>
-        <dependency>
-            <groupId>com.kntrel</groupId>
-            <artifactId>runical-bukkit</artifactId>
-            <version>0.1.0-SNAPSHOT</version>
-        </dependency>
-        <dependency>
-            <groupId>com.saicone.rtag</groupId>
-            <artifactId>rtag</artifactId>
-            <version>main-SNAPSHOT</version>
-            <scope>compile</scope>
-        </dependency>
-        <!-- Other modules -->
-        <dependency>
-            <groupId>com.saicone.rtag</groupId>
-            <artifactId>rtag-block</artifactId>
-            <version>main-SNAPSHOT</version>
-            <scope>compile</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.saicone.rtag</groupId>
-            <artifactId>rtag-entity</artifactId>
-            <version>main-SNAPSHOT</version>
-            <scope>compile</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.saicone.rtag</groupId>
-            <artifactId>rtag-item</artifactId>
-            <version>main-SNAPSHOT</version>
-            <scope>compile</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter</artifactId>
-            <version>5.11.0</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.mockito</groupId>
-            <artifactId>mockito-junit-jupiter</artifactId>
-            <version>5.21.0</version>
-            <scope>test</scope>
-        </dependency>
-    </dependencies>
 </project>
