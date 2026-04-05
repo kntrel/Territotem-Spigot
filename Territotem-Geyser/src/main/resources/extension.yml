@@ -1,0 +1,6 @@
+id: territotemgeyser
+name: Territotem-Geyser
+main: com.kntrel.mc.territotem.geyser.TerritotemGeyserExtension
+api: ${geyser.extension.api}
+version: ${project.version}
+authors: [Kntrel]

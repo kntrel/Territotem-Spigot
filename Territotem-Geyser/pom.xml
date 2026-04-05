@@ -16,4 +16,27 @@
 
     <name>Territotem-Geyser</name>
     <description>Bedrock compatibility layer module for Territotem.</description>
+
+    <properties>
+        <geyser.api.version>2.9.0-SNAPSHOT</geyser.api.version>
+        <geyser.extension.api>2.9.0</geyser.extension.api>
+    </properties>
+
+    <build>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+            </resource>
+        </resources>
+    </build>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.geysermc.geyser</groupId>
+            <artifactId>api</artifactId>
+            <version>${geyser.api.version}</version>
+            <scope>provided</scope>
+        </dependency>
+    </dependencies>
 </project>
