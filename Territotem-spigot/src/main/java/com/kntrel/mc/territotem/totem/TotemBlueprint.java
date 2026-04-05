@@ -1,6 +1,7 @@
 package com.kntrel.mc.territotem.totem;
 
 import com.kntrel.mc.regionLib.region.hierarchy.Hierarchy;
+import com.kntrel.mc.territotem.config.blueprint.TotemBlueprintRule;
 import com.kntrel.mc.territotem.structure.blueprint.Blueprint;
 import com.kntrel.mc.territotem.structure.blueprint.InvalidBlueprintException;
 import com.kntrel.mc.territotem.structure.piece.Piece;
@@ -21,10 +22,18 @@ public class TotemBlueprint extends Blueprint {
     private final Set<TotemTile<TotemNameSignPiece>> nameSigns_;
     private final BoundingBox initialRegionBounds_;
     private final Hierarchy hierarchy_;
+    private final List<TotemBlueprintRule> rules_;
 
 
     //CONSTRUCTOR
-    public TotemBlueprint(long id, String name, Iterable<Tile> pieces, BoundingBox initialRegionBounds, Hierarchy hierarchy) {
+    public TotemBlueprint(
+            long id,
+            String name,
+            Iterable<Tile> pieces,
+            BoundingBox initialRegionBounds,
+            Hierarchy hierarchy,
+            Iterable<TotemBlueprintRule> rules
+    ) {
         super(id, name, pieces);
         Processed processed = process(pieces);
         this.core_ = processed.core;
@@ -32,6 +41,18 @@ public class TotemBlueprint extends Blueprint {
         this.nameSigns_ = processed.nameSigns;
         this.initialRegionBounds_ = initialRegionBounds;
         this.hierarchy_ = hierarchy;
+        if (rules == null) {
+            this.rules_ = List.of();
+        } else {
+            List<TotemBlueprintRule> collected = new ArrayList<>();
+            for (TotemBlueprintRule rule : rules) {
+                collected.add(rule);
+            }
+            this.rules_ = List.copyOf(collected);
+        }
+    }
+    public TotemBlueprint(long id, String name, Iterable<Tile> pieces, BoundingBox initialRegionBounds, Hierarchy hierarchy) {
+        this(id, name, pieces, initialRegionBounds, hierarchy, List.of());
     }
 
 
@@ -50,6 +71,9 @@ public class TotemBlueprint extends Blueprint {
     }
     public Hierarchy hierarchy() {
         return this.hierarchy_;
+    }
+    public List<TotemBlueprintRule> rules() {
+        return this.rules_;
     }
 
 

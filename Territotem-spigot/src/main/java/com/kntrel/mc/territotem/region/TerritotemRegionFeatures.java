@@ -46,6 +46,10 @@ import java.util.WeakHashMap;
 public final class TerritotemRegionFeatures implements Listener {
 
     private static final long AUTOPLANT_STALE_TICKS = 20L;
+    public static final String RULE_AUTOPLANT = "autoplant";
+    public static final String RULE_FARMLAND_PROTECTED = "farmlandProtected";
+    public static final String RULE_NO_MONSTER_SPAWN = "noMonsterSpawn";
+    public static final String RULE_RAID_PROTECTED = "raidProtected";
 
     private final Plugin plugin_;
     private final RegionContext regionContext_;
@@ -139,7 +143,7 @@ public final class TerritotemRegionFeatures implements Listener {
                         .at(AbilityTriggeredEvent::getLocation)
                         .ifTrue()
                         .then(this::handleAutoplant)
-                        .named("autoplant")
+                        .named(RULE_AUTOPLANT)
         );
 
         this.regionContext_.getRuleRegistry().register(
@@ -148,7 +152,7 @@ public final class TerritotemRegionFeatures implements Listener {
                         .at(e -> center(e.getClickedBlock()))
                         .ifTrue()
                         .thenCancel()
-                        .named("farmlandProtected")
+                        .named(RULE_FARMLAND_PROTECTED)
         );
 
         this.regionContext_.getRuleRegistry().register(
@@ -157,7 +161,7 @@ public final class TerritotemRegionFeatures implements Listener {
                         .at(CreatureSpawnEvent::getLocation)
                         .ifTrue()
                         .thenCancel()
-                        .named("noMonsterSpawn")
+                        .named(RULE_NO_MONSTER_SPAWN)
         );
 
         this.regionContext_.getRuleRegistry().register(
@@ -165,7 +169,7 @@ public final class TerritotemRegionFeatures implements Listener {
                         .at(e -> e.getRaid().getLocation())
                         .ifTrue()
                         .thenCancel()
-                        .named("raidProtected")
+                        .named(RULE_RAID_PROTECTED)
         );
     }
 

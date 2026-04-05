@@ -1,7 +1,9 @@
 package com.kntrel.mc.territotem.totem;
 
+import com.kntrel.mc.regionLib.region.Region;
 import com.kntrel.mc.regionLib.region.context.RegionContext;
 import com.kntrel.mc.runical.bukkit.Translator;
+import com.kntrel.mc.territotem.config.blueprint.TotemBlueprintRule;
 import com.kntrel.mc.territotem.totem.core.TotemCore;
 import com.kntrel.mc.territotem.totem.core.TotemCoreTracker;
 import com.kntrel.mc.territotem.totem.region.ExpansionTable;
@@ -13,6 +15,7 @@ import org.bukkit.scheduler.BukkitTask;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
 import java.util.Set;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -64,5 +67,26 @@ class TotemServiceTest {
                 eq(Totem.AMBIENT_SOUND_RATE),
                 eq(Totem.AMBIENT_SOUND_RATE)
         );
+    }
+
+    @Test
+    @DisplayName("blueprint rules are copied into newly created regions")
+    void applyBlueprintRulesSeedsRegionValues() {
+        Region region = mock(Region.class);
+
+        TotemService.applyBlueprintRules(
+                region,
+                List.of(
+                        new TotemBlueprintRule("autoplant", true),
+                        new TotemBlueprintRule("fire_spread_rate", 0.3d),
+                        new TotemBlueprintRule("welcome_message", "hello"),
+                        new TotemBlueprintRule("max_animals", 4)
+                )
+        );
+
+        verify(region).setRuleValue("autoplant", true);
+        verify(region).setRuleValue("fire_spread_rate", 0.3d);
+        verify(region).setRuleValue("welcome_message", "hello");
+        verify(region).setRuleValue("max_animals", 4);
     }
 }

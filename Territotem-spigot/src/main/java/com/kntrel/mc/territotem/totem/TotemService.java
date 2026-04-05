@@ -5,6 +5,7 @@ import com.kntrel.mc.regionLib.region.Region;
 import com.kntrel.mc.regionLib.region.context.RegionContext;
 import com.kntrel.mc.regionLib.region.repository.Condition;
 import com.kntrel.mc.runical.bukkit.Translator;
+import com.kntrel.mc.territotem.config.blueprint.TotemBlueprintRule;
 import com.kntrel.mc.territotem.structure.Structure;
 import com.kntrel.mc.territotem.structure.piece.Tile;
 import com.kntrel.mc.territotem.structure.worldTile.WorldTile;
@@ -175,6 +176,7 @@ public class TotemService {
         }
 
         Region region = placed.region();
+        applyBlueprintRules(region, blueprint.rules());
         totem = this.loadTotem(structure, region, 0, false);
         totem.core().setState(TotemCore.State.ACTIVE);
         totem.save();
@@ -294,6 +296,17 @@ public class TotemService {
                 boundingBox.maxY() + 1d,
                 boundingBox.maxZ() + 1d
         );
+    }
+    static void applyBlueprintRules(Region region, Iterable<TotemBlueprintRule> rules) {
+        if (region == null || rules == null) {
+            return;
+        }
+        for (TotemBlueprintRule rule : rules) {
+            if (rule == null) {
+                continue;
+            }
+            region.setRuleValue(rule.name(), rule.value());
+        }
     }
 
 

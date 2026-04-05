@@ -1,0 +1,62 @@
+version: 1
+
+id: 25
+name: domestic_totem
+hierarchy-id: 1
+
+initial-region-bounds:
+  - [-8, -2, -8]
+  - [8, 12, 8]
+
+rules: {}
+
+palette:
+  C:
+    piece: core
+  O:
+    block: OBSIDIAN
+  N:
+    piece: name_sign
+    direction: north
+  E:
+    piece: name_sign
+    direction: east
+  S:
+    piece: name_sign
+    direction: south
+  W:
+    piece: name_sign
+    direction: west
+  n:
+    piece: deeds_lectern
+    direction: north
+  e:
+    piece: deeds_lectern
+    direction: east
+  s:
+    piece: deeds_lectern
+    direction: south
+  w:
+    piece: deeds_lectern
+    direction: west
+  _:
+    piece: empty
+
+layout:
+  skip: "."
+  layers:
+    - y: 2
+      rows:
+        - "..."
+        - ".C."
+        - "..."
+    - y: 1
+      rows:
+        - ".N."
+        - "WOE"
+        - ".S."
+    - y: 0
+      rows:
+        - ".n."
+        - "wOe"
+        - ".s."

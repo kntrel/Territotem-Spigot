@@ -8,11 +8,11 @@ import org.slf4j.Logger;
 import java.util.List;
 import java.util.Map;
 
-final class NbtYamlParser {
+public final class NbtYamlParser {
 
     private NbtYamlParser() {}
 
-    static @Nullable NBTCompound compound(@Nullable Object raw, String path, Logger logger) {
+    public static @Nullable NBTCompound compound(@Nullable Object raw, String path, Logger logger) {
         if (raw == null) {
             logger.error("Invalid null NBT value for config key '{}'. Expected a map. Ignoring row.", path);
             return null;
