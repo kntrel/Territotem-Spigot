@@ -1,0 +1,6 @@
+<b>Escrituras de {region.colorizedName}</b>
+
+<c:gray>  ID de la región: {region.id}</>
+<c:gray>  Versión: {version}</>
+
+<i>Este libro contiene la definición de permisos de todos los miembros de su región y sus roles. Cuando se coloque en el atril del tótem, todos los cambios se aplicarán.</>

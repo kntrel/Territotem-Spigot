@@ -41,7 +41,7 @@ _runical:
       empty: ""
       #Used when formatting a list of exactly two items.
       #   {0} = First item   {1} = Second item
-      two: "{0} and {1}"
+      two: "{0} y {1}"
       #Used for the first join while formatting a list of three or more items.
       #   {0} = Current text   {1} = Next item
       start: "{0}, {1}"
@@ -50,7 +50,7 @@ _runical:
       middle: "{0}, {1}"
       #Used for the last join of a list of three or more items.
       #   {0} = Current text   {1} = Last item
-      end: "{0}, and {1}"
+      end: "{0} y {1}"
 
 
 ################################################## [ TOTEM ] ##################################################
@@ -59,103 +59,103 @@ totem:
   expansion:
     direction:
       #Direction texts inserted into the expansion feedback messages.
-      all: "in all directions"
-      up: "upward"
-      down: "downward"
-      north: "to the north"
-      south: "to the south"
-      east: "to the east"
-      west: "to the west"
+      all: "en todas direcciones"
+      up: "hacia arriba"
+      down: "hacia abajo"
+      north: "hacia el norte"
+      south: "hacia el sur"
+      east: "hacia el este"
+      west: "hacia el oeste"
     #Message shown when a totem expands exactly as requested.
     #   {direction} = Direction text   {height} = New total height   {x} = New X size   {z} = New Z size
-    success: "Expanded {direction}. Size: H {height}, X {x}, Z {z}."
+    success: "Se expandió {direction}. Tamaño: A {height}, X {x}, Z {z}."
     #Message shown when the requested growth succeeds, but some of it had to be redistributed around blocking regions.
     #   {direction} = Direction text   {blockers} = Blocking regions   {height} = New total height   {x} = New X size   {z} = New Z size
-    shifted: "Expanded {direction}; shifted around {blockers}. Size: H {height}, X {x}, Z {z}."
+    shifted: "Se expandió {direction}; se redistribuyó alrededor de {blockers}. Tamaño: A {height}, X {x}, Z {z}."
     #Message shown when a totem grows only partially because blockers prevented part of the requested expansion.
     #   {direction} = Direction text   {blockers} = Blocking regions   {height} = New total height   {x} = New X size   {z} = New Z size
-    partial: "Expanded {direction}; {blockers} blocked the rest. Size: H {height}, X {x}, Z {z}."
+    partial: "Se expandió {direction}; {blockers} bloquearon el resto. Tamaño: A {height}, X {x}, Z {z}."
     #Message shown when a totem cannot expand and the blocking regions are known.
     #   {direction} = Direction text   {blockers} = Blocking regions
-    blocked: "Cannot expand {direction} any further. Blocked by {blockers}"
+    blocked: "No se puede expandir más {direction}. Bloqueado por {blockers}"
     #Message shown when a totem cannot expand and no specific blocker list is available.
     #   {direction} = Direction text
-    blocked_generic: "Cannot expand {direction}."
+    blocked_generic: "No se puede expandir {direction}."
   default_name:
     #The name the associated region gets when a player places a totem.
     #   {player} = The totem placer's player name
-    player_placed: "{player}'s lands"
+    player_placed: "Tierras de {player}"
     #The name the associated region gets when a totem is placed without a player for any strange reason.
     #   {region.*} = Region arguments
-    undefined_placer: "Unnamed region"
+    undefined_placer: "Región sin nombre"
   rename:
     #Message shown when a player tries to rename a region outside the allowed name length.
     #   {min} = Minimum length   {max} = Maximum length
-    invalid_length: "Name length must be between {min} and {max} characters."
+    invalid_length: "El nombre debe tener entre {min} y {max} caracteres."
     #Message shown to the player who renamed the region.
     #   {oldName} = Previous name   {newName} = New name   {region.*} = Region arguments
-    first_person: "{oldName} was renamed to '{newName}'."
+    first_person: "El nombre de {oldName} fue cambiado a '{newName}'."
     #Message shown to other online members when a region is renamed.
     #   {oldName} = Previous name   {newName} = New name   {renamer} = Responsible player   {region.*} = Region arguments
-    third_person: "{oldName} was renamed to '{newName}' by {renamer}."
+    third_person: "{renamer} cambió el nombre de {oldName} a '{newName}'."
   creation:
     #Message shown when a totem successfully claims a new region.
     #   {region.*} = Region arguments   {creator} = Responsible player   {x} = Region center X   {y} = Region center Y   {z} = Region center Z
-    success: "Region created: '{region.colorizedName}'."
+    success: "Región creada: '{region.colorizedName}'."
     #Message shown when a totem cannot claim because of overlapping regions.
     #   {blockers} = Blocking regions
-    blocked: "Cannot claim here, overlapping with {blockers}."
+    blocked: "No se puede reclamar terreno aquí, Colisiona con {blockers}."
     #Message shown when a totem cannot claim and no specific blocker list is available.
-    failed: "Cannot claim here."
+    failed: "No se puede reclamar terreno aquí."
   block_place_reject:
     #Message shown when a player tries to place a sign where a totem already owns its sign position.
     #   {region.*} = Region arguments
-    sign: "There's already a sign attached to {region.colorizedName}'s totem"
+    sign: "Ya hay un cartel en el tótem de {region.colorizedName}"
     #Message shown when a player tries to place a lectern where a totem already owns its lectern position.
     #   {region.*} = Region arguments
-    lectern: "There's already a lectern attached to {region.colorizedName}'s totem"
+    lectern: "Ya hay un atril en el tótem de {region.colorizedName}"
   deeds:
     #The prologue text inserted into the first pages of deeds books.
     #This entry may point to an external file with !file.
     #Lines starting with '/page' inside that file begin a new page.
     #   {region.*} = Region arguments   {version} = Deeds version   {player} = Player creating the deeds
-    prologue: !file "./deeds_prologue.en.txt"
+    prologue: !file "./deeds_prologue.es.txt"
     item:
       #The display name of the writable book turned into deeds.
       #   {region.*} = Region arguments   {playerName} = Player creating the deeds   {version} = Deeds version
-      name: "§dDeeds for {region.colorizedName}"
+      name: "§dEscrituras de {region.colorizedName}"
       #The lore of the deeds item. Use '\n' to split multiple lore lines.
       #   {region.*} = Region arguments   {playerName} = Player creating the deeds   {version} = Deeds version
-      lore: "§7Region: [{region.id}] {region.colorizedName}\n§r§7Version: {version}"
+      lore: "§7Región: [{region.id}] {region.colorizedName}\n§r§7Versión: {version}"
     placement_error:
       #If a player tries to place a non-deeds book in a totem lectern.
-      not_a_deeds_book: "This lectern only permits deeds books."
+      not_a_deeds_book: "Este atril solo permite libros de escrituras."
       #If an outdated deeds item is placed in a totem lectern.
       #   {region.*} = Region arguments   {deedsVersion} = Book version   {totemDeedsVersion} = Current totem version
-      old_version: "Those are outdated deeds for {region.colorizedName}. Book version {deedsVersion}; current version {totemDeedsVersion}."
+      old_version: "Esas son escrituras desactualizadas de {region.colorizedName}. Versión del libro: {deedsVersion}; versión actual: {totemDeedsVersion}."
       #If deeds are placed on the lectern of a different region's totem.
       #   {deedsRegion.*} = Region referenced by the book   {totemRegion.*} = Region owning the lectern
-      region_mismatch: "Those deeds belong to {deedsRegion.colorizedName}, not {totemRegion.colorizedName}."
+      region_mismatch: "Esas escrituras pertenecen a {deedsRegion.colorizedName}, no a {totemRegion.colorizedName}."
       #Generic fallback when a deeds book is invalid for another reason.
-      generic: "Invalid deeds book."
+      generic: "Libro de escrituras inválido."
     formatting_error:
       #Detail text used when the failing deeds line is empty.
-      empty_input: "No content"
+      empty_input: "Sin contenido"
       #Header message shown when a deeds parsing error is reported back to the player.
       #   {pageNumber} = Page number   {lineNumber} = Line number   {line} = Raw line content   {details} = Specific error details   {region.*} = Region arguments
-      message: "Deeds formatting error. page: {pageNumber} line: {lineNumber}\n{details}"
+      message: "Error de formato en las escrituras. página: {pageNumber} línea: {lineNumber}\n{details}"
       detail:
         #If a player name listed in deeds could not be resolved to any known player.
         #   {playerName} = Entered player name
-        player_not_found: "No player named '{playerName}' was found."
+        player_not_found: "No se encontró ningún jugador llamado '{playerName}'."
         #If a deeds line contains a character that is not valid in player names or numeric group headers.
         #   {column} = Column where the unexpected character was found
-        unexpected_character: "Unexpected character at column {column}. Player names may only contain letters, numbers, and '_', and group headers must be numeric only."
+        unexpected_character: "Carácter inesperado en la columna {column}. Los nombres de jugador solo pueden contener letras, números y '_', y los encabezados de grupo deben ser únicamente numéricos."
         #If a deeds group header does not resolve to any group level in the region's hierarchy.
         #   {groupName} = Entered numeric group header
-        unknown_group: "No group exists at or below level '{groupName}' in this region."
+        unknown_group: "No existe ningún grupo en esta región con nivel igual o inferior a '{groupName}'."
         #If player names are listed before any group header is declared.
-        no_group_name_provided: "Add a numeric group header before listing player names."
+        no_group_name_provided: "Agrega un encabezado numérico de grupo antes de listar nombres de jugadores."
 
 
 ################################################ [ DEEDS HIERARCHY ] ################################################
@@ -169,7 +169,7 @@ hierarchy:
       #Display name of this group in deeds books.
       name: Admins
       #Optional description block shown under the group header in deeds books.
-      description: They can do all members can, plus modifying region deeds.
+      description: Pueden hacer todo lo que hacen los miembros, además de modificar las escrituras de la región.
 
 
 ################################################ [ REGION PERMISSIONS ] ################################################
@@ -179,42 +179,42 @@ region:
     add:
       #Message shown to other players when a permission in a region has been granted to another player.
       #   {affectedPlayer} = Affected player   {responsiblePlayer} = Responsible player   {groupName} = Group name   {region.*} = Region arguments
-      third_person_third_person: "{affectedPlayer} has been granted with the role of {groupName} at {region.colorizedName} by {responsiblePlayer}"
+      third_person_third_person: "{responsiblePlayer} le otorgó a {affectedPlayer} el rol de {groupName} en {region.colorizedName}"
       #Message shown to a player when a permission in a region has been granted to them.
       #   {affectedPlayer} = Affected player   {responsiblePlayer} = Responsible player   {groupName} = Group name   {region.*} = Region arguments
-      third_person_first_person: "{responsiblePlayer} has granted you with the role of {groupName} at {region.colorizedName}"
+      third_person_first_person: "{responsiblePlayer} te otorgó el rol de {groupName} en {region.colorizedName}"
       #Message shown to a player when they grant a permission in a region to another player.
       #   {affectedPlayer} = Affected player   {responsiblePlayer} = Responsible player   {groupName} = Group name   {region.*} = Region arguments
-      first_person_third_person: "You've granted {affectedPlayer} with the role of {groupName} at {region.colorizedName}"
+      first_person_third_person: "Le otorgaste a {affectedPlayer} el rol de {groupName} en {region.colorizedName}"
       #Message shown to a player when they grant a permission in a region to themselves.
       #   {affectedPlayer} = Affected player   {responsiblePlayer} = Responsible player   {groupName} = Group name   {region.*} = Region arguments
-      first_person_first_person: "You've granted yourself with the role of {groupName} at {region.colorizedName}"
+      first_person_first_person: "Te asignaste el rol de {groupName} en {region.colorizedName}"
     remove:
       #Message shown to other players when a permission in a region has been removed from another player.
       #   {affectedPlayer} = Affected player   {responsiblePlayer} = Responsible player   {groupName} = Removed group name   {region.*} = Region arguments
-      third_person_third_person: "{responsiblePlayer} has taken the role of {groupName} at {region.colorizedName} away from {affectedPlayer}"
+      third_person_third_person: "{responsiblePlayer} despojó a {affectedPlayer} del rol de {groupName} en {region.colorizedName}"
       #Message shown to a player when their permission in a region has been removed.
       #   {affectedPlayer} = Affected player   {responsiblePlayer} = Responsible player   {groupName} = Removed group name   {region.*} = Region arguments
-      third_person_first_person: "{responsiblePlayer} has taken the role of {groupName} at {region.colorizedName} away from you"
+      third_person_first_person: "{responsiblePlayer} te quitó el rol de {groupName} en {region.colorizedName}"
       #Message shown to a player when they remove a permission in a region from another player.
       #   {affectedPlayer} = Affected player   {responsiblePlayer} = Responsible player   {groupName} = Removed group name   {region.*} = Region arguments
-      first_person_third_person: "You got rid of {affectedPlayer}'s role of {groupName} at {region.colorizedName}"
+      first_person_third_person: "Le quitaste a {affectedPlayer} el rol de {groupName} en {region.colorizedName}"
       #Message shown to a player when they remove a permission in a region from themselves.
       #   {affectedPlayer} = Affected player   {responsiblePlayer} = Responsible player   {groupName} = Removed group name   {region.*} = Region arguments
-      first_person_first_person: "You took the role of {groupName} at {region.colorizedName} away from yourself"
+      first_person_first_person: "Renunciaste al rol de {groupName} en {region.colorizedName}"
     change:
       #Message shown to other players when a permission in a region is changed for another player.
       #   {affectedPlayer} = Affected player   {responsiblePlayer} = Responsible player   {oldGroupName} = Previous group   {newGroupName} = New group   {region.*} = Region arguments
-      third_person_third_person: "{responsiblePlayer} has changed the role of {affectedPlayer} at {region.colorizedName} from {oldGroupName} to {newGroupName}"
+      third_person_third_person: "{responsiblePlayer} cambió el rol de {affectedPlayer} en {region.colorizedName} de {oldGroupName} a {newGroupName}"
       #Message shown to a player when their permission in a region is changed.
       #   {affectedPlayer} = Affected player   {responsiblePlayer} = Responsible player   {oldGroupName} = Previous group   {newGroupName} = New group   {region.*} = Region arguments
-      third_person_first_person: "{responsiblePlayer} has changed your role at {region.colorizedName} from {oldGroupName} to {newGroupName}"
+      third_person_first_person: "{responsiblePlayer} cambió tu rol en {region.colorizedName} de {oldGroupName} a {newGroupName}"
       #Message shown to a player when they change another player's permission in a region.
       #   {affectedPlayer} = Affected player   {responsiblePlayer} = Responsible player   {oldGroupName} = Previous group   {newGroupName} = New group   {region.*} = Region arguments
-      first_person_third_person: "You've changed the role of {affectedPlayer} at {region.colorizedName} from {oldGroupName} to {newGroupName}"
+      first_person_third_person: "Cambiaste el rol de {affectedPlayer} en {region.colorizedName} de {oldGroupName} a {newGroupName}"
       #Message shown to a player when they change their own permission in a region.
       #   {affectedPlayer} = Affected player   {responsiblePlayer} = Responsible player   {oldGroupName} = Previous group   {newGroupName} = New group   {region.*} = Region arguments
-      first_person_first_person: "You've has changed your role at {region.colorizedName} from {oldGroupName} to {newGroupName}"
+      first_person_first_person: "Cambiaste tu rol en {region.colorizedName} de {oldGroupName} a {newGroupName}"
 
 
 ############################################## [ NOT ALLOWED ] ##############################################
@@ -224,80 +224,80 @@ region:
 #Available arguments include {region.*}, {player}, {abilityName}, {x}, {y}, and {z}.
 not_allowed:
   #Fallback message when there is no ability-specific translation.
-  default: "You're not allowed to do that in {region.colorizedName}"
-  access_anvils: "Only {region.colorizedName}'s members can use that"
-  access_blast_furnaces: "That furnace is for {region.colorizedName}'s members only"
-  access_brewing_stands: "Only {region.colorizedName}'s members brew there"
-  access_cartography_tables: "Only {region.colorizedName}'s members can use that"
-  access_crafting_tables: "Only {region.colorizedName}'s members can craft there"
-  access_enchanting_tables: "Only {region.colorizedName}'s members can enchant there"
-  access_fletching_tables: "Only {region.colorizedName}'s members can use that"
-  access_furnaces: "That furnace is for {region.colorizedName}'s members only"
-  access_grindstones: "Only {region.colorizedName}'s members can use that"
-  access_lecterns: "Only {region.colorizedName}'s members can read that"
-  access_looms: "Only {region.colorizedName}'s members can use that"
-  access_smithing_tables: "Only {region.colorizedName}'s members can use that"
-  access_smokers: "That smoker is for {region.colorizedName}'s members only"
-  access_stonecutters: "Only {region.colorizedName}'s members can use that"
-  access_totem_lecterns: "Those are {region.colorizedName}'s deeds! Only members can read it"
-  break_armor_stands: "You're not allowed to break armor stands in {region.colorizedName}"
-  break_blocks: "You're not allowed to brake blocks in {region.colorizedName}"
-  break_crops: "You're not allowed to collect crops in {region.colorizedName}"
-  break_glow_item_frames: "You're not allowed to break item frames in {region.colorizedName}"
-  break_item_frames: "You're not allowed to break item frames in {region.colorizedName}"
-  break_paintings: "That masterpiece belongs to {region.colorizedName}"
-  break_redstone: "That redstone circuit belongs to {region.colorizedName}"
-  click_jukeboxes: "Only a {region.colorizedName}'s member can set the tone of the party"
-  click_note_blocks: "Only a {region.colorizedName}'s member can tune that up"
-  create_deeds: "You're not allowed to summon new deeds for {region.colorizedName}"
-  damage_animals: "{region.colorizedName}'s fauna shall be protected"
-  damage_monsters: "You can't damage a monster inside {region.colorizedName}"
-  damage_villagers: "Have a bit of respect for {region.colorizedName}'s habitants"
-  destroy_totems: "{region.colorizedName}'s totem shall only be destroyed by a {region.colorizedName}'s member"
-  extinguish_fire: "Let a {region.colorizedName}'s member take care of the fire"
-  ignite: "Only a {region.colorizedName}'s member can burn stuff here"
-  ignite_tnt: "Only a member of {region.colorizedName} can ignite that"
-  interact_with_animals: "{region.colorizedName}'s shat not mess with outsiders"
-  interact_with_armor_stands: "That stand belongs to {region.colorizedName}"
-  interact_with_glow_item_frames: "That item frame belongs to {region.colorizedName}"
-  interact_with_item_frames: "That item frame belongs to {region.colorizedName}"
-  open_barrels: "You cannot look into {region.colorizedName}'s barrels"
-  open_chests: "You cannot look into {region.colorizedName}'s chests"
-  open_doors: "You're not allowed to open {region.colorizedName}'s doors"
-  open_fence_gates: "You're not allowed to open {region.colorizedName}'s gates"
-  open_trapdoors: "You're not allowed to open {region.colorizedName}'s trapdoors"
-  pick_from_glow_frames: "That item frame belongs to {region.colorizedName}"
-  pick_from_glow_item_frames: "That item frame belongs to {region.colorizedName}"
-  pick_from_item_frames: "That item frame belongs to {region.colorizedName}"
-  place_armor_stands: "You're not allowed to place armor stands in {region.colorizedName}"
-  place_blocks: "You're not allowed to place blocks in {region.colorizedName}"
-  place_boats: "You're not allowed to place boats in {region.colorizedName}"
-  place_glow_item_frames: "You're not allowed to put item frames in {region.colorizedName}"
-  place_item_frames: "You're not allowed to put item frames in {region.colorizedName}"
-  place_paintings: "You don't have permission to exhibit your art in {region.colorizedName}"
-  place_redstone: "You must have permission to place redstone in {region.colorizedName}"
-  plant: "You're not allowed to plant in {region.colorizedName}"
-  press_buttons: "You must have permission to press buttons in {region.colorizedName}"
-  press_enforced_buttons: "That button is locked. Only {region.colorizedName}'s members can press it"
-  pull_levers: "You must have permission to pull levers in {region.colorizedName}"
-  pull_locked_levers: "That lever is locked. Only {region.colorizedName}'s members can press it"
-  put_books_on_lecterns: "Only {region.colorizedName}'s members can place a book there"
-  put_books_on_totem_lecterns: "You must be a member to overwrite {region.colorizedName}'s permissions!"
-  put_into_glow_item_frames: "You can't put items into {region.colorizedName}'s item frames"
-  put_into_item_frames: "You can't put items into {region.colorizedName}'s item frames"
-  put_into_item_glow_frames: "You can't put items into {region.colorizedName}'s item frames"
-  put_lava: "You must have permission to put lava in {region.colorizedName}"
-  put_water: "You're not allowed to flood {region.colorizedName}"
-  right_click_blocks: "You're not allowed to use that block in {region.colorizedName}"
-  ring_bells: "Too noisy! That's just for {region.colorizedName}'s members"
-  scrap_copper: "Copper blocks from {region.colorizedName} cannot be scraped by you"
-  take_books_from_lecterns: "Only a {region.colorizedName} members cant pick that book"
-  take_books_from_totem_lecterns: "Those are {region.colorizedName}'s deeds! You're not allowed to pick them up"
-  take_infinite_water: "Even infinite water is forbidden for outsiders of {region.colorizedName}"
-  take_lava: "That lava source is property of {region.colorizedName}"
-  take_water: "That water source rs property of {region.colorizedName}"
-  teleport_in: "Those are {region.colorizedName}'s domains. You can't teleport there"
-  teleport_out: "You must be our of {region.colorizedName} to teleport"
-  use_beds: "That bed is reserved to {region.colorizedName}'s members."
-  use_respawn_anchors: "Only a {region.colorizedName}'s member can respawn here"
-  wax_copper: "Copper blocks from {region.colorizedName} cannot be waxed by you"
+  default: "No se te permite hacer eso en {region.colorizedName}"
+  access_anvils: "Solo los miembros de {region.colorizedName} pueden usar eso"
+  access_blast_furnaces: "Ese alto horno es solo para los miembros de {region.colorizedName}"
+  access_brewing_stands: "Solo los miembros de {region.colorizedName} pueden hacer pociones allí"
+  access_cartography_tables: "Solo los miembros de {region.colorizedName} pueden cartografiar allí"
+  access_crafting_tables: "Solo los miembros de {region.colorizedName} pueden craftear allí"
+  access_enchanting_tables: "Solo los miembros de {region.colorizedName} pueden encantar allí"
+  access_fletching_tables: "Solo los miembros de {region.colorizedName} pueden usar eso"
+  access_furnaces: "Ese horno es solo para los miembros de {region.colorizedName}"
+  access_grindstones: "Solo los miembros de {region.colorizedName} pueden usar eso"
+  access_lecterns: "Solo los miembros de {region.colorizedName} pueden leer eso"
+  access_looms: "Solo los miembros de {region.colorizedName} pueden usar eso"
+  access_smithing_tables: "Solo los miembros de {region.colorizedName} pueden usar eso"
+  access_smokers: "Ese ahumador es solo para los miembros de {region.colorizedName}"
+  access_stonecutters: "Solo los miembros de {region.colorizedName} pueden usar eso"
+  access_totem_lecterns: "Esas son las escrituras de {region.colorizedName}. Solo sus miembros pueden leerlas"
+  break_armor_stands: "No tienes permitido romper soportes para armaduras en {region.colorizedName}"
+  break_blocks: "No puedes romper bloques en {region.colorizedName}"
+  break_crops: "No tienes permitido cosechar en {region.colorizedName}"
+  break_glow_item_frames: "No tienes permitido romper marcos luminosos en {region.colorizedName}"
+  break_item_frames: "No tienes permitido romper marcos en {region.colorizedName}"
+  break_paintings: "Esa obra de arte pertenece a {region.colorizedName}"
+  break_redstone: "Ese circuito de redstone pertenece a {region.colorizedName}"
+  click_jukeboxes: "No le arruines la fiesta a los miembros de {region.colorizedName}"
+  click_note_blocks: "Solo los miembros de {region.colorizedName} pueden afinar eso"
+  create_deeds: "No tienes permitido crear escrituras para {region.colorizedName}"
+  damage_animals: "La fauna de {region.colorizedName} debe ser protegida"
+  damage_monsters: "No puedes dañar monstruos dentro de {region.colorizedName}"
+  damage_villagers: "Ten un poco de respeto por los habitantes de {region.colorizedName}"
+  destroy_totems: "Solo los miembros de {region.colorizedName} pueden destruir su tótem"
+  extinguish_fire: "Deja que un miembro de {region.colorizedName} se encargue del fuego"
+  ignite: "Solo los miembros de {region.colorizedName} pueden prender fuego aquí"
+  ignite_tnt: "Solo los miembros de {region.colorizedName} pueden encender esa TNT"
+  interact_with_animals: "No puedes interactuar con los animales de {region.colorizedName}"
+  interact_with_armor_stands: "Ese soporte pertenece a {region.colorizedName}"
+  interact_with_glow_item_frames: "Ese marco luminoso pertenece a {region.colorizedName}"
+  interact_with_item_frames: "Ese marco pertenece a {region.colorizedName}"
+  open_barrels: "No puedes husmear en los barriles de {region.colorizedName}"
+  open_chests: "No puedes husmear en los cofres de {region.colorizedName}"
+  open_doors: "Las puertas de {region.colorizedName} están protegidas"
+  open_fence_gates: "Los portones de {region.colorizedName} están protegidos"
+  open_trapdoors: "Las trampillas de {region.colorizedName} están protegidas"
+  pick_from_glow_frames: "Ese marco luminoso pertenece a {region.colorizedName}"
+  pick_from_glow_item_frames: "Ese marco luminoso pertenece a {region.colorizedName}"
+  pick_from_item_frames: "Ese marco pertenece a {region.colorizedName}"
+  place_armor_stands: "No tienes permitido colocar soportes para armaduras en {region.colorizedName}"
+  place_blocks: "No puedes colocar bloques en {region.colorizedName}"
+  place_boats: "No puedes colocar botes en {region.colorizedName}"
+  place_glow_item_frames: "No tienes permitido colocar marcos luminosos en {region.colorizedName}"
+  place_item_frames: "No tienes permitido colocar marcos en {region.colorizedName}"
+  place_paintings: "Tu arte no es bienvenido en {region.colorizedName}"
+  place_redstone: "No tienes permiso para colocar redstone en {region.colorizedName}"
+  plant: "No tienes permitido plantar en {region.colorizedName}"
+  press_buttons: "No tienes permiso para presionar botones en {region.colorizedName}"
+  press_enforced_buttons: "Ese botón está bloqueado. Solo los miembros de {region.colorizedName} pueden presionarlo"
+  pull_levers: "No tienes permiso para accionar palancas en {region.colorizedName}"
+  pull_locked_levers: "Esa palanca está bloqueada. Solo los miembros de {region.colorizedName} pueden accionarla"
+  put_books_on_lecterns: "Solo los miembros de {region.colorizedName} pueden colocar un libro allí"
+  put_books_on_totem_lecterns: "Debes ser miembro para sobrescribir los permisos de {region.colorizedName}"
+  put_into_glow_item_frames: "No puedes poner objetos en los marcos luminosos de {region.colorizedName}"
+  put_into_item_frames: "No puedes poner objetos en los marcos de {region.colorizedName}"
+  put_into_item_glow_frames: "No puedes poner objetos en los marcos luminosos de {region.colorizedName}"
+  put_lava: "No tienes permiso para colocar lava en {region.colorizedName}"
+  put_water: "No tienes permitido inundar {region.colorizedName}"
+  right_click_blocks: "No tienes permitido usar ese bloque en {region.colorizedName}"
+  ring_bells: "No perturbes la paz de los miembros de {region.colorizedName}"
+  scrap_copper: "No puedes raspar los bloques de cobre de {region.colorizedName}"
+  take_books_from_lecterns: "Solo los miembros de {region.colorizedName} pueden tomar ese libro"
+  take_books_from_totem_lecterns: "Esas son las escrituras de {region.colorizedName}. No tienes permitido tomarlas"
+  take_infinite_water: "Incluso el agua infinita está prohibida para los forasteros de {region.colorizedName}"
+  take_lava: "Esa fuente de lava es propiedad de {region.colorizedName}"
+  take_water: "Esa fuente de agua es propiedad de {region.colorizedName}"
+  teleport_in: "Esos son los dominios de {region.colorizedName}. No puedes teletransportarte allí"
+  teleport_out: "Debes estar fuera de {region.colorizedName} para teletransportarte"
+  use_beds: "Esa cama está reservada para los miembros de {region.colorizedName}."
+  use_respawn_anchors: "Solo los miembros de {region.colorizedName} pueden reaparecer allí"
+  wax_copper: "No puedes encerar los bloques de cobre de {region.colorizedName}"
