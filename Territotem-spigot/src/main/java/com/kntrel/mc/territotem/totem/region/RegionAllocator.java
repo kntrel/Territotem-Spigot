@@ -7,7 +7,9 @@ import com.kntrel.mc.regionLib.region.hierarchy.Hierarchy;
 import com.kntrel.mc.regionLib.region.repository.Condition;
 import com.kntrel.mc.regionLib.region.repository.RegionRepository;
 import com.kntrel.mc.territotem.totem.core.TotemCore;
+import org.bukkit.Location;
 import org.bukkit.World;
+import org.bukkit.WorldBorder;
 import org.bukkit.util.BoundingBox;
 
 import java.util.Collection;
@@ -19,6 +21,8 @@ import java.util.Objects;
 public class RegionAllocator {
 
     private static final double EPSILON = 1.0E-9;
+    private static final double MIN_COORDINATE = Integer.MIN_VALUE;
+    private static final double MAX_COORDINATE = Integer.MAX_VALUE + 1d;
     private static final List<TotemCore.Direction> SIDES = List.of(
             TotemCore.Direction.UP,
             TotemCore.Direction.DOWN,
@@ -83,6 +87,10 @@ public class RegionAllocator {
         BoundingBox anchor = critical.clone();
         if (!proposed.contains(anchor)) {
             throw new IllegalArgumentException("bounds must fully contain the critical bounding box");
+        }
+
+        if (!this.isWithinWorldLimits(world, anchor)) {
+            return RegionPlaceResult.unplaceable(List.of());
         }
 
         LinkedHashSet<Region> blockers = new LinkedHashSet<>(this.findCollidingRegions(world, anchor, null));
@@ -269,12 +277,48 @@ public class RegionAllocator {
     }
 
     private double maxAllowedWorldGrowth(World world, BoundingBox current, TotemCore.Direction side) {
+        WorldLimits limits = worldLimits(world);
         return switch (side) {
-            case UP -> Math.max(0d, world.getMaxHeight() - current.getMaxY());
-            case DOWN -> Math.max(0d, current.getMinY() - world.getMinHeight());
-            case NORTH, SOUTH, EAST, WEST -> Double.POSITIVE_INFINITY;
+            case UP -> Math.max(0d, limits.maxY() - current.getMaxY());
+            case DOWN -> Math.max(0d, current.getMinY() - limits.minY());
+            case NORTH -> Math.max(0d, current.getMinZ() - limits.minZ());
+            case SOUTH -> Math.max(0d, limits.maxZ() - current.getMaxZ());
+            case EAST -> Math.max(0d, limits.maxX() - current.getMaxX());
+            case WEST -> Math.max(0d, current.getMinX() - limits.minX());
             case ALL -> throw new IllegalArgumentException("ALL is not a concrete side");
         };
+    }
+
+    private boolean isWithinWorldLimits(World world, BoundingBox bounds) {
+        return worldLimits(world).contains(bounds);
+    }
+
+    private static WorldLimits worldLimits(World world) {
+        double minX = MIN_COORDINATE;
+        double maxX = MAX_COORDINATE;
+        double minZ = MIN_COORDINATE;
+        double maxZ = MAX_COORDINATE;
+
+        WorldBorder border = world.getWorldBorder();
+        if (border != null) {
+            Location center = border.getCenter();
+            if (center != null) {
+                double halfSize = border.getSize() / 2d;
+                minX = Math.max(minX, center.getX() - halfSize);
+                maxX = Math.min(maxX, center.getX() + halfSize);
+                minZ = Math.max(minZ, center.getZ() - halfSize);
+                maxZ = Math.min(maxZ, center.getZ() + halfSize);
+            }
+        }
+
+        return new WorldLimits(
+                minX,
+                maxX,
+                Math.max(world.getMinHeight(), MIN_COORDINATE),
+                Math.min(world.getMaxHeight(), MAX_COORDINATE),
+                minZ,
+                maxZ
+        );
     }
 
     private List<Region> findCollidingRegions(World world, BoundingBox bounds, Long ignoredRegionId) {
@@ -424,6 +468,18 @@ public class RegionAllocator {
     private record Allocation(BoundingBox bounds, ExpansionResult result) {
         private Allocation {
             bounds = bounds.clone();
+        }
+    }
+
+    private record WorldLimits(double minX, double maxX, double minY, double maxY, double minZ, double maxZ) {
+
+        private boolean contains(BoundingBox bounds) {
+            return bounds.getMinX() >= this.minX - EPSILON
+                    && bounds.getMaxX() <= this.maxX + EPSILON
+                    && bounds.getMinY() >= this.minY - EPSILON
+                    && bounds.getMaxY() <= this.maxY + EPSILON
+                    && bounds.getMinZ() >= this.minZ - EPSILON
+                    && bounds.getMaxZ() <= this.maxZ + EPSILON;
         }
     }
 }

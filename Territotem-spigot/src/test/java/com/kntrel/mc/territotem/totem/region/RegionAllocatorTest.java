@@ -8,7 +8,9 @@ import com.kntrel.mc.regionLib.region.repository.Condition;
 import com.kntrel.mc.regionLib.region.repository.Query;
 import com.kntrel.mc.regionLib.region.repository.RegionRepository;
 import com.kntrel.mc.territotem.totem.core.TotemCore;
+import org.bukkit.Location;
 import org.bukkit.World;
+import org.bukkit.WorldBorder;
 import org.bukkit.util.BoundingBox;
 import org.junit.jupiter.api.Test;
 
@@ -266,6 +268,59 @@ class RegionAllocatorTest {
     }
 
     @Test
+    void snapsEastwardGrowthToTheWorldBorder() {
+        Fixture fixture = fixture();
+        World world = world(-64, 320, 0d, 0d, 4d);
+        Region region = fixture.region(1L, world, new BoundingBox(0, 0, 0, 1, 1, 1));
+
+        ExpansionResult result = fixture.allocator().expand(region, Expansion.forDirection(TotemCore.Direction.EAST, 6d));
+
+        assertTrue(result.hasGrowth());
+        assertEquals(1d, result.accomplished().east(), DELTA);
+        assertEquals(5d, result.unachievedTotal(), DELTA);
+        assertEquals(2d, region.getMaxX(), DELTA);
+        assertTrue(result.blockingRegions().isEmpty());
+    }
+
+    @Test
+    void snapsEastwardGrowthToTheIntegerMaximum() {
+        Fixture fixture = fixture();
+        World world = world();
+        Region region = fixture.region(
+                1L,
+                world,
+                new BoundingBox(Integer.MAX_VALUE - 1d, 0, 0, Integer.MAX_VALUE, 1, 1)
+        );
+
+        ExpansionResult result = fixture.allocator().expand(region, Expansion.forDirection(TotemCore.Direction.EAST, 6d));
+
+        assertTrue(result.hasGrowth());
+        assertEquals(1d, result.accomplished().east(), DELTA);
+        assertEquals(5d, result.unachievedTotal(), DELTA);
+        assertEquals(Integer.MAX_VALUE + 1d, region.getMaxX(), DELTA);
+        assertTrue(result.blockingRegions().isEmpty());
+    }
+
+    @Test
+    void snapsWestwardGrowthToTheIntegerMinimum() {
+        Fixture fixture = fixture();
+        World world = world();
+        Region region = fixture.region(
+                1L,
+                world,
+                new BoundingBox(Integer.MIN_VALUE + 1d, 0, 0, Integer.MIN_VALUE + 2d, 1, 1)
+        );
+
+        ExpansionResult result = fixture.allocator().expand(region, Expansion.forDirection(TotemCore.Direction.WEST, 6d));
+
+        assertTrue(result.hasGrowth());
+        assertEquals(1d, result.accomplished().west(), DELTA);
+        assertEquals(5d, result.unachievedTotal(), DELTA);
+        assertEquals(Integer.MIN_VALUE, region.getMinX(), DELTA);
+        assertTrue(result.blockingRegions().isEmpty());
+    }
+
+    @Test
     void redistributesCeilingShortageToTheFloor() {
         Fixture fixture = fixture();
         World world = world(0, 12);
@@ -341,6 +396,42 @@ class RegionAllocatorTest {
         assertEquals(3d, placed.resulting().getMaxY(), DELTA);
     }
 
+    @Test
+    void shiftsPlacementAwayFromTheWorldBorder() {
+        Fixture fixture = fixture();
+        World world = world(-64, 320, 0d, 0d, 4d);
+
+        RegionPlaceResult result = fixture.allocator().place(
+                world,
+                new BoundingBox(-1, 0, 0, 3, 1, 1),
+                new BoundingBox(0, 0, 0, 1, 1, 1),
+                "border-shifted-region",
+                fixture.hierarchy()
+        );
+        RegionPlaceResult.Placed placed = result.getPlaced().orElseThrow();
+
+        assertTrue(result.isPlaced());
+        assertEquals(-2d, placed.resulting().getMinX(), DELTA);
+        assertEquals(2d, placed.resulting().getMaxX(), DELTA);
+    }
+
+    @Test
+    void rejectsPlacementWhenCriticalBoxAlreadyCrossesTheWorldBorder() {
+        Fixture fixture = fixture();
+        World world = world(-64, 320, 0d, 0d, 4d);
+
+        RegionPlaceResult result = fixture.allocator().place(
+                world,
+                new BoundingBox(0.5, 0, 0, 2.5, 1, 1),
+                new BoundingBox(1.5, 0, 0, 2.5, 1, 1),
+                "border-overlap",
+                fixture.hierarchy()
+        );
+
+        assertFalse(result.isPlaced());
+        assertTrue(result.getUnplaceable().orElseThrow().overlappingRegions().isEmpty());
+    }
+
     private static World world() {
         return world(-64, 320);
     }
@@ -349,6 +440,15 @@ class RegionAllocatorTest {
         World world = mock(World.class);
         when(world.getMinHeight()).thenReturn(minHeight);
         when(world.getMaxHeight()).thenReturn(maxHeight);
+        return world;
+    }
+
+    private static World world(int minHeight, int maxHeight, double borderCenterX, double borderCenterZ, double borderSize) {
+        World world = world(minHeight, maxHeight);
+        WorldBorder border = mock(WorldBorder.class);
+        when(border.getCenter()).thenReturn(new Location(world, borderCenterX, 0d, borderCenterZ));
+        when(border.getSize()).thenReturn(borderSize);
+        when(world.getWorldBorder()).thenReturn(border);
         return world;
     }
 
