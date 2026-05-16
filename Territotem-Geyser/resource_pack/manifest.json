@@ -1,0 +1,18 @@
+{
+  "format_version": 2,
+  "header": {
+    "description": "Territotem custom block resources for Bedrock testing",
+    "name": "Territotem",
+    "uuid": "046b7f9e-a4fb-415c-8c1e-dc7ce2300e24",
+    "version": [1, 0, 0],
+    "min_engine_version": [1, 26, 20]
+  },
+  "modules": [
+    {
+      "description": "Territotem resources",
+      "type": "resources",
+      "uuid": "e768bc44-5a15-496e-b197-799839b24317",
+      "version": [1, 0, 0]
+    }
+  ]
+}

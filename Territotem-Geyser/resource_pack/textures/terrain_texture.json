@@ -1,0 +1,9 @@
+{
+  "resource_pack_name": "Territotem",
+  "texture_name": "atlas.terrain",
+  "texture_data": {
+    "ender_eye": {
+      "textures": "textures/items/ender_eye"
+    }
+  }
+}

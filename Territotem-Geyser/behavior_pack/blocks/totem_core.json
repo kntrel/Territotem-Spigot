@@ -1,0 +1,495 @@
+{
+  "format_version": "1.26.20",
+  "minecraft:block": {
+    "description": {
+      "identifier": "territotem:totem_core",
+      "states": {
+        "territotem:state": [
+          "amethyst",
+          "eye",
+          "complete",
+          "active"
+        ],
+        "territotem:direction": [
+          "south",
+          "north",
+          "east",
+          "west",
+          "up",
+          "down",
+          "all"
+        ]
+      }
+    },
+    "components": {
+      "minecraft:geometry": "geometry.totem_core",
+      "minecraft:material_instances": {
+        "*": {
+          "texture": "tinted_glass",
+          "render_method": "blend"
+        },
+        "totem_core_amethyst": {
+          "texture": "large_amethyst_bud",
+          "render_method": "alpha_test"
+        },
+        "totem_core_glass": {
+          "texture": "tinted_glass",
+          "render_method": "blend"
+        },
+        "totem_core_eye_item": {
+          "texture": "ender_eye",
+          "render_method": "alpha_test"
+        },
+        "totem_core_eye": {
+          "texture": "ender_eye",
+          "render_method": "opaque"
+        },
+        "totem_core_directonal": {
+          "texture": "amethyst_block",
+          "render_method": "opaque"
+        }
+      }
+    },
+    "permutations": [
+      {
+        "condition": "query.block_state('territotem:state') == 'amethyst'",
+        "components": {
+          "minecraft:geometry": {
+            "identifier": "geometry.totem_core",
+            "bone_visibility": {
+              "eye_inactive": "false",
+              "eye": "false",
+              "eye_north": "false",
+              "eye_south": "false",
+              "eye_east": "false",
+              "eye_west": "false",
+              "eye_up": "false",
+              "eye_down": "false"
+            }
+          },
+          "minecraft:material_instances": {
+            "*": {
+              "texture": "tinted_glass",
+              "render_method": "blend"
+            },
+            "totem_core_amethyst": {
+              "texture": "large_amethyst_bud",
+              "render_method": "alpha_test"
+            },
+            "totem_core_glass": {
+              "texture": "tinted_glass",
+              "render_method": "blend"
+            },
+            "totem_core_eye_item": {
+              "texture": "ender_eye",
+              "render_method": "alpha_test"
+            },
+            "totem_core_eye": {
+              "texture": "ender_eye",
+              "render_method": "opaque"
+            },
+            "totem_core_directonal": {
+              "texture": "amethyst_block",
+              "render_method": "opaque"
+            }
+          }
+        }
+      },
+      {
+        "condition": "query.block_state('territotem:state') == 'eye'",
+        "components": {
+          "minecraft:geometry": {
+            "identifier": "geometry.totem_core",
+            "bone_visibility": {
+              "amethyst": "false",
+              "eye": "false",
+              "eye_north": "false",
+              "eye_south": "false",
+              "eye_east": "false",
+              "eye_west": "false",
+              "eye_up": "false",
+              "eye_down": "false"
+            }
+          },
+          "minecraft:material_instances": {
+            "*": {
+              "texture": "tinted_glass",
+              "render_method": "blend"
+            },
+            "totem_core_amethyst": {
+              "texture": "large_amethyst_bud",
+              "render_method": "alpha_test"
+            },
+            "totem_core_glass": {
+              "texture": "tinted_glass",
+              "render_method": "blend"
+            },
+            "totem_core_eye_item": {
+              "texture": "ender_eye",
+              "render_method": "alpha_test"
+            },
+            "totem_core_eye": {
+              "texture": "ender_eye",
+              "render_method": "opaque"
+            },
+            "totem_core_directonal": {
+              "texture": "amethyst_block",
+              "render_method": "opaque"
+            }
+          }
+        }
+      },
+      {
+        "condition": "query.block_state('territotem:state') == 'complete'",
+        "components": {
+          "minecraft:geometry": {
+            "identifier": "geometry.totem_core",
+            "bone_visibility": {
+              "eye": "false",
+              "eye_north": "false",
+              "eye_south": "false",
+              "eye_east": "false",
+              "eye_west": "false",
+              "eye_up": "false",
+              "eye_down": "false"
+            }
+          },
+          "minecraft:material_instances": {
+            "*": {
+              "texture": "tinted_glass",
+              "render_method": "blend"
+            },
+            "totem_core_amethyst": {
+              "texture": "large_amethyst_bud",
+              "render_method": "alpha_test"
+            },
+            "totem_core_glass": {
+              "texture": "tinted_glass",
+              "render_method": "blend"
+            },
+            "totem_core_eye_item": {
+              "texture": "ender_eye",
+              "render_method": "alpha_test"
+            },
+            "totem_core_eye": {
+              "texture": "ender_eye",
+              "render_method": "opaque"
+            },
+            "totem_core_directonal": {
+              "texture": "amethyst_block",
+              "render_method": "opaque"
+            }
+          }
+        }
+      },
+      {
+        "condition": "query.block_state('territotem:state') == 'active' && query.block_state('territotem:direction') == 'all'",
+        "components": {
+          "minecraft:geometry": {
+            "identifier": "geometry.totem_core",
+            "bone_visibility": {
+              "glass": "false",
+              "eye_inactive": "false",
+              "eye_north": "false",
+              "eye_south": "false",
+              "eye_east": "false",
+              "eye_west": "false",
+              "eye_up": "false",
+              "eye_down": "false"
+            }
+          },
+          "minecraft:material_instances": {
+            "*": {
+              "texture": "tinted_glass",
+              "render_method": "blend"
+            },
+            "totem_core_amethyst": {
+              "texture": "large_amethyst_bud",
+              "render_method": "alpha_test"
+            },
+            "totem_core_glass": {
+              "texture": "tinted_glass",
+              "render_method": "blend"
+            },
+            "totem_core_eye_item": {
+              "texture": "ender_eye",
+              "render_method": "alpha_test"
+            },
+            "totem_core_eye": {
+              "texture": "ender_eye",
+              "render_method": "opaque"
+            },
+            "totem_core_directonal": {
+              "texture": "amethyst_block",
+              "render_method": "opaque"
+            }
+          }
+        }
+      },
+      {
+        "condition": "query.block_state('territotem:state') == 'active' && query.block_state('territotem:direction') == 'north'",
+        "components": {
+          "minecraft:geometry": {
+            "identifier": "geometry.totem_core",
+            "bone_visibility": {
+              "glass": "false",
+              "eye_inactive": "false",
+              "eye": "false",
+              "eye_south": "false",
+              "eye_east": "false",
+              "eye_west": "false",
+              "eye_up": "false",
+              "eye_down": "false"
+            }
+          },
+          "minecraft:material_instances": {
+            "*": {
+              "texture": "tinted_glass",
+              "render_method": "blend"
+            },
+            "totem_core_amethyst": {
+              "texture": "large_amethyst_bud",
+              "render_method": "alpha_test"
+            },
+            "totem_core_glass": {
+              "texture": "tinted_glass",
+              "render_method": "blend"
+            },
+            "totem_core_eye_item": {
+              "texture": "ender_eye",
+              "render_method": "alpha_test"
+            },
+            "totem_core_eye": {
+              "texture": "ender_eye",
+              "render_method": "opaque"
+            },
+            "totem_core_directonal": {
+              "texture": "amethyst_block",
+              "render_method": "opaque"
+            }
+          }
+        }
+      },
+      {
+        "condition": "query.block_state('territotem:state') == 'active' && query.block_state('territotem:direction') == 'south'",
+        "components": {
+          "minecraft:geometry": {
+            "identifier": "geometry.totem_core",
+            "bone_visibility": {
+              "glass": "false",
+              "eye_inactive": "false",
+              "eye": "false",
+              "eye_north": "false",
+              "eye_east": "false",
+              "eye_west": "false",
+              "eye_up": "false",
+              "eye_down": "false"
+            }
+          },
+          "minecraft:material_instances": {
+            "*": {
+              "texture": "tinted_glass",
+              "render_method": "blend"
+            },
+            "totem_core_amethyst": {
+              "texture": "large_amethyst_bud",
+              "render_method": "alpha_test"
+            },
+            "totem_core_glass": {
+              "texture": "tinted_glass",
+              "render_method": "blend"
+            },
+            "totem_core_eye_item": {
+              "texture": "ender_eye",
+              "render_method": "alpha_test"
+            },
+            "totem_core_eye": {
+              "texture": "ender_eye",
+              "render_method": "opaque"
+            },
+            "totem_core_directonal": {
+              "texture": "amethyst_block",
+              "render_method": "opaque"
+            }
+          }
+        }
+      },
+      {
+        "condition": "query.block_state('territotem:state') == 'active' && query.block_state('territotem:direction') == 'east'",
+        "components": {
+          "minecraft:geometry": {
+            "identifier": "geometry.totem_core",
+            "bone_visibility": {
+              "glass": "false",
+              "eye_inactive": "false",
+              "eye": "false",
+              "eye_north": "false",
+              "eye_south": "false",
+              "eye_west": "false",
+              "eye_up": "false",
+              "eye_down": "false"
+            }
+          },
+          "minecraft:material_instances": {
+            "*": {
+              "texture": "tinted_glass",
+              "render_method": "blend"
+            },
+            "totem_core_amethyst": {
+              "texture": "large_amethyst_bud",
+              "render_method": "alpha_test"
+            },
+            "totem_core_glass": {
+              "texture": "tinted_glass",
+              "render_method": "blend"
+            },
+            "totem_core_eye_item": {
+              "texture": "ender_eye",
+              "render_method": "alpha_test"
+            },
+            "totem_core_eye": {
+              "texture": "ender_eye",
+              "render_method": "opaque"
+            },
+            "totem_core_directonal": {
+              "texture": "amethyst_block",
+              "render_method": "opaque"
+            }
+          }
+        }
+      },
+      {
+        "condition": "query.block_state('territotem:state') == 'active' && query.block_state('territotem:direction') == 'west'",
+        "components": {
+          "minecraft:geometry": {
+            "identifier": "geometry.totem_core",
+            "bone_visibility": {
+              "glass": "false",
+              "eye_inactive": "false",
+              "eye": "false",
+              "eye_north": "false",
+              "eye_south": "false",
+              "eye_east": "false",
+              "eye_up": "false",
+              "eye_down": "false"
+            }
+          },
+          "minecraft:material_instances": {
+            "*": {
+              "texture": "tinted_glass",
+              "render_method": "blend"
+            },
+            "totem_core_amethyst": {
+              "texture": "large_amethyst_bud",
+              "render_method": "alpha_test"
+            },
+            "totem_core_glass": {
+              "texture": "tinted_glass",
+              "render_method": "blend"
+            },
+            "totem_core_eye_item": {
+              "texture": "ender_eye",
+              "render_method": "alpha_test"
+            },
+            "totem_core_eye": {
+              "texture": "ender_eye",
+              "render_method": "opaque"
+            },
+            "totem_core_directonal": {
+              "texture": "amethyst_block",
+              "render_method": "opaque"
+            }
+          }
+        }
+      },
+      {
+        "condition": "query.block_state('territotem:state') == 'active' && query.block_state('territotem:direction') == 'up'",
+        "components": {
+          "minecraft:geometry": {
+            "identifier": "geometry.totem_core",
+            "bone_visibility": {
+              "glass": "false",
+              "eye_inactive": "false",
+              "eye": "false",
+              "eye_north": "false",
+              "eye_south": "false",
+              "eye_east": "false",
+              "eye_west": "false",
+              "eye_down": "false"
+            }
+          },
+          "minecraft:material_instances": {
+            "*": {
+              "texture": "tinted_glass",
+              "render_method": "blend"
+            },
+            "totem_core_amethyst": {
+              "texture": "large_amethyst_bud",
+              "render_method": "alpha_test"
+            },
+            "totem_core_glass": {
+              "texture": "tinted_glass",
+              "render_method": "blend"
+            },
+            "totem_core_eye_item": {
+              "texture": "ender_eye",
+              "render_method": "alpha_test"
+            },
+            "totem_core_eye": {
+              "texture": "ender_eye",
+              "render_method": "opaque"
+            },
+            "totem_core_directonal": {
+              "texture": "amethyst_block",
+              "render_method": "opaque"
+            }
+          }
+        }
+      },
+      {
+        "condition": "query.block_state('territotem:state') == 'active' && query.block_state('territotem:direction') == 'down'",
+        "components": {
+          "minecraft:geometry": {
+            "identifier": "geometry.totem_core",
+            "bone_visibility": {
+              "glass": "false",
+              "eye_inactive": "false",
+              "eye": "false",
+              "eye_north": "false",
+              "eye_south": "false",
+              "eye_east": "false",
+              "eye_west": "false",
+              "eye_up": "false"
+            }
+          },
+          "minecraft:material_instances": {
+            "*": {
+              "texture": "tinted_glass",
+              "render_method": "blend"
+            },
+            "totem_core_amethyst": {
+              "texture": "large_amethyst_bud",
+              "render_method": "alpha_test"
+            },
+            "totem_core_glass": {
+              "texture": "tinted_glass",
+              "render_method": "blend"
+            },
+            "totem_core_eye_item": {
+              "texture": "ender_eye",
+              "render_method": "alpha_test"
+            },
+            "totem_core_eye": {
+              "texture": "ender_eye",
+              "render_method": "opaque"
+            },
+            "totem_core_directonal": {
+              "texture": "amethyst_block",
+              "render_method": "opaque"
+            }
+          }
+        }
+      }
+    ]
+  }
+}

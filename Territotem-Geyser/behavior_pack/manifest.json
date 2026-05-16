@@ -1,0 +1,24 @@
+{
+  "format_version": 2,
+  "header": {
+    "description": "Territotem custom block behavior for Bedrock testing",
+    "name": "Territotem",
+    "uuid": "adc32628-f371-43fe-9a7d-16e5d7b3e78e",
+    "version": [ 1, 0, 0 ],
+    "min_engine_version": [1, 26, 20]
+  },
+  "modules": [
+    {
+      "description": "Territotem behavior",
+      "type": "data",
+      "uuid": "57528880-fea0-476c-aa17-e6363eda23f6",
+      "version": [ 1, 0, 0 ]
+    }
+  ],
+  "dependencies": [
+    {
+      "uuid": "046b7f9e-a4fb-415c-8c1e-dc7ce2300e24",
+      "version": [ 1, 0, 0 ]
+    }
+  ]
+}

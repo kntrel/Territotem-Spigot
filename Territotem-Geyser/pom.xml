@@ -8,7 +8,7 @@
         <groupId>com.kntrel</groupId>
         <artifactId>Territotem-parent</artifactId>
         <version>main-SNAPSHOT</version>
-        <relativePath>..</relativePath>
+        <relativePath>../pom.xml</relativePath>
     </parent>
 
     <artifactId>Territotem-Geyser</artifactId>
@@ -18,8 +18,8 @@
     <description>Bedrock compatibility layer module for Territotem.</description>
 
     <properties>
-        <geyser.api.version>2.9.0-SNAPSHOT</geyser.api.version>
-        <geyser.extension.api>2.9.0</geyser.extension.api>
+        <geyser.api.version>2.10.0-SNAPSHOT</geyser.api.version>
+        <geyser.extension.api>2.10.0</geyser.extension.api>
     </properties>
 
     <build>
@@ -27,6 +27,16 @@
             <resource>
                 <directory>src/main/resources</directory>
                 <filtering>true</filtering>
+            </resource>
+            <resource>
+                <directory>${project.basedir}/resource_pack</directory>
+                <targetPath>resource_pack</targetPath>
+                <filtering>false</filtering>
+            </resource>
+            <resource>
+                <directory>${project.basedir}/behavior_pack</directory>
+                <targetPath>behavior_pack</targetPath>
+                <filtering>false</filtering>
             </resource>
         </resources>
     </build>
