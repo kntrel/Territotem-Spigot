@@ -39,6 +39,29 @@
                 <filtering>false</filtering>
             </resource>
         </resources>
+        <plugins>
+            <plugin>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>3.1.0</version>
+                <executions>
+                    <execution>
+                        <id>package-bedrock-resource-pack</id>
+                        <phase>prepare-package</phase>
+                        <configuration>
+                            <target>
+                                <mkdir dir="${project.build.outputDirectory}/packs"/>
+                                <zip destfile="${project.build.outputDirectory}/packs/territotem-bedrock.mcpack">
+                                    <fileset dir="${project.basedir}/resource_pack"/>
+                                </zip>
+                            </target>
+                        </configuration>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
     </build>
 
     <dependencies>

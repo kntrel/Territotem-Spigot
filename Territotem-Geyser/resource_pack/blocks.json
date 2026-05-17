@@ -1,6 +1,6 @@
 {
   "format_version": "1.19.30",
-  "territotem:totem_core": {
+  "geyser_custom:totem_core": {
     "sound": "glass"
   }
 }
