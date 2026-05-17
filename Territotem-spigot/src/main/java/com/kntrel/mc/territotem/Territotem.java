@@ -36,6 +36,7 @@ public final class Territotem extends JavaPlugin {
 
     //FIELDS
     private ChunkPersister chunkPersister_ = null;
+    private TotemCoreTracker totemCoreTracker_ = null;
 
 
     //IMPLEMENTATION
@@ -73,12 +74,12 @@ public final class Territotem extends JavaPlugin {
 
         this.chunkPersister_ = new ChunkPersister(this, config.chunkPersistencePeriodTicks());
         StructureService structureService = new StructureService(this, this.chunkPersister_);
-        TotemCoreTracker totemCoreTracker = new TotemCoreTracker(this, this.chunkPersister_, config.directionalSelectorItem());
+        this.totemCoreTracker_ = new TotemCoreTracker(this, this.chunkPersister_, config.directionalSelectorItem());
         TotemService totemService = new TotemService(
                 regionContext,
                 totemTranslator,
                 config.expansionTable(),
-                totemCoreTracker,
+                this.totemCoreTracker_,
                 config.dropBackRate(),
                 config.allowedDeedsRequestItems()
         );
@@ -89,7 +90,7 @@ public final class Territotem extends JavaPlugin {
                 config.allowedDeedsRequestItems(),
                 config.regionFeatureMaterials()
         ).register();
-        structureService.registerBlueprint(createTotemBlueprint(totemCoreTracker, hierarchy))
+        structureService.registerBlueprint(createTotemBlueprint(this.totemCoreTracker_, hierarchy))
                 .on(TotemCoreCompletedEvent.class)
                 .when(e -> {
                     e.getCore().setState(TotemCore.State.FULL);
@@ -111,6 +112,10 @@ public final class Territotem extends JavaPlugin {
         } else {
             this.chunkPersister_.shutdown();
         }
+    }
+
+    public TotemCoreTracker getTotemCoreTracker() {
+        return this.totemCoreTracker_;
     }
 
     private static TotemBlueprint createTotemBlueprint(TotemCoreTracker service, Hierarchy hierarchy) {

@@ -66,8 +66,26 @@
 
     <dependencies>
         <dependency>
+            <groupId>com.kntrel</groupId>
+            <artifactId>Territotem-spigot</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.spigotmc</groupId>
+            <artifactId>spigot-api</artifactId>
+            <version>26.1.1-R0.1-SNAPSHOT</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
             <groupId>org.geysermc.geyser</groupId>
             <artifactId>api</artifactId>
+            <version>${geyser.api.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.geysermc.geyser</groupId>
+            <artifactId>core</artifactId>
             <version>${geyser.api.version}</version>
             <scope>provided</scope>
         </dependency>
