@@ -216,8 +216,7 @@ class TotemCoreListener implements Listener {
 
     @EventHandler
     void onChunkUnload(ChunkUnloadEvent e) {
-        Chunk c = e.getChunk();
-        this.tracker_.unloadChunk(e.getWorld(), c.getX(), c.getZ());
+        this.tracker_.unloadChunk(e.getChunk());
     }
 
 

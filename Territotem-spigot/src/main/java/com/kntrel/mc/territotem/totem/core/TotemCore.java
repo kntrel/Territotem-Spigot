@@ -1,5 +1,6 @@
 package com.kntrel.mc.territotem.totem.core;
 
+import com.kntrel.mc.territotem.totem.event.TotemCoreUpdatedEvent;
 import com.kntrel.util.Vec3i;
 import org.bukkit.*;
 import org.bukkit.block.Block;
@@ -144,6 +145,7 @@ public class TotemCore {
             this.kill();
             this.refinishBlock();
             emitStateChangeSound(old, this.state_, this.world_, this.getLocation());
+            this.emitUpdated(old, this.state_, this.direction_, this.direction_);
             return;
         }
 
@@ -180,6 +182,7 @@ public class TotemCore {
 
         this.refinishBlock();
         emitStateChangeSound(old, this.state_, this.world_, this.getLocation());
+        this.emitUpdated(old, this.state_, this.direction_, this.direction_);
     }
     public void setDirection(@NonNull Direction direction) {
         Objects.requireNonNull(direction);
@@ -196,6 +199,7 @@ public class TotemCore {
         this.refinishDirectional();
         this.refinishDirectionalEnderEye();
         emitDirectionChangeSound(old, this.direction_, this.world_, this.getLocation());
+        this.emitUpdated(this.state_, this.state_, old, this.direction_);
     }
     public void breakDown() {
         Block b = this.world_.getBlockAt(this.coordinates_.x(), this.coordinates_.y(), this.coordinates_.z());
@@ -355,6 +359,20 @@ public class TotemCore {
     private static void tweakEntity(Entity entity) {
         entity.setPersistent(false);
         entity.setInvulnerable(true);
+    }
+    private void emitUpdated(State oldState, State newState, Direction oldDirection, Direction newDirection) {
+        if (oldState == null || newState == null || oldDirection == null || newDirection == null) {
+            return;
+        }
+
+        TotemCoreUpdatedEvent event = new TotemCoreUpdatedEvent(
+                this,
+                oldState,
+                newState,
+                oldDirection,
+                newDirection
+        );
+        this.plugin_.getServer().getPluginManager().callEvent(event);
     }
     private static void emitStateChangeSound(State old, State current, World world, Location location) {
         if (old == current) { return; }

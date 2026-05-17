@@ -3,6 +3,8 @@ package com.kntrel.mc.territotem.totem.core;
 import com.kntrel.mc.chunkPersistence.ChunkPersister;
 import com.kntrel.mc.regionLib.Constants;
 import com.kntrel.mc.territotem.structure.worldTile.WorldView;
+import com.kntrel.mc.territotem.totem.event.TotemCoreLoadedEvent;
+import com.kntrel.mc.territotem.totem.event.TotemCoreUnloadedEvent;
 import com.kntrel.util.Vec3i;
 import org.bukkit.Chunk;
 import org.bukkit.Material;
@@ -64,6 +66,11 @@ public class TotemCoreTracker {
 
     //SERVICES
     public TotemCore createCore(Vec3i coordinates, World world, TotemCore.State state, TotemCore.Direction direction) {
+        Chunk chunk = world.getChunkAt(coordinates.x() >> Constants.CHUNK_SHIFT, coordinates.z() >> Constants.CHUNK_SHIFT);
+        return this.createCore(coordinates, world, state, direction, chunk);
+    }
+
+    private TotemCore createCore(Vec3i coordinates, World world, TotemCore.State state, TotemCore.Direction direction, Chunk chunk) {
         Map<Vec3i, TotemCore> worldCores = this.coresByWorld_.computeIfAbsent(world.getUID(), ignored -> new ConcurrentHashMap<>());
         TotemCore existing = worldCores.get(coordinates);
         if (existing != null) {
@@ -78,6 +85,7 @@ public class TotemCoreTracker {
         worldCores.put(coordinates, core);
         this.coresById_.put(core.getRuntimeId(), core);
         this.persistCore(core);
+        this.getServer().getPluginManager().callEvent(new TotemCoreLoadedEvent(core, chunk));
         return core;
     }
 
@@ -133,7 +141,11 @@ public class TotemCoreTracker {
     }
 
     public void destroyCore(TotemCore core) {
-        this.unloadCore(core);
+        Chunk chunk = core.getWorld().getChunkAt(
+                core.getCoordinates().x() >> Constants.CHUNK_SHIFT,
+                core.getCoordinates().z() >> Constants.CHUNK_SHIFT
+        );
+        this.unloadCore(core, chunk);
         this.persistChunk(core.getWorld(), core.getCoordinates().x() >> Constants.CHUNK_SHIFT, core.getCoordinates().z() >> Constants.CHUNK_SHIFT);
     }
 
@@ -172,7 +184,7 @@ public class TotemCoreTracker {
 
         for (TotemCoreChunkData data : cores) {
             Vec3i absolute = data.offset().add(new Vec3i(baseX, 0, baseZ));
-            this.createCore(absolute, chunk.getWorld(), data.state(), data.direction());
+            this.createCore(absolute, chunk.getWorld(), data.state(), data.direction(), chunk);
         }
 
         LOGGER.debug("Deserialized {} totem cores in chunk [{}, {}]", cores.size(), chunk.getX(), chunk.getZ());
@@ -181,6 +193,14 @@ public class TotemCoreTracker {
 
     //HELPERS
     void unloadCore(TotemCore core) {
+        Chunk chunk = core.getWorld().getChunkAt(
+                core.getCoordinates().x() >> Constants.CHUNK_SHIFT,
+                core.getCoordinates().z() >> Constants.CHUNK_SHIFT
+        );
+        this.unloadCore(core, chunk);
+    }
+
+    void unloadCore(TotemCore core, Chunk chunk) {
         core.kill();;
         Map<Vec3i, TotemCore> worldCores = this.coresByWorld_.get(core.getWorld().getUID());
         if (worldCores == null) { return; }
@@ -190,14 +210,18 @@ public class TotemCoreTracker {
             this.coresByWorld_.remove(core.getWorld().getUID());
         }
         this.coresById_.remove(core.getRuntimeId());
+        this.getServer().getPluginManager().callEvent(new TotemCoreUnloadedEvent(core, chunk));
     }
 
-    void unloadChunk(World world, int chunkX, int chunkZ) {
+    void unloadChunk(Chunk chunk) {
+        World world = chunk.getWorld();
+        int chunkX = chunk.getX();
+        int chunkZ = chunk.getZ();
         int baseX = chunkX << Constants.CHUNK_SHIFT;
         int baseZ = chunkZ << Constants.CHUNK_SHIFT;
 
         this.coresIn(baseX, baseZ, baseX + Constants.CHUNK_SIZE, baseZ + Constants.CHUNK_SIZE, world.getUID())
-                .thenAccept(l -> this.getServer().getScheduler().runTask(this.getPlugin(), () -> l.forEach(this::unloadCore)));
+                .thenAccept(l -> this.getServer().getScheduler().runTask(this.getPlugin(), () -> l.forEach(c -> this.unloadCore(c, chunk))));
     }
 
     private void persistChunk(World world, int chunkX, int chunkZ) {
