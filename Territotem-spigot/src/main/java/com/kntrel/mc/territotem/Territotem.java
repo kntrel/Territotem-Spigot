@@ -3,10 +3,13 @@ package com.kntrel.mc.territotem;
 import com.kntrel.mc.chunkPersistence.ChunkPersister;
 import com.kntrel.mc.regionLib.RegionLib;
 import com.kntrel.mc.regionLib.region.context.RegionContext;
+import com.kntrel.mc.regionLib.region.context.RegionContextConfig;
+import com.kntrel.mc.regionLib.region.display.RegionDisplayer;
 import com.kntrel.mc.regionLib.region.hierarchy.Hierarchy;
 import com.kntrel.mc.runical.bukkit.Runical;
 import com.kntrel.mc.runical.bukkit.Translator;
 import com.kntrel.mc.territotem.config.Config;
+import com.kntrel.mc.territotem.region.CompositeRegionDisplayer;
 import com.kntrel.mc.territotem.region.RegionListener;
 import com.kntrel.mc.territotem.region.TerritotemRegionFeatures;
 import com.kntrel.mc.territotem.totem.core.TotemCore;
@@ -37,6 +40,8 @@ public final class Territotem extends JavaPlugin {
     //FIELDS
     private ChunkPersister chunkPersister_ = null;
     private TotemCoreTracker totemCoreTracker_ = null;
+    private RegionContext regionContext_ = null;
+    private CompositeRegionDisplayer regionDisplayer_ = null;
 
 
     //IMPLEMENTATION
@@ -45,15 +50,17 @@ public final class Territotem extends JavaPlugin {
 
         this.saveResource("hierarchies.json", false);
         Config config = Config.load(this, "config.yaml");
+        RegionContextConfig regionContextConfig = this.compositeRegionContextConfig(config.regionContextConfig());
 
         RegionLib.enable(this);
         RegionContext regionContext = RegionLib.createContext(
                 this,
                 this.getName(),
-                config.regionContextConfig(),
+                regionContextConfig,
                 new File(this.getDataFolder(), "hierarchies.json").toURI(),
                 new File(this.getDataFolder(), ".db").toURI()
         );
+        this.regionContext_ = regionContext;
         RegionLib.setDefault(regionContext);
         Hierarchy hierarchy = regionContext.getHierarchyRepository().get(1).orElse(null);
 
@@ -118,6 +125,28 @@ public final class Territotem extends JavaPlugin {
         return this.totemCoreTracker_;
     }
 
+    public RegionContext getRegionContext() {
+        return this.regionContext_;
+    }
+
+    public CompositeRegionDisplayer getRegionDisplayer() {
+        return this.regionDisplayer_;
+    }
+
+    public boolean addRegionDisplayer(RegionDisplayer displayer) {
+        if (this.regionDisplayer_ == null) {
+            throw new IllegalStateException("Territotem region displayer is not ready.");
+        }
+        return this.regionDisplayer_.addDelegate(displayer);
+    }
+
+    public boolean removeRegionDisplayer(RegionDisplayer displayer) {
+        if (this.regionDisplayer_ == null) {
+            return false;
+        }
+        return this.regionDisplayer_.removeDelegate(displayer);
+    }
+
     private static TotemBlueprint createTotemBlueprint(TotemCoreTracker service, Hierarchy hierarchy) {
         List<Tile> tile = List.of(
                 new Tile(1, 2, 1, TotemPieces.core(service)),
@@ -135,5 +164,26 @@ public final class Territotem extends JavaPlugin {
         );
         BoundingBox bb = new BoundingBox(-8, -2, -8, 8, 12, 8);
         return new TotemBlueprint(25, "totem", tile, bb, hierarchy);
+    }
+
+    private RegionContextConfig compositeRegionContextConfig(RegionContextConfig source) {
+        return new RegionContextConfig(
+                source.minNameLength,
+                source.maxNameLength,
+                source.permissionsOverlapMode,
+                source.regionDisplayDurationSeconds,
+                source.cellSize,
+                source.cacheCapacity,
+                source.playerSamplingPeriodTicks,
+                source.playerMovementTolerance,
+                ctx -> this.createCompositeRegionDisplayer(source, ctx)
+        );
+    }
+
+    private CompositeRegionDisplayer createCompositeRegionDisplayer(RegionContextConfig source, RegionContext ctx) {
+        CompositeRegionDisplayer displayer = new CompositeRegionDisplayer();
+        displayer.addDelegate(source.regionDisplayerFactory.apply(ctx));
+        this.regionDisplayer_ = displayer;
+        return displayer;
     }
 }

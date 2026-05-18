@@ -3,14 +3,17 @@ package com.kntrel.mc.territotem.geyser;
 import com.kntrel.mc.territotem.Territotem;
 import com.kntrel.mc.territotem.geyser.block.BedrockTotemCore;
 import com.kntrel.mc.territotem.geyser.render.BedrockBlockRenderer;
+import com.kntrel.mc.territotem.geyser.render.BedrockRegionDisplayer;
 import com.kntrel.mc.territotem.geyser.render.TotemCoreBedrockRenderListener;
 import com.kntrel.mc.territotem.totem.core.TotemCoreTracker;
 import org.bukkit.Bukkit;
+import org.bukkit.event.HandlerList;
 import org.bukkit.plugin.Plugin;
 import org.geysermc.event.subscribe.Subscribe;
 import org.geysermc.geyser.api.event.lifecycle.GeyserDefineCustomBlocksEvent;
 import org.geysermc.geyser.api.event.lifecycle.GeyserDefineResourcePacksEvent;
 import org.geysermc.geyser.api.event.lifecycle.GeyserPostInitializeEvent;
+import org.geysermc.geyser.api.event.lifecycle.GeyserShutdownEvent;
 import org.geysermc.geyser.api.extension.Extension;
 import org.geysermc.geyser.api.pack.PackCodec;
 import org.geysermc.geyser.api.pack.ResourcePack;
@@ -33,6 +36,7 @@ public final class TerritotemGeyserExtension implements Extension {
     private TotemCoreTracker totemCoreTracker_ = null;
     private BedrockBlockRenderer blockRenderer_ = null;
     private TotemCoreBedrockRenderListener renderListener_ = null;
+    private BedrockRegionDisplayer regionDisplayer_ = null;
 
 
     //LISTENERS
@@ -40,6 +44,11 @@ public final class TerritotemGeyserExtension implements Extension {
     public void onPostInitialize(GeyserPostInitializeEvent event) {
         this.bindTerritotem();
         this.logger().info("Territotem Geyser extension loaded.");
+    }
+
+    @Subscribe
+    public void onShutdown(GeyserShutdownEvent event) {
+        this.unbindTerritotem();
     }
 
     @Subscribe
@@ -95,13 +104,39 @@ public final class TerritotemGeyserExtension implements Extension {
         this.territotem_ = territotem;
         this.totemCoreTracker_ = tracker;
         this.blockRenderer_ = new BedrockBlockRenderer(territotem, this);
-        this.renderListener_ = new TotemCoreBedrockRenderListener(this.blockRenderer_, this.bedrockTotemCore_);
+        this.regionDisplayer_ = new BedrockRegionDisplayer(
+                territotem,
+                territotem.getRegionContext().getConfig().regionDisplayDurationSeconds
+        );
+        territotem.addRegionDisplayer(this.regionDisplayer_);
+        this.renderListener_ = new TotemCoreBedrockRenderListener(this.territotem_, this.blockRenderer_, this.bedrockTotemCore_);
         territotem.getServer().getPluginManager().registerEvents(
                 this.renderListener_,
                 territotem
         );
         tracker.getLoadedCores().forEach(this.renderListener_::render);
         this.logger().info("Connected to Territotem Bukkit plugin with " + tracker.getLoadedCores().size() + " loaded Totem Core(s).");
+    }
+
+    private void unbindTerritotem() {
+        if (this.territotem_ != null && this.regionDisplayer_ != null) {
+            this.territotem_.removeRegionDisplayer(this.regionDisplayer_);
+            this.regionDisplayer_.stopAll();
+        }
+
+        if (this.blockRenderer_ != null) {
+            this.blockRenderer_.clearAll();
+            this.blockRenderer_.stop();
+        }
+        if (this.renderListener_ != null) {
+            HandlerList.unregisterAll(this.renderListener_);
+        }
+
+        this.regionDisplayer_ = null;
+        this.renderListener_ = null;
+        this.blockRenderer_ = null;
+        this.totemCoreTracker_ = null;
+        this.territotem_ = null;
     }
 
     public BedrockTotemCore getBedrockTotemCore() {

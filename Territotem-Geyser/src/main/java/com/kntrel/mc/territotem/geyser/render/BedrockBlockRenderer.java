@@ -6,6 +6,7 @@ import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
+import org.bukkit.event.HandlerList;
 import org.bukkit.plugin.Plugin;
 import org.cloudburstmc.math.vector.Vector3i;
 import org.cloudburstmc.nbt.NbtMap;
@@ -114,6 +115,7 @@ public final class BedrockBlockRenderer {
 
     public void stop() {
         this.listener_.stop();
+        HandlerList.unregisterAll(this.listener_);
     }
 
     public Map<Vec3i, CustomBlockState> renderedBlocks(World world) {
